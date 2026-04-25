@@ -1,0 +1,10 @@
+^C:\USERS\OYH57\SODASOO1\DEVS\RESAMP\CMAKELISTS.TXT
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SC:/Users/oyh57/SODAsoo1/Devs/Resamp -BC:/Users/oyh57/SODAsoo1/Devs/Resamp/build --check-stamp-file C:/Users/oyh57/SODAsoo1/Devs/Resamp/build/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

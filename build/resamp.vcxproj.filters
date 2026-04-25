@@ -1,0 +1,61 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="C:\Users\oyh57\SODAsoo1\Devs\Resamp\src\main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\oyh57\SODAsoo1\Devs\Resamp\src\args\arg_parser.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\oyh57\SODAsoo1\Devs\Resamp\src\io\wav_reader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\oyh57\SODAsoo1\Devs\Resamp\src\io\wav_writer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\oyh57\SODAsoo1\Devs\Resamp\src\io\frq_reader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\oyh57\SODAsoo1\Devs\Resamp\src\analysis\frame_slicer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\oyh57\SODAsoo1\Devs\Resamp\src\analysis\lpc_analyzer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\oyh57\SODAsoo1\Devs\Resamp\src\analysis\residual.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\oyh57\SODAsoo1\Devs\Resamp\src\analysis\pitch_detector.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\oyh57\SODAsoo1\Devs\Resamp\src\synth\pitch_mapper.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\oyh57\SODAsoo1\Devs\Resamp\src\synth\source_gen.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\oyh57\SODAsoo1\Devs\Resamp\src\synth\kelly_lochbaum.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\oyh57\SODAsoo1\Devs\Resamp\src\synth\psola_splicer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\oyh57\SODAsoo1\Devs\Resamp\src\flags\flag_parser.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\oyh57\SODAsoo1\Devs\Resamp\src\post\volume.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\oyh57\SODAsoo1\Devs\Resamp\src\util\math_util.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="C:\Users\oyh57\SODAsoo1\Devs\Resamp\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{29030F8F-6ACE-34A7-95F6-DA8D019151BF}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

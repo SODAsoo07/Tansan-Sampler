@@ -1,0 +1,106 @@
+#include "arg_parser.hpp"
+#include "util/base64.hpp"
+#include <stdexcept>
+#include <cmath>
+#include <cstdlib>
+#include <cctype>
+#include <algorithm>
+
+namespace resamp {
+
+// ── 음정 문자열 → Hz ─────────────────────────────────────────────────────
+double pitch_str_to_hz(const std::string& s) {
+    if (s.empty() || s == "R") return 0.0; // rest
+
+    // 음정 클래스 인덱스 (C=0, C#=1, D=2, ..., B=11)
+    static const struct { const char* name; int idx; } notes[] = {
+        {"C#", 1}, {"Db", 1}, {"D#", 3}, {"Eb", 3},
+        {"F#", 6}, {"Gb", 6}, {"G#", 8}, {"Ab", 8},
+        {"A#", 10},{"Bb", 10},
+        {"C",  0}, {"D",  2}, {"E",  4}, {"F",  5},
+        {"G",  7}, {"A",  9}, {"B",  11},
+    };
+
+    int note_idx = -1;
+    size_t pos   = 0;
+    for (auto& n : notes) {
+        size_t len = std::strlen(n.name);
+        if (s.size() > len && s.substr(0, len) == n.name) {
+            note_idx = n.idx;
+            pos = len;
+            break;
+        }
+    }
+    if (note_idx < 0)
+        throw std::invalid_argument("Unknown note: " + s);
+
+    // 옥타브 파싱 (음수도 허용: C-1)
+    int octave = std::stoi(s.substr(pos));
+
+    // MIDI 노트 번호: C4=60, A4=69
+    // midi = (octave+1)*12 + note_idx
+    int midi = (octave + 1) * 12 + note_idx;
+
+    return 440.0 * std::pow(2.0, (midi - 69) / 12.0);
+}
+
+// ── CLI 파싱 ──────────────────────────────────────────────────────────────
+RenderParams parse_args(int argc, char** argv) {
+    if (argc < 5)
+        throw std::runtime_error(
+            "Usage: resamp <in.wav> <out.wav> <pitch> <velocity> "
+            "[flags] [offset] [length] [consonant] [cutoff] "
+            "[volume] [modulation] [tempo] [pitch_bend]");
+
+    RenderParams p;
+    p.input_wav  = argv[1];
+    p.output_wav = argv[2];
+    p.pitch_str  = argv[3];
+    p.velocity   = std::atoi(argv[4]);
+    p.target_hz  = pitch_str_to_hz(p.pitch_str);
+
+    auto get_str = [&](int i) -> std::string {
+        return (i < argc) ? argv[i] : "";
+    };
+    auto get_dbl = [&](int i, double def) -> double {
+        if (i >= argc) return def;
+        std::string v = argv[i];
+        return v.empty() ? def : std::stod(v);
+    };
+    auto get_int = [&](int i, int def) -> int {
+        if (i >= argc) return def;
+        std::string v = argv[i];
+        return v.empty() ? def : std::stoi(v);
+    };
+
+    // arg[5]: 플래그 ("_"=빈 플래그)
+    if (argc > 5) {
+        p.flags = argv[5];
+        if (p.flags == "_") p.flags = "";
+    }
+
+    p.offset_ms    = get_dbl(6,  0.0);
+    p.length_ms    = get_dbl(7,  500.0);
+    p.consonant_ms = get_dbl(8,  0.0);
+    p.cutoff_ms    = get_dbl(9,  0.0);
+    p.volume       = get_int(10, 100);
+    p.modulation   = get_int(11, 0);
+
+    // arg[12]: 템포 "!120" 또는 숫자
+    if (argc > 12) {
+        std::string t = argv[12];
+        if (!t.empty() && t[0] == '!') t = t.substr(1);
+        if (!t.empty()) p.tempo = std::stod(t);
+    }
+
+    // arg[13]: pitch_bend (base64)
+    if (argc > 13) {
+        std::string pb = argv[13];
+        if (!pb.empty() && pb != "AA==")
+            p.pitch_bend = base64::decode(pb);
+    }
+
+    return p;
+}
+
+} // namespace resamp

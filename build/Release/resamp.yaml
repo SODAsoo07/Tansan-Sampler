@@ -1,0 +1,79 @@
+# Resamp — OpenUTAU Resampler Manifest
+# 이 파일을 resamp.exe 와 같은 폴더(Resamplers/)에 함께 배치하세요.
+# expression_filter: true 를 활성화하면 여기 없는 기본 표현은 자동으로 비활성화됩니다.
+
+expression_filter: true
+
+expressions:
+  gen:
+    name: Gender Factor (Formant)
+    abbr: gen
+    type: Numerical
+    min: -100
+    max: 100
+    default_value: 0
+    is_flag: true
+    flag: g
+  bre:
+    name: Breathiness
+    abbr: bre
+    type: Numerical
+    min: 0
+    max: 100
+    default_value: 50
+    is_flag: true
+    flag: B
+  tens:
+    name: Tension
+    abbr: tens
+    type: Numerical
+    min: -100
+    max: 100
+    default_value: 0
+    is_flag: true
+    flag: t
+  harm:
+    name: Harmonics
+    abbr: harm
+    type: Numerical
+    min: 0
+    max: 100
+    default_value: 100
+    is_flag: true
+    flag: H
+  merg:
+    name: Voiced Merge
+    abbr: merg
+    type: Numerical
+    min: 0
+    max: 100
+    default_value: 100
+    is_flag: true
+    flag: M
+  nois:
+    name: Noise Level
+    abbr: nois
+    type: Numerical
+    min: 0
+    max: 100
+    default_value: 0
+    is_flag: true
+    flag: N
+  pkcp:
+    name: Peak Compressor
+    abbr: pkcp
+    type: Numerical
+    min: 0
+    max: 100
+    default_value: 86
+    is_flag: true
+    flag: P
+  colr:
+    name: Voice Color
+    abbr: colr
+    type: Numerical
+    min: -100
+    max: 100
+    default_value: 0
+    is_flag: true
+    flag: c

@@ -1,0 +1,16 @@
+C:\Users\oyh57\SODAsoo1\Devs\Resamp\src\main.cpp;C:\Users\oyh57\SODAsoo1\Devs\Resamp\build\resamp.dir\Release\main.obj
+C:\Users\oyh57\SODAsoo1\Devs\Resamp\src\args\arg_parser.cpp;C:\Users\oyh57\SODAsoo1\Devs\Resamp\build\resamp.dir\Release\arg_parser.obj
+C:\Users\oyh57\SODAsoo1\Devs\Resamp\src\io\wav_reader.cpp;C:\Users\oyh57\SODAsoo1\Devs\Resamp\build\resamp.dir\Release\wav_reader.obj
+C:\Users\oyh57\SODAsoo1\Devs\Resamp\src\io\wav_writer.cpp;C:\Users\oyh57\SODAsoo1\Devs\Resamp\build\resamp.dir\Release\wav_writer.obj
+C:\Users\oyh57\SODAsoo1\Devs\Resamp\src\io\frq_reader.cpp;C:\Users\oyh57\SODAsoo1\Devs\Resamp\build\resamp.dir\Release\frq_reader.obj
+C:\Users\oyh57\SODAsoo1\Devs\Resamp\src\analysis\frame_slicer.cpp;C:\Users\oyh57\SODAsoo1\Devs\Resamp\build\resamp.dir\Release\frame_slicer.obj
+C:\Users\oyh57\SODAsoo1\Devs\Resamp\src\analysis\lpc_analyzer.cpp;C:\Users\oyh57\SODAsoo1\Devs\Resamp\build\resamp.dir\Release\lpc_analyzer.obj
+C:\Users\oyh57\SODAsoo1\Devs\Resamp\src\analysis\residual.cpp;C:\Users\oyh57\SODAsoo1\Devs\Resamp\build\resamp.dir\Release\residual.obj
+C:\Users\oyh57\SODAsoo1\Devs\Resamp\src\analysis\pitch_detector.cpp;C:\Users\oyh57\SODAsoo1\Devs\Resamp\build\resamp.dir\Release\pitch_detector.obj
+C:\Users\oyh57\SODAsoo1\Devs\Resamp\src\synth\pitch_mapper.cpp;C:\Users\oyh57\SODAsoo1\Devs\Resamp\build\resamp.dir\Release\pitch_mapper.obj
+C:\Users\oyh57\SODAsoo1\Devs\Resamp\src\synth\source_gen.cpp;C:\Users\oyh57\SODAsoo1\Devs\Resamp\build\resamp.dir\Release\source_gen.obj
+C:\Users\oyh57\SODAsoo1\Devs\Resamp\src\synth\kelly_lochbaum.cpp;C:\Users\oyh57\SODAsoo1\Devs\Resamp\build\resamp.dir\Release\kelly_lochbaum.obj
+C:\Users\oyh57\SODAsoo1\Devs\Resamp\src\synth\psola_splicer.cpp;C:\Users\oyh57\SODAsoo1\Devs\Resamp\build\resamp.dir\Release\psola_splicer.obj
+C:\Users\oyh57\SODAsoo1\Devs\Resamp\src\flags\flag_parser.cpp;C:\Users\oyh57\SODAsoo1\Devs\Resamp\build\resamp.dir\Release\flag_parser.obj
+C:\Users\oyh57\SODAsoo1\Devs\Resamp\src\post\volume.cpp;C:\Users\oyh57\SODAsoo1\Devs\Resamp\build\resamp.dir\Release\volume.obj
+C:\Users\oyh57\SODAsoo1\Devs\Resamp\src\util\math_util.cpp;C:\Users\oyh57\SODAsoo1\Devs\Resamp\build\resamp.dir\Release\math_util.obj
