@@ -1,7 +1,8 @@
 {
 	"InstallScripts" : 
 	[
-		"C:/Users/oyh57/SODAsoo1/Devs/Resamp/build/cmake_install.cmake"
+		"C:/Users/oyh57/SODAsoo1/Devs/Resamp/build/cmake_install.cmake",
+		"C:/Users/oyh57/SODAsoo1/Devs/Resamp/build/external/World/cmake_install.cmake"
 	],
 	"Parallel" : false
 }

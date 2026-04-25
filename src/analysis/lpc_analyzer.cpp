@@ -7,10 +7,10 @@ namespace resamp::analysis {
 
 LpcCoeffs analyze_lpc(const float* frame, int frame_len,
                       int order, int sample_rate) {
-    // 차수 자동 결정: 24차 (F1~F5까지 포먼트 표현, 안정성 유지)
-    // 48차는 float 오차로 발산; 24차는 충분한 표현력과 수치 안정성 균형
-    if (order <= 0) order = 24;
-    if (order > 30)  order = 30;          // 안전 상한
+    // 차수 자동 결정: 프리엠퍼시스 후 분석이므로 16차로도 F1~F8 포먼트 충분
+    // 24차 이상은 배음 구조까지 모델링 → 피치 의존적 반향감의 원인
+    if (order <= 0) order = 16;
+    if (order > 20)  order = 20;          // 안전 상한
     if (order > frame_len / 2) order = frame_len / 2;
 
     // ── 자기상관 계산 ──────────────────────────────────────────────────────
@@ -57,7 +57,9 @@ LpcCoeffs analyze_lpc(const float* frame, int frame_len,
     }
 
     // Bandwidth expansion (pole 반지름 축소) — γ^i 스케일로 안정성 보장
-    // γ=0.997: 0.994보다 완화 → 포먼트 선명도 유지하면서 발산 방지
+    // γ=0.997: 안정성 보장용 최소 bandwidth expansion
+    // 소스도 프리엠퍼시스 처리되므로 스펙트럼 불일치가 해소됨 → 포먼트를 넓힐 필요 없음
+    // 0.994는 Δ BW≈84Hz 추가 → 포먼트 과대역화 → 먹먹함의 또 다른 원인
     {
         const double gamma = 0.997;
         double gk = gamma;

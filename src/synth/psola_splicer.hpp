@@ -6,25 +6,19 @@
 
 namespace resamp::synth {
 
-// PSOLA 기반 접합: 분석 프레임들을 타깃 길이/피치로 OLA 합산
+// TD-PSOLA: 원본 신호 grain을 직접 OLA → 포먼트 자연 보존
 //
-// 처리 순서:
-//   1. 자음 영역: velocity에 따른 시간 스케일
-//   2. 모음 영역: 루프/크롭으로 target_length 충족
-//   3. 각 합성 마커에서 가장 가까운 분석 마커의 윈도우를 OLA 합산
-//
-// signal: 원본 신호 (자름 적용 후)
-// frames: slice_and_analyze() 결과
-// f0_contour: 타깃 F0 (샘플 단위, output_samples 길이)
-// output_samples: 출력 샘플 수
+// signal: 원본 신호 (트리밍 후, raw 도메인)
+// frames: 소스 F0/LPC (피치 마크 구성과 gender 워핑용)
+// f0_contour: 타겟 F0 (샘플 단위)
 std::vector<float> psola_splice(
-    const std::vector<float>&              signal,
+    const std::vector<float>&                   signal,
     const std::vector<analysis::AnalysisFrame>& frames,
-    const std::vector<double>&             f0_contour,
-    const RenderParams&                    params,
-    const SynthParams&                     sp,
-    int                                    sample_rate,
-    int                                    output_samples
+    const std::vector<double>&                  f0_contour,
+    const RenderParams&                         params,
+    const SynthParams&                          sp,
+    int                                         sample_rate,
+    int                                         output_samples
 );
 
 } // namespace resamp::synth

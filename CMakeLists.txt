@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(Resamp VERSION 0.1.0 LANGUAGES CXX)
+project(Resamp VERSION 0.2.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -17,6 +17,11 @@ else()
   link_libraries(m)
 endif()
 
+# ── WORLD 라이브러리 (vocoder) ─────────────────────────
+set(WORLD_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(WORLD_BUILD_TESTS    OFF CACHE BOOL "" FORCE)
+add_subdirectory(external/World)
+
 # ── 소스 목록 ──────────────────────────────────────────
 set(SOURCES
   src/main.cpp
@@ -24,14 +29,8 @@ set(SOURCES
   src/io/wav_reader.cpp
   src/io/wav_writer.cpp
   src/io/frq_reader.cpp
-  src/analysis/frame_slicer.cpp
-  src/analysis/lpc_analyzer.cpp
-  src/analysis/residual.cpp
-  src/analysis/pitch_detector.cpp
   src/synth/pitch_mapper.cpp
-  src/synth/source_gen.cpp
-  src/synth/kelly_lochbaum.cpp
-  src/synth/psola_splicer.cpp
+  src/synth/world_synth.cpp
   src/flags/flag_parser.cpp
   src/post/volume.cpp
   src/util/math_util.cpp
@@ -39,6 +38,7 @@ set(SOURCES
 
 add_executable(resamp ${SOURCES})
 target_include_directories(resamp PRIVATE src)
+target_link_libraries(resamp PRIVATE world)
 
 if(WIN32)
   target_compile_definitions(resamp PRIVATE
@@ -47,7 +47,3 @@ if(WIN32)
 endif()
 
 install(TARGETS resamp RUNTIME DESTINATION bin)
-
-# ── 크로스 컴파일 안내 ─────────────────────────────────
-# Linux → Windows MinGW:
-#   cmake -DCMAKE_TOOLCHAIN_FILE=toolchain-mingw64.cmake -DCMAKE_BUILD_TYPE=Release ..

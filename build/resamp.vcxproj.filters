@@ -16,28 +16,10 @@
     <ClCompile Include="C:\Users\oyh57\SODAsoo1\Devs\Resamp\src\io\frq_reader.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="C:\Users\oyh57\SODAsoo1\Devs\Resamp\src\analysis\frame_slicer.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="C:\Users\oyh57\SODAsoo1\Devs\Resamp\src\analysis\lpc_analyzer.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="C:\Users\oyh57\SODAsoo1\Devs\Resamp\src\analysis\residual.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="C:\Users\oyh57\SODAsoo1\Devs\Resamp\src\analysis\pitch_detector.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="C:\Users\oyh57\SODAsoo1\Devs\Resamp\src\synth\pitch_mapper.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="C:\Users\oyh57\SODAsoo1\Devs\Resamp\src\synth\source_gen.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="C:\Users\oyh57\SODAsoo1\Devs\Resamp\src\synth\kelly_lochbaum.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="C:\Users\oyh57\SODAsoo1\Devs\Resamp\src\synth\psola_splicer.cpp">
+    <ClCompile Include="C:\Users\oyh57\SODAsoo1\Devs\Resamp\src\synth\world_synth.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="C:\Users\oyh57\SODAsoo1\Devs\Resamp\src\flags\flag_parser.cpp">

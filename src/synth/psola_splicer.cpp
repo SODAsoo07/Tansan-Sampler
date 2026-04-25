@@ -1,6 +1,5 @@
 #include "psola_splicer.hpp"
-#include "kelly_lochbaum.hpp"
-#include "source_gen.hpp"
+#include "analysis/frame_slicer.hpp"
 #include "analysis/lpc_analyzer.hpp"
 #include "util/math_util.hpp"
 #include <cmath>
@@ -9,168 +8,217 @@
 
 namespace resamp::synth {
 
-// ── 분석 프레임에서 LPC 선형 보간 ────────────────────────────────────────
-static analysis::LpcCoeffs interp_lpc(
-    const std::vector<analysis::AnalysisFrame>& frames,
-    double src_sample_pos)
-{
-    if (frames.empty()) return {};
-
-    // src_sample_pos 기준으로 가장 가까운 두 프레임 찾기
-    int n = static_cast<int>(frames.size());
-    int idx = 0;
-    for (int i = 0; i < n; ++i) {
-        if (frames[i].center_sample <= static_cast<int>(src_sample_pos))
-            idx = i;
-        else
-            break;
-    }
-
-    if (idx >= n - 1) return frames[n - 1].lpc;
-
-    const auto& fa = frames[idx];
-    const auto& fb = frames[idx + 1];
-    double span = fb.center_sample - fa.center_sample;
-    if (span < 1.0) return fa.lpc;
-    double t = (src_sample_pos - fa.center_sample) / span;
-    t = math::clamp(t, 0.0, 1.0);
-
-    // 계수 보간
-    analysis::LpcCoeffs out;
-    int P = std::min(static_cast<int>(fa.lpc.a.size()),
-                     static_cast<int>(fb.lpc.a.size()));
-    out.order = P;
-    out.a.resize(P);
-    out.k.resize(P);
-    for (int i = 0; i < P; ++i) {
-        out.a[i] = static_cast<float>(
-            fa.lpc.a[i] * (1.0 - t) + fb.lpc.a[i] * t);
-    }
-    out.gain = static_cast<float>(
-        fa.lpc.gain * (1.0 - t) + fb.lpc.gain * t);
-    return out;
-}
-
-// ── 원본 위치 계산 (자음 속도 + 모음 루프) ───────────────────────────────
 static double compute_src_position(
-    int out_sample,
-    int /*output_samples*/,
-    const RenderParams& params,
-    int N_src,
-    int sample_rate)
+    int out_sample, const RenderParams& params, int N_src, int sample_rate)
 {
     double consonant_scale = params.velocity / 100.0;
     if (consonant_scale < 0.01) consonant_scale = 0.01;
-
-    int consonant_src_smp = static_cast<int>(
-        params.consonant_ms * sample_rate / 1000.0);
-    int consonant_tgt_smp = static_cast<int>(
-        consonant_src_smp * consonant_scale);
-
+    int consonant_src_smp = static_cast<int>(params.consonant_ms * sample_rate / 1000.0);
+    int consonant_tgt_smp = static_cast<int>(consonant_src_smp * consonant_scale);
     if (out_sample <= consonant_tgt_smp) {
-        // 자음 영역: 역스케일
         return out_sample / consonant_scale;
     } else {
-        // 모음 영역: consonant 이후를 루프
-        int vowel_offset = out_sample - consonant_tgt_smp;
+        int vowel_offset  = out_sample - consonant_tgt_smp;
         int vowel_src_len = N_src - consonant_src_smp;
         if (vowel_src_len <= 0) return consonant_src_smp;
-        int vowel_loop = vowel_offset % vowel_src_len;
-        return consonant_src_smp + vowel_loop;
+        return consonant_src_smp + vowel_offset % vowel_src_len;
     }
 }
 
-// ── 메인 합성 ─────────────────────────────────────────────────────────────
-// 샘플 단위 합성:
-//   1. 출력 위치 → 원본 대응 위치 계산
-//   2. 해당 위치의 LPC 보간
-//   3. KL 필터에 LPC 설정
-//   4. 타깃 F0 소스 샘플 → KL 필터 통과 → 출력
-std::vector<float> psola_splice(
-    const std::vector<float>&              signal,
-    const std::vector<analysis::AnalysisFrame>& frames,
-    const std::vector<double>&             f0_contour,
-    const RenderParams&                    params,
-    const SynthParams&                     sp,
-    int                                    sample_rate,
-    int                                    output_samples)
+static double get_f0_at_sample(
+    const std::vector<analysis::AnalysisFrame>& frames, int sample)
 {
-    int N_src = static_cast<int>(signal.size());
+    if (frames.empty()) return 0.0;
+    int lo = 0, hi = static_cast<int>(frames.size()) - 1;
+    while (lo < hi) {
+        int mid = (lo + hi) >> 1;
+        if (frames[mid].center_sample < sample) lo = mid + 1;
+        else hi = mid;
+    }
+    if (lo > 0 && std::abs(frames[lo-1].center_sample - sample) <=
+                  std::abs(frames[lo  ].center_sample - sample)) --lo;
+    return frames[lo].f0;
+}
 
-    // 타깃 F0 소스 신호 생성 (출력 길이)
-    auto source = generate_source(f0_contour, sample_rate, sp);
+// ── Simple TD-PSOLA ──────────────────────────────────────────────────────
+//
+// 원본 신호 grain을 직접 OLA. 리샘플링·LPC 합성 필터 모두 사용 안 함.
+// → 포먼트는 원본 파형이 자연 반영되어 보존됨 (Mickey-Mouse 효과 없음)
+// → IIR 없으므로 ringing/buzzing 아티팩트 없음
+//
+// Pitch UP  (f_tgt > f_src): grain = 2·T_src (소스 1주기 포함)
+// Pitch DOWN (f_tgt ≤ f_src): grain = 2·T_tgt (50% COLA)
+// → wsum 정규화가 비 50% 오버랩 자동 보정
+//
+// Gender 플래그: per-grain LPC 분석 + 워핑 (raw grain에 직접 적용,
+//   리샘플링 없으므로 스펙트럼 불일치로 인한 IIR 발산 위험 낮음)
+std::vector<float> psola_splice(
+    const std::vector<float>&                   signal,
+    const std::vector<analysis::AnalysisFrame>& frames,
+    const std::vector<double>&                  f0_contour,
+    const RenderParams&                         params,
+    const SynthParams&                          sp,
+    int                                         sample_rate,
+    int                                         output_samples)
+{
+    if (params.target_hz <= 0.0)
+        return std::vector<float>(output_samples, 0.0f);
 
-    // KL 필터 초기화
-    KellyLochbaumFilter kl(64);
-
-    // 원본 RMS (볼륨 기준)
+    int    N_src   = static_cast<int>(signal.size());
     double src_rms = math::rms(signal.data(), N_src);
-    if (src_rms < 1e-6) src_rms = 0.1;  // 무음 소스 방어
+    if (src_rms < 1e-6) src_rms = 0.1;
 
-    std::cerr << "[Resamp] N_src=" << N_src
-              << " frames=" << frames.size()
-              << " src_rms=" << src_rms
-              << " output_samples=" << output_samples << '\n';
+    float warp_lambda = -sp.gender / 300.0f;
+    bool  do_warp     = std::fabs(warp_lambda) > 0.005f;
 
-    // LPC 업데이트 간격
-    // 256→128: 더 촘촘한 포먼트 추적, smooth=true로 전환 시 클릭 제거
-    const int UPDATE_INTERVAL = 128;
-    int prev_frame_idx = -1;
+    std::cerr << "[Resamp] TD-PSOLA N_src=" << N_src
+              << " output=" << output_samples
+              << " warp=" << warp_lambda << '\n';
+
+    // ── 소스 피치 마크 구성 ───────────────────────────────────────────────
+    std::vector<int> src_marks;
+    {
+        const int n_frames = static_cast<int>(frames.size());
+        int fi = 0;
+        double pos = 0.0;
+        while (static_cast<int>(std::round(pos)) < N_src) {
+            src_marks.push_back(static_cast<int>(std::round(pos)));
+            while (fi + 1 < n_frames &&
+                   std::abs(frames[fi+1].center_sample - (int)pos) <
+                   std::abs(frames[fi  ].center_sample - (int)pos)) ++fi;
+            double f0h = (fi < n_frames && frames[fi].f0 >= 50.0) ? frames[fi].f0 : 0.0;
+            pos += (f0h > 0.0) ? (sample_rate / f0h) : (sample_rate * 0.005);
+        }
+    }
+    std::cerr << "[Resamp] src_marks=" << src_marks.size() << '\n';
 
     std::vector<float> output(output_samples, 0.0f);
+    std::vector<float> wsum  (output_samples, 0.0f);
+
+    const int LPC_ORDER = 16;
+    double phase = 0.5;
 
     for (int i = 0; i < output_samples; ++i) {
-        // 원본 대응 위치
-        double src_pos = compute_src_position(i, output_samples, params, N_src, sample_rate);
-        src_pos = math::clamp(src_pos, 0.0, static_cast<double>(N_src - 1));
+        double f0 = (i < (int)f0_contour.size()) ? f0_contour[i] : params.target_hz;
+        if (f0 < 10.0) f0 = params.target_hz;
+        if (f0 < 20.0) { phase = 0.5; continue; }
 
-        // LPC 업데이트 (매 UPDATE_INTERVAL 샘플마다 또는 첫 샘플)
-        if (i % UPDATE_INTERVAL == 0 || prev_frame_idx < 0) {
-            auto lpc = interp_lpc(frames, src_pos);
-            if (lpc.order > 0) {
-                // smooth=true: bandwidth expansion(γ=0.997) 덕분에 필터 안정
-                // → 전환 구간 64샘플 크로스페이드로 클릭/기계음 제거
-                // apply_gain=false: 새 소스 사용 시 gain 무시 (에너지 제어는 별도)
-                kl.set_coeffs(lpc, /*smooth=*/true, /*apply_gain=*/false);
+        phase += f0 / sample_rate;
+        if (phase < 1.0) continue;
+        phase -= 1.0;
+
+        double src_d = compute_src_position(i, params, N_src, sample_rate);
+        src_d = math::clamp(src_d, 0.0, (double)(N_src - 1));
+        int src_c = (int)std::round(src_d);
+
+        // 소스 피치 마크 스냅
+        if (!src_marks.empty()) {
+            auto it = std::lower_bound(src_marks.begin(), src_marks.end(), src_c);
+            if      (it == src_marks.end())   src_c = src_marks.back();
+            else if (it == src_marks.begin()) src_c = *it;
+            else {
+                auto pi = std::prev(it);
+                src_c = (std::abs(*it - src_c) < std::abs(*pi - src_c)) ? *it : *pi;
             }
-            prev_frame_idx = 0;
+            src_c = (int)math::clamp((double)src_c, 0.0, (double)(N_src-1));
         }
 
-        // 소스 샘플 가져오기
-        float src_samp = (i < static_cast<int>(source.size())) ? source[i] : 0.0f;
+        // 윈도우 크기 결정
+        int hw_tgt = std::max(32, std::min(4096, (int)std::round(sample_rate / f0)));
+        double f0_src = get_f0_at_sample(frames, src_c);
+        bool voiced = (f0_src >= 50.0);
+        int hw_src = voiced
+            ? std::max(32, std::min(4096, (int)std::round(sample_rate / f0_src)))
+            : hw_tgt;
+        int hw_g   = std::max(hw_tgt, hw_src);
+        int win_lg = 2 * hw_g;
 
-        // KL 필터 통과 (성도 합성)
-        output[i] = kl.process(src_samp);
+        // ── 일반 경로: 원본 샘플 직접 OLA (포먼트 자연 보존) ───────────
+        if (!do_warp) {
+            for (int d = -hw_g; d <= hw_g; ++d) {
+                int oi = i + d;
+                int si = src_c + d;
+                if (oi < 0 || oi >= output_samples) continue;
+                if (si < 0 || si >= N_src)          continue;
+                float w = (float)(0.5*(1.0-std::cos(2.0*math::PI*(d+hw_g)/win_lg)));
+                output[oi] += signal[si] * w;
+                wsum[oi]   += w;
+            }
+            continue;
+        }
+
+        // ── 젠더 플래그: per-grain LPC 워핑 ──────────────────────────────
+        int grain_len = win_lg + 1;
+        std::vector<float> grain(grain_len, 0.0f);
+        for (int d = -hw_g; d <= hw_g; ++d) {
+            int si = src_c + d;
+            if (si >= 0 && si < N_src) grain[d + hw_g] = signal[si];
+        }
+
+        std::vector<float> grain_w(grain_len);
+        for (int k = 0; k < grain_len; ++k)
+            grain_w[k] = grain[k] * (float)(0.5*(1.0-std::cos(2.0*math::PI*k/win_lg)));
+
+        auto lpc_g = analysis::analyze_lpc(grain_w.data(), grain_len, LPC_ORDER, sample_rate);
+
+        if (lpc_g.order > 0 && lpc_g.gain > 1e-10f) {
+            auto lpc_w = analysis::warp_lpc(lpc_g, warp_lambda);
+            int P = lpc_g.order;
+
+            std::vector<float> residual(grain_len, 0.0f);
+            for (int n = 0; n < grain_len; ++n) {
+                float e = grain[n];
+                for (int k = 0; k < P && n-1-k >= 0; ++k)
+                    e += lpc_g.a[k] * grain[n-1-k];
+                residual[n] = e;
+            }
+
+            std::vector<float> grain_out(grain_len, 0.0f);
+            for (int n = 0; n < grain_len; ++n) {
+                float s = residual[n];
+                for (int k = 0; k < P && n-1-k >= 0; ++k)
+                    s -= lpc_w.a[k] * grain_out[n-1-k];
+                grain_out[n] = std::isfinite(s) ? s : grain[n];
+            }
+
+            for (int d = -hw_g; d <= hw_g; ++d) {
+                int oi = i + d;
+                if (oi < 0 || oi >= output_samples) continue;
+                int gi = d + hw_g;
+                float w = (float)(0.5*(1.0-std::cos(2.0*math::PI*gi/win_lg)));
+                output[oi] += grain_out[gi] * w;
+                wsum[oi]   += w;
+            }
+        } else {
+            // LPC 실패 시 raw grain 직접 OLA
+            for (int d = -hw_g; d <= hw_g; ++d) {
+                int oi = i + d;
+                if (oi < 0 || oi >= output_samples) continue;
+                int gi = d + hw_g;
+                float w = (float)(0.5*(1.0-std::cos(2.0*math::PI*gi/win_lg)));
+                output[oi] += grain[gi] * w;
+                wsum[oi]   += w;
+            }
+        }
     }
 
-    // 출력 RMS를 원본 RMS에 맞춰 스케일 (자연스러운 음량)
+    // OLA 정규화
+    for (int i = 0; i < output_samples; ++i)
+        if (wsum[i] > 1e-10f) output[i] /= wsum[i];
+
+    // RMS 맞춤
     double out_rms = math::rms(output.data(), output_samples);
-    std::cerr << "[Resamp] out_rms=" << out_rms << '\n';
+    std::cerr << "[Resamp] PSOLA out_rms=" << out_rms << " src_rms=" << src_rms << '\n';
     if (out_rms > 1e-10) {
-        float scale = static_cast<float>(src_rms / out_rms);
-        // 상한만 제한: 무음에 가까운 출력을 과도하게 증폭하지 않음
-        // 하한 없음: 필터 게인이 높아도 필요한 만큼 scale-down 허용
-        if (scale > 5.0f) scale = 5.0f;
+        float scale = (float)std::min(5.0, src_rms / out_rms);
         for (auto& s : output) s *= scale;
     } else {
-        // 필터가 무음을 출력한 경우 — 소스를 직접 출력 (폴백)
-        std::cerr << "[Resamp] Warning: KL filter produced silence! Falling back to source passthrough.\n";
-        for (int i = 0; i < output_samples; ++i)
-            output[i] = (i < static_cast<int>(source.size())) ? source[i] : 0.0f;
-        // 소스 RMS로 정규화
-        double s_rms = math::rms(output.data(), output_samples);
-        if (s_rms > 1e-10) {
-            float scale = static_cast<float>(src_rms / s_rms);
-            for (auto& s : output) s *= scale;
+        std::cerr << "[Resamp] Warning: silence fallback\n";
+        for (int i = 0; i < output_samples; ++i) {
+            double sd = compute_src_position(i, params, N_src, sample_rate);
+            output[i] = signal[(int)math::clamp(sd, 0.0, (double)(N_src-1))];
         }
     }
-
-    // 소프트 클리핑 (-0.9 ~ +0.9 범위로 제한)
-    for (auto& s : output) {
-        if (s >  1.0f) s =  1.0f;
-        if (s < -1.0f) s = -1.0f;
-    }
-
     return output;
 }
 

@@ -37,7 +37,7 @@ private:
     bool  use_gain_  = true;
     int   order_    = 0;
     int   smooth_cnt_ = 0;         // smooth 전환 카운터
-    static constexpr int SMOOTH_N = 64; // smooth 전환 샘플 수
+    static constexpr int SMOOTH_N = 32; // smooth 전환 샘플 수 (64→32: 전환 시간 단축)
 };
 
 } // namespace resamp::synth

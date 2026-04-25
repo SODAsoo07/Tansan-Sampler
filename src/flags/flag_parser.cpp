@@ -31,8 +31,7 @@ SynthParams parse_flags(const std::string& s) {
         if      (name == "g") p.gender      = math::clamp(val, -100, 100);
         else if (name == "B") p.brightness  = math::clamp(val, 0, 100);
         else if (name == "t") p.tension     = math::clamp(val, -100, 100);
-        else if (name == "H") p.harmonics   = math::clamp(val, 0, 100);
-        else if (name == "M") p.merge       = math::clamp(val, 0, 100);
+        else if (name == "Hr") p.harmonics  = math::clamp(val, 0, 100);
         else if (name == "N") p.noise_level = math::clamp(val, 0, 100);
         else if (name == "P") p.peak_comp   = math::clamp(val, 0, 100);
         else if (name == "c") p.voice_color = math::clamp(val, -100, 100);

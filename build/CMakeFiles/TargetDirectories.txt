@@ -2,3 +2,7 @@ C:/Users/oyh57/SODAsoo1/Devs/Resamp/build/CMakeFiles/resamp.dir
 C:/Users/oyh57/SODAsoo1/Devs/Resamp/build/CMakeFiles/INSTALL.dir
 C:/Users/oyh57/SODAsoo1/Devs/Resamp/build/CMakeFiles/ALL_BUILD.dir
 C:/Users/oyh57/SODAsoo1/Devs/Resamp/build/CMakeFiles/ZERO_CHECK.dir
+C:/Users/oyh57/SODAsoo1/Devs/Resamp/build/external/World/CMakeFiles/world.dir
+C:/Users/oyh57/SODAsoo1/Devs/Resamp/build/external/World/CMakeFiles/world_tool.dir
+C:/Users/oyh57/SODAsoo1/Devs/Resamp/build/external/World/CMakeFiles/INSTALL.dir
+C:/Users/oyh57/SODAsoo1/Devs/Resamp/build/external/World/CMakeFiles/ALL_BUILD.dir

@@ -1,0 +1,90 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="C:\Users\oyh57\SODAsoo1\Devs\Resamp\external\World\src\cheaptrick.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\oyh57\SODAsoo1\Devs\Resamp\external\World\src\codec.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\oyh57\SODAsoo1\Devs\Resamp\external\World\src\common.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\oyh57\SODAsoo1\Devs\Resamp\external\World\src\d4c.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\oyh57\SODAsoo1\Devs\Resamp\external\World\src\dio.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\oyh57\SODAsoo1\Devs\Resamp\external\World\src\fft.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\oyh57\SODAsoo1\Devs\Resamp\external\World\src\harvest.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\oyh57\SODAsoo1\Devs\Resamp\external\World\src\matlabfunctions.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\oyh57\SODAsoo1\Devs\Resamp\external\World\src\stonemask.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\oyh57\SODAsoo1\Devs\Resamp\external\World\src\synthesis.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\oyh57\SODAsoo1\Devs\Resamp\external\World\src\synthesisrealtime.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="C:\Users\oyh57\SODAsoo1\Devs\Resamp\external\World\src\world\cheaptrick.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\oyh57\SODAsoo1\Devs\Resamp\external\World\src\world\codec.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\oyh57\SODAsoo1\Devs\Resamp\external\World\src\world\common.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\oyh57\SODAsoo1\Devs\Resamp\external\World\src\world\constantnumbers.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\oyh57\SODAsoo1\Devs\Resamp\external\World\src\world\d4c.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\oyh57\SODAsoo1\Devs\Resamp\external\World\src\world\dio.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\oyh57\SODAsoo1\Devs\Resamp\external\World\src\world\fft.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\oyh57\SODAsoo1\Devs\Resamp\external\World\src\world\harvest.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\oyh57\SODAsoo1\Devs\Resamp\external\World\src\world\macrodefinitions.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\oyh57\SODAsoo1\Devs\Resamp\external\World\src\world\matlabfunctions.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\oyh57\SODAsoo1\Devs\Resamp\external\World\src\world\stonemask.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\oyh57\SODAsoo1\Devs\Resamp\external\World\src\world\synthesis.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\oyh57\SODAsoo1\Devs\Resamp\external\World\src\world\synthesisrealtime.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="C:\Users\oyh57\SODAsoo1\Devs\Resamp\external\World\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{3FF4B3B9-D613-344D-B6BB-482D43C1A2D0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{29030F8F-6ACE-34A7-95F6-DA8D019151BF}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>
