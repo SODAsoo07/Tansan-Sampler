@@ -634,11 +634,12 @@ std::vector<float> world_render(
     double vtl = std::clamp(sp.tract_length / 100.0, -1.0, 1.0);
     double vtr = std::clamp(sp.tract_resonance / 100.0, -1.0, 1.0);
     double vtw = std::clamp(sp.tract_focus / 100.0, -1.0, 1.0);
-    double vc_amt = std::pow(std::clamp(sp.tract_constriction / 100.0, 0.0, 1.0), 0.80);
-    double nn_amt = std::pow(std::clamp(sp.nasal_coupling / 100.0, 0.0, 1.0), 0.82);
-    double vtl_eff = (vtl >= 0.0) ? std::pow(vtl, 0.78) : -std::pow(-vtl, 0.78);
-    double vtr_eff = (vtr >= 0.0) ? std::pow(vtr, 0.78) : -std::pow(-vtr, 0.78);
-    double vtw_eff = (vtw >= 0.0) ? std::pow(vtw, 0.76) : -std::pow(-vtw, 0.76);
+    // 체감 강도를 높이기 위해 저값 구간 응답을 키움.
+    double vc_amt = std::pow(std::clamp(sp.tract_constriction / 100.0, 0.0, 1.0), 0.62);
+    double nn_amt = std::pow(std::clamp(sp.nasal_coupling / 100.0, 0.0, 1.0), 0.64);
+    double vtl_eff = (vtl >= 0.0) ? std::pow(vtl, 0.60) : -std::pow(-vtl, 0.60);
+    double vtr_eff = (vtr >= 0.0) ? std::pow(vtr, 0.60) : -std::pow(-vtr, 0.60);
+    double vtw_eff = (vtw >= 0.0) ? std::pow(vtw, 0.58) : -std::pow(-vtw, 0.58);
     // 기본 톤 캘리브레이션: 고역/잔향 과강조 완화
     double global_hi_tilt_db = -2.4;
     double global_hi_ap_trim = 0.045;
@@ -926,9 +927,12 @@ std::vector<float> world_render(
             std::fabs(vtr_eff) > 0.01 ||
             std::fabs(vtw_eff) > 0.01 ||
             vc_amt > 0.01 || nn_amt > 0.01 || std::fabs(mo_eff) > 0.01) {
+            double max_ctrl = std::max({std::fabs(vtl_eff), std::fabs(vtr_eff), std::fabs(vtw_eff),
+                                        vc_amt, nn_amt, std::fabs(mo_eff)});
+            double tract_drive = 0.45 + 1.45 * std::pow(max_ctrl, 0.76); // 중간값 체감 강화
             if (std::fabs(vtl_eff) > 0.01 && !tract_warp_buf.empty()) {
                 // Vtl: 성도 길이 이동(추가 formant warp)
-                double tract_ratio = std::exp(-vtl_eff / 6.6); // ~0.86..1.17
+                double tract_ratio = std::exp(-vtl_eff / 4.3); // ~0.79..1.27 (강화)
                 double tract_inv = 1.0 / tract_ratio;
                 for (int k = 0; k < spec_dim; ++k) {
                     double src_k = k * tract_inv;
@@ -943,7 +947,7 @@ std::vector<float> world_render(
 
             double e0 = 0.0;
             double e1 = 0.0;
-            double focus_sigma = std::clamp(0.95 - 0.30 * vtw_eff, 0.58, 1.35);
+            double focus_sigma = std::clamp(0.92 - 0.44 * vtw_eff, 0.45, 1.55);
             double mo_tr = mo_eff;
             for (int k = 0; k < spec_dim; ++k) {
                 double p0 = std::max(0.0, out_spec[i][k]);
@@ -952,9 +956,9 @@ std::vector<float> world_render(
                 double fn = static_cast<double>(k) / std::max(1, spec_dim - 1);
                 double hz = fn * (fs * 0.5);
 
-                double c1 = std::clamp(760.0 + 520.0 * (vtr_eff + 0.35 * mo_tr), 280.0, 1900.0);
-                double c2 = std::clamp(1650.0 + 840.0 * (vtr_eff + 0.18 * mo_tr), 700.0, 4200.0);
-                double c3 = std::clamp(2950.0 + 1220.0 * vtr_eff, 1300.0, 7000.0);
+                double c1 = std::clamp(740.0 + 720.0 * (vtr_eff + 0.36 * mo_tr), 220.0, 2200.0);
+                double c2 = std::clamp(1600.0 + 1160.0 * (vtr_eff + 0.20 * mo_tr), 520.0, 5200.0);
+                double c3 = std::clamp(2850.0 + 1700.0 * vtr_eff, 900.0, 8500.0);
                 double x1 = std::log2((hz + 120.0) / c1);
                 double x2 = std::log2((hz + 120.0) / c2);
                 double x3 = std::log2((hz + 120.0) / c3);
@@ -970,23 +974,24 @@ std::vector<float> world_render(
 
                 double db = 0.0;
                 // Mo를 tract layer에 추가 반영 (기존 Mo 톤 이동과 병행)
-                db += mo_tr * (4.2 * f1 + 1.3 * f2 - 1.2 * high);
-                db += vtr_eff * (2.8 * (0.78 * f2 + 0.70 * f3 - 0.35 * f1));
-                db += vtw_eff * (2.2 * ((f2 + f3) - 0.90 * std::exp(-0.5 * std::pow((fn - 0.34) / 0.17, 2.0))));
-                db += vc_amt * (3.8 * constr_hi - 1.7 * constr_low);
-                db += nn_amt * (2.6 * nasal_form - 3.0 * nasal_notch);
-                db = std::clamp(db, -16.0, 16.0);
+                db += mo_tr * (5.6 * f1 + 1.9 * f2 - 1.8 * high);
+                db += vtr_eff * (4.4 * (0.82 * f2 + 0.76 * f3 - 0.40 * f1));
+                db += vtw_eff * (3.6 * ((f2 + f3) - 0.88 * std::exp(-0.5 * std::pow((fn - 0.34) / 0.17, 2.0))));
+                db += vc_amt * (6.2 * constr_hi - 2.7 * constr_low);
+                db += nn_amt * (4.8 * nasal_form - 5.3 * nasal_notch);
+                db *= tract_drive;
+                db = std::clamp(db, -24.0, 24.0);
                 out_spec[i][k] = p0 * std::pow(10.0, db / 10.0);
                 e1 += out_spec[i][k];
 
                 double ap_delta = 0.0;
-                ap_delta += vc_amt * (0.05 + 0.14 * constr_hi);
-                ap_delta += nn_amt * (0.03 + 0.10 * nasal_form - 0.06 * nasal_notch);
+                ap_delta += vc_amt * tract_drive * (0.08 + 0.22 * constr_hi);
+                ap_delta += nn_amt * tract_drive * (0.05 + 0.18 * nasal_form - 0.11 * nasal_notch);
                 out_ap[i][k] = std::clamp(out_ap[i][k] + ap_delta, 0.0, 1.0);
             }
             if (e0 > 1.0e-12 && e1 > 1.0e-12) {
                 double norm = e0 / e1;
-                norm = std::clamp(norm, 0.72, 1.45);
+                norm = std::clamp(norm, 0.68, 1.52);
                 for (int k = 0; k < spec_dim; ++k) out_spec[i][k] *= norm;
             }
         }

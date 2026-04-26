@@ -151,7 +151,7 @@ expressions:
     flag: Tr
   cstab:
     name: Consonant Stability
-    abbr: cstab
+    abbr: cstb
     type: Numerical
     min: 0
     max: 100
