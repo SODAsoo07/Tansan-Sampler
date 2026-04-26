@@ -1,0 +1,420 @@
+2026-04-26 20:52:49.420 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:49.424 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:49.428 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:49.432 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:49.436 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:49.440 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:49.444 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:49.448 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:49.456 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:49.460 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:49.464 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:49.468 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:49.472 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:49.476 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:49.480 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:49.484 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:49.488 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:49.493 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:49.496 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:49.500 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:49.504 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:49.506 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:49.508 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:49.512 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:49.516 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:49.520 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:49.524 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:49.528 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:49.532 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:49.536 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:49.540 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:49.544 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:49.548 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:49.656 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:49.788 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:49.796 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:49.800 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:49.804 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:49.812 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:49.820 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:49.828 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:49.832 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:49.836 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:49.848 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:49.852 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:49.856 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:49.870 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:49.886 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:49.890 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:49.904 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:49.916 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:49.924 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:49.936 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:49.944 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:49.956 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:49.960 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:49.968 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:49.976 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:49.993 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.012 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.020 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.024 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.032 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.040 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.048 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.056 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.061 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.064 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.068 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.076 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.084 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.088 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.093 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.096 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.100 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.108 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.112 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.114 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.118 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.122 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.128 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.132 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.136 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.140 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.144 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.148 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.152 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.160 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.168 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.172 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.180 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.188 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.196 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.200 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.204 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.208 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.216 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.220 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.228 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.236 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.240 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.244 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.248 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.252 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.264 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.272 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.276 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.296 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.304 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.308 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.312 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.316 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.320 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.324 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.328 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.332 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.336 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.340 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.344 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.348 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.352 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.360 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.364 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.368 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.370 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.376 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.380 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.384 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.385 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.388 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.392 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.396 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.398 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.402 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.406 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.410 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.416 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.420 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.424 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.428 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.432 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.434 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.436 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.440 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.444 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.448 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.452 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.568 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:50.600 +09:00 [INF] ExecuteCmd Set phoneme expression mo
+2026-04-26 20:52:51.020 +09:00 [INF] undoGroup ended
+2026-04-26 20:52:51.021 +09:00 [INF] Publish notification Pre-render notification.
+2026-04-26 20:52:51.863 +09:00 [WRN] Part rendered. not on main thread
+2026-04-26 20:52:51.863 +09:00 [INF] Publish notification Part rendered.
+2026-04-26 20:52:51.867 +09:00 [INF] StartPlayback at 00:00:04.3706896
+2026-04-26 20:52:51.879 +09:00 [INF]  > [thread-15] C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Resamplers\resamp.exe "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-db464910.wav" "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\res-0603e9a4-1692fa1b23be4eb2.wav" F5 100 "g0Bi50Hu0Mo-68Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0" 1454.88 200 131.52 -433.56 100 0 !145 848584879A9I9T9g9u9++O+f+w/B/Q/e/q/z/6//AA#8#
+2026-04-26 20:52:51.879 +09:00 [INF]  > [thread-8] C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Resamplers\resamp.exe "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-38ea4e3b.wav" "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\res-0603e9a4-b47b4cac890ba369.wav" C5 100 "g0Bi50Hu0Mo100Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0" 951.47 350 300 -422.68 100 0 !145 AA#25#ANAp88B5Cl9YBJBV9TAqC09Y
+2026-04-26 20:52:51.879 +09:00 [INF]  > [thread-19] C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Resamplers\resamp.exe "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-5f1d8399.wav" "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\res-0603e9a4-6ab08b32baa54ef5.wav" G5 100 "g0Bi50Hu0Mo-1Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0" 1706.12 350 229.48 -263.04 100 0 !145 AA#65#/+/6
+2026-04-26 20:52:51.879 +09:00 [INF]  > [thread-10] C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Resamplers\resamp.exe "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-7d9e47bc.wav" "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\res-0603e9a4-b9faa611277ee8eb.wav" D5 100 "g0Bi50Hu0Mo100Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0" 2233.11 250 215.87 -238.55 100 0 !145 9y899Y96+K+S+f+w/B/T/g/r/z/6//AA#30#ACAEAIANAV
+2026-04-26 20:52:51.879 +09:00 [INF]  > [thread-18] C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Resamplers\resamp.exe "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-11320e94.wav" "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\res-0603e9a4-485796e6aca1303d.wav" G5 100 "g0Bi50Hu0Mo-85Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0" 2026.3 400 359.18 -437.19 100 0 !145 84#22#85889C9L9W9j9y+C+S+j+0/E/T/h/s/1/7//AA#39#
+2026-04-26 20:52:51.918 +09:00 [ERR] ProcessRunner >>> [thread-10] [Resamp] in=C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-7d9e47bc.wav pitch=D5 vel=100 flags=g0Bi50Hu0Mo100Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0 off=2233.11 len=250 con=215.87 cut=-238.55 vol=100
+2026-04-26 20:52:51.919 +09:00 [ERR] ProcessRunner >>> [thread-8] [Resamp] in=C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-38ea4e3b.wav pitch=C5 vel=100 flags=g0Bi50Hu0Mo100Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0 off=951.47 len=350 con=300 cut=-422.68 vol=100
+2026-04-26 20:52:51.921 +09:00 [ERR] ProcessRunner >>> [thread-15] [Resamp] in=C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-db464910.wav pitch=F5 vel=100 flags=g0Bi50Hu0Mo-68Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0 off=1454.88 len=200 con=131.52 cut=-433.56 vol=100
+2026-04-26 20:52:51.923 +09:00 [ERR] ProcessRunner >>> [thread-18] [Resamp] in=C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-11320e94.wav pitch=G5 vel=100 flags=g0Bi50Hu0Mo-85Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0 off=2026.3 len=400 con=359.18 cut=-437.19 vol=100
+2026-04-26 20:52:51.925 +09:00 [ERR] ProcessRunner >>> [thread-19] [Resamp] in=C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-5f1d8399.wav pitch=G5 vel=100 flags=g0Bi50Hu0Mo-1Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0 off=1706.12 len=350 con=229.48 cut=-263.04 vol=100
+2026-04-26 20:52:51.930 +09:00 [ERR] ProcessRunner >>> [thread-10] [Resamp] WAV: sr=44100 ch=1 samples=259840
+2026-04-26 20:52:51.930 +09:00 [ERR] ProcessRunner >>> [thread-10] [Resamp] flags parsed: g=0 Bi=50 Hu=0 Mo=100 Tn=0 t=0 Gr=0 Vtl=0 Vtr=0 Vtw=0 Vc=0 Nn=0 H=70 N=0 Bh=0 Tr=100 Cs=50 At=0 Rl=0 Ns=0 P=86 c=0
+2026-04-26 20:52:51.931 +09:00 [ERR] ProcessRunner >>> [thread-8] [Resamp] WAV: sr=44100 ch=1 samples=261632
+2026-04-26 20:52:51.931 +09:00 [ERR] ProcessRunner >>> [thread-8] [Resamp] flags parsed: g=0 Bi=50 Hu=0 Mo=100 Tn=0 t=0 Gr=0 Vtl=0 Vtr=0 Vtw=0 Vc=0 Nn=0 H=70 N=0 Bh=0 Tr=100 Cs=50 At=0 Rl=0 Ns=0 P=86 c=0
+2026-04-26 20:52:51.936 +09:00 [ERR] ProcessRunner >>> [thread-19] [Resamp] WAV: sr=44100 ch=1 samples=257152
+2026-04-26 20:52:51.936 +09:00 [ERR] ProcessRunner >>> [thread-19] [Resamp] flags parsed: g=0 Bi=50 Hu=0 Mo=-1 Tn=0 t=0 Gr=0 Vtl=0 Vtr=0 Vtw=0 Vc=0 Nn=0 H=70 N=0 Bh=0 Tr=100 Cs=50 At=0 Rl=0 Ns=0 P=86 c=0
+2026-04-26 20:52:51.936 +09:00 [ERR] ProcessRunner >>> [thread-15] [Resamp] WAV: sr=44100 ch=1 samples=258944
+2026-04-26 20:52:51.937 +09:00 [ERR] ProcessRunner >>> [thread-15] [Resamp] flags parsed: g=0 Bi=50 Hu=0 Mo=-68 Tn=0 t=0 Gr=0 Vtl=0 Vtr=0 Vtw=0 Vc=0 Nn=0 H=70 N=0 Bh=0 Tr=100 Cs=50 At=0 Rl=0 Ns=0 P=86 c=0
+2026-04-26 20:52:51.939 +09:00 [ERR] ProcessRunner >>> [thread-18] [Resamp] WAV: sr=44100 ch=1 samples=261632
+2026-04-26 20:52:51.939 +09:00 [ERR] ProcessRunner >>> [thread-18] [Resamp] flags parsed: g=0 Bi=50 Hu=0 Mo=-85 Tn=0 t=0 Gr=0 Vtl=0 Vtr=0 Vtw=0 Vc=0 Nn=0 H=70 N=0 Bh=0 Tr=100 Cs=50 At=0 Rl=0 Ns=0 P=86 c=0
+2026-04-26 20:52:52.750 +09:00 [ERR] ProcessRunner >>> [thread-18] [Resamp] WORLD analyzed: n_frames=1388 fft_size=2048
+2026-04-26 20:52:52.774 +09:00 [ERR] ProcessRunner >>> [thread-10] [Resamp] WORLD analyzed: n_frames=1369 fft_size=2048
+2026-04-26 20:52:52.909 +09:00 [ERR] ProcessRunner >>> [thread-19] [Resamp] WORLD analyzed: n_frames=1545 fft_size=2048
+2026-04-26 20:52:52.956 +09:00 [ERR] ProcessRunner >>> [thread-15] [Resamp] WORLD analyzed: n_frames=1594 fft_size=2048
+2026-04-26 20:52:52.993 +09:00 [ERR] ProcessRunner >>> [thread-10] [Resamp] WORLD synthesized: out_frames=502 warp_ratio=1 Mo=100 mo_eff=1 mo_ratio=1.19722 mo_blend=0.72
+2026-04-26 20:52:53.001 +09:00 [INF]  > [thread-10] C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Resamplers\resamp.exe "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-7d9e47bc.wav" "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\res-0603e9a4-29ca08ce597e5332.wav" D#5 100 "g0Bi50Hu0Mo22Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0" 2448.98 200 125.17 -517.91 100 0 !145 +f+j+o+t+0+8/E/N/V/d/l/s/z/4/8/+AA#9#
+2026-04-26 20:52:53.020 +09:00 [ERR] ProcessRunner >>> [thread-10] [Resamp] in=C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-7d9e47bc.wav pitch=D#5 vel=100 flags=g0Bi50Hu0Mo22Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0 off=2448.98 len=200 con=125.17 cut=-517.91 vol=100
+2026-04-26 20:52:53.030 +09:00 [ERR] ProcessRunner >>> [thread-10] [Resamp] WAV: sr=44100 ch=1 samples=259840
+2026-04-26 20:52:53.031 +09:00 [ERR] ProcessRunner >>> [thread-10] [Resamp] flags parsed: g=0 Bi=50 Hu=0 Mo=22 Tn=0 t=0 Gr=0 Vtl=0 Vtr=0 Vtw=0 Vc=0 Nn=0 H=70 N=0 Bh=0 Tr=100 Cs=50 At=0 Rl=0 Ns=0 P=86 c=0
+2026-04-26 20:52:53.059 +09:00 [ERR] ProcessRunner >>> [thread-8] [Resamp] WORLD analyzed: n_frames=1824 fft_size=2048
+2026-04-26 20:52:53.086 +09:00 [ERR] ProcessRunner >>> [thread-18] [Resamp] WORLD synthesized: out_frames=802 warp_ratio=1 Mo=-85 mo_eff=-0.880941 mo_ratio=0.853364 mo_blend=0.696668
+2026-04-26 20:52:53.097 +09:00 [INF]  > [thread-18] C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Resamplers\resamp.exe "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-c347728e.wav" "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\res-0603e9a4-5ff5687d0d97abaf.wav" G5 100 "g0Bi50Hu0Mo-77Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0" 4146.94 250 216.78 -238.55 100 0 !145 AA#47#
+2026-04-26 20:52:53.113 +09:00 [ERR] ProcessRunner >>> [thread-18] [Resamp] in=C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-c347728e.wav pitch=G5 vel=100 flags=g0Bi50Hu0Mo-77Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0 off=4146.94 len=250 con=216.78 cut=-238.55 vol=100
+2026-04-26 20:52:53.125 +09:00 [ERR] ProcessRunner >>> [thread-18] [Resamp] WAV: sr=44100 ch=1 samples=253568
+2026-04-26 20:52:53.125 +09:00 [ERR] ProcessRunner >>> [thread-18] [Resamp] flags parsed: g=0 Bi=50 Hu=0 Mo=-77 Tn=0 t=0 Gr=0 Vtl=0 Vtr=0 Vtw=0 Vc=0 Nn=0 H=70 N=0 Bh=0 Tr=100 Cs=50 At=0 Rl=0 Ns=0 P=86 c=0
+2026-04-26 20:52:53.126 +09:00 [ERR] ProcessRunner >>> [thread-15] [Resamp] WORLD synthesized: out_frames=402 warp_ratio=1 Mo=-68 mo_eff=-0.740213 mo_ratio=0.875256 mo_blend=0.620115
+2026-04-26 20:52:53.137 +09:00 [INF]  > [thread-15] C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Resamplers\resamp.exe "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-db464910.wav" "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\res-0603e9a4-73fa5a0547ded2e7.wav" F5 100 "g0Bi50Hu0Mo-100Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0" 1754.2 300 225 -252.15 100 0 !145 84#2#868+9F9P9b9o93+I+Z+q+6/K/Y/l/v/3/9//AA#29#ACAG
+2026-04-26 20:52:53.147 +09:00 [ERR] ProcessRunner >>> [thread-19] [Resamp] WORLD synthesized: out_frames=541 warp_ratio=1 Mo=-1 mo_eff=-0.0275423 mo_ratio=0.995055 mo_blend=0.169268
+2026-04-26 20:52:53.154 +09:00 [ERR] ProcessRunner >>> [thread-15] [Resamp] in=C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-db464910.wav pitch=F5 vel=100 flags=g0Bi50Hu0Mo-100Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0 off=1754.2 len=300 con=225 cut=-252.15 vol=100
+2026-04-26 20:52:53.156 +09:00 [INF]  > [thread-19] C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Resamplers\resamp.exe "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-5f1d8399.wav" "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\res-0603e9a4-de2d19b9984939f5.wav" F5 100 "g0Bi50Hu0Mo-74Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0" 3431.29 150 112.47 -295.69 100 0 !145 DI#1#DGDBC5CvCjCVCFB1BkBTBCAzAlAYAPAHACAA#3#
+2026-04-26 20:52:53.165 +09:00 [ERR] ProcessRunner >>> [thread-15] [Resamp] WAV: sr=44100 ch=1 samples=258944
+2026-04-26 20:52:53.165 +09:00 [ERR] ProcessRunner >>> [thread-15] [Resamp] flags parsed: g=0 Bi=50 Hu=0 Mo=-100 Tn=0 t=0 Gr=0 Vtl=0 Vtr=0 Vtw=0 Vc=0 Nn=0 H=70 N=0 Bh=0 Tr=100 Cs=50 At=0 Rl=0 Ns=0 P=86 c=0
+2026-04-26 20:52:53.171 +09:00 [ERR] ProcessRunner >>> [thread-19] [Resamp] in=C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-5f1d8399.wav pitch=F5 vel=100 flags=g0Bi50Hu0Mo-74Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0 off=3431.29 len=150 con=112.47 cut=-295.69 vol=100
+2026-04-26 20:52:53.185 +09:00 [ERR] ProcessRunner >>> [thread-19] [Resamp] WAV: sr=44100 ch=1 samples=257152
+2026-04-26 20:52:53.185 +09:00 [ERR] ProcessRunner >>> [thread-19] [Resamp] flags parsed: g=0 Bi=50 Hu=0 Mo=-74 Tn=0 t=0 Gr=0 Vtl=0 Vtr=0 Vtw=0 Vc=0 Nn=0 H=70 N=0 Bh=0 Tr=100 Cs=50 At=0 Rl=0 Ns=0 P=86 c=0
+2026-04-26 20:52:53.340 +09:00 [ERR] ProcessRunner >>> [thread-18] [Resamp] WORLD analyzed: n_frames=546 fft_size=2048
+2026-04-26 20:52:53.363 +09:00 [ERR] ProcessRunner >>> [thread-8] [Resamp] WORLD synthesized: out_frames=702 warp_ratio=1 Mo=100 mo_eff=1 mo_ratio=1.19722 mo_blend=0.72
+2026-04-26 20:52:53.377 +09:00 [INF]  > [thread-8] C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Resamplers\resamp.exe "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-6608ade5.wav" "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\res-0603e9a4-7f0e98e5a5f7e179.wav" C5 100 "g0Bi50Hu0Mo100Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0" 1235.37 300 261.22 -293.88 100 0 !145 AA#21#AIAe+b/6CT/d/pBQ+6/UB9/jAaA1/WAfBd+n/UBW/T/9Bw+9#1#A1+xAhBU/l/8BC+VAoC4/A/U
+2026-04-26 20:52:53.396 +09:00 [ERR] ProcessRunner >>> [thread-8] [Resamp] in=C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-6608ade5.wav pitch=C5 vel=100 flags=g0Bi50Hu0Mo100Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0 off=1235.37 len=300 con=261.22 cut=-293.88 vol=100
+2026-04-26 20:52:53.409 +09:00 [ERR] ProcessRunner >>> [thread-8] [Resamp] WAV: sr=44100 ch=1 samples=259840
+2026-04-26 20:52:53.410 +09:00 [ERR] ProcessRunner >>> [thread-8] [Resamp] flags parsed: g=0 Bi=50 Hu=0 Mo=100 Tn=0 t=0 Gr=0 Vtl=0 Vtr=0 Vtw=0 Vc=0 Nn=0 H=70 N=0 Bh=0 Tr=100 Cs=50 At=0 Rl=0 Ns=0 P=86 c=0
+2026-04-26 20:52:53.486 +09:00 [ERR] ProcessRunner >>> [thread-18] [Resamp] WORLD synthesized: out_frames=315 warp_ratio=1 Mo=-77 mo_eff=-0.815573 mo_ratio=0.863464 mo_blend=0.661357
+2026-04-26 20:52:53.492 +09:00 [INF]  > [thread-18] C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Resamplers\resamp.exe "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-c347728e.wav" "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\res-0603e9a4-e2cc706b33ccf03f.wav" G5 100 "g0Bi50Hu0Mo61Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0" 1380.5 350 197.73 -357.37 100 0 !145 AA#73#
+2026-04-26 20:52:53.509 +09:00 [ERR] ProcessRunner >>> [thread-18] [Resamp] in=C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-c347728e.wav pitch=G5 vel=100 flags=g0Bi50Hu0Mo61Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0 off=1380.5 len=350 con=197.73 cut=-357.37 vol=100
+2026-04-26 20:52:53.515 +09:00 [ERR] ProcessRunner >>> [thread-18] [Resamp] WAV: sr=44100 ch=1 samples=253568
+2026-04-26 20:52:53.515 +09:00 [ERR] ProcessRunner >>> [thread-18] [Resamp] flags parsed: g=0 Bi=50 Hu=0 Mo=61 Tn=0 t=0 Gr=0 Vtl=0 Vtr=0 Vtw=0 Vc=0 Nn=0 H=70 N=0 Bh=0 Tr=100 Cs=50 At=0 Rl=0 Ns=0 P=86 c=0
+2026-04-26 20:52:53.647 +09:00 [ERR] ProcessRunner >>> [thread-19] [Resamp] WORLD analyzed: n_frames=842 fft_size=2048
+2026-04-26 20:52:53.783 +09:00 [ERR] ProcessRunner >>> [thread-19] [Resamp] WORLD synthesized: out_frames=302 warp_ratio=1 Mo=-74 mo_eff=-0.79068 mo_ratio=0.867342 mo_blend=0.6478
+2026-04-26 20:52:53.788 +09:00 [INF]  > [thread-19] C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Resamplers\resamp.exe "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-38ea4e3b.wav" "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\res-0603e9a4-9e7dfb88cd95f333.wav" F5 100 "g0Bi50Hu0Mo-100Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0" 1664.4 500 462.59 -600 100 0 !145 DI#36#DHDDC8CzCoCbCMB8BrBaBJA5ArAeATAKAEABAA#30#
+2026-04-26 20:52:53.803 +09:00 [ERR] ProcessRunner >>> [thread-19] [Resamp] in=C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-38ea4e3b.wav pitch=F5 vel=100 flags=g0Bi50Hu0Mo-100Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0 off=1664.4 len=500 con=462.59 cut=-600 vol=100
+2026-04-26 20:52:53.809 +09:00 [ERR] ProcessRunner >>> [thread-19] [Resamp] WAV: sr=44100 ch=1 samples=261632
+2026-04-26 20:52:53.810 +09:00 [ERR] ProcessRunner >>> [thread-19] [Resamp] flags parsed: g=0 Bi=50 Hu=0 Mo=-100 Tn=0 t=0 Gr=0 Vtl=0 Vtr=0 Vtw=0 Vc=0 Nn=0 H=70 N=0 Bh=0 Tr=100 Cs=50 At=0 Rl=0 Ns=0 P=86 c=0
+2026-04-26 20:52:53.810 +09:00 [ERR] ProcessRunner >>> [thread-10] [Resamp] WORLD analyzed: n_frames=1171 fft_size=2048
+2026-04-26 20:52:53.975 +09:00 [ERR] ProcessRunner >>> [thread-10] [Resamp] WORLD synthesized: out_frames=402 warp_ratio=1 Mo=22 mo_eff=0.306966 mo_ratio=1.05681 mo_blend=0.367205
+2026-04-26 20:52:53.981 +09:00 [INF]  > [thread-10] C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Resamplers\resamp.exe "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-db464910.wav" "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\res-0603e9a4-0fc4bdb387ef0cf9.wav" D#5 100 "g0Bi50Hu0Mo12Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0" 2735.6 300 225 -257.6 100 0 !145 +c+d+f+j+n+t+0+8/E/M/V/d/l/s/y/4/8/+AA#30#ACAGANAX
+2026-04-26 20:52:53.997 +09:00 [ERR] ProcessRunner >>> [thread-10] [Resamp] in=C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-db464910.wav pitch=D#5 vel=100 flags=g0Bi50Hu0Mo12Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0 off=2735.6 len=300 con=225 cut=-257.6 vol=100
+2026-04-26 20:52:54.008 +09:00 [ERR] ProcessRunner >>> [thread-10] [Resamp] WAV: sr=44100 ch=1 samples=258944
+2026-04-26 20:52:54.008 +09:00 [ERR] ProcessRunner >>> [thread-10] [Resamp] flags parsed: g=0 Bi=50 Hu=0 Mo=12 Tn=0 t=0 Gr=0 Vtl=0 Vtr=0 Vtw=0 Vc=0 Nn=0 H=70 N=0 Bh=0 Tr=100 Cs=50 At=0 Rl=0 Ns=0 P=86 c=0
+2026-04-26 20:52:54.139 +09:00 [ERR] ProcessRunner >>> [thread-15] [Resamp] WORLD analyzed: n_frames=1547 fft_size=2048
+2026-04-26 20:52:54.356 +09:00 [ERR] ProcessRunner >>> [thread-15] [Resamp] WORLD synthesized: out_frames=602 warp_ratio=1 Mo=-100 mo_eff=-1 mo_ratio=0.83527 mo_blend=0.72
+2026-04-26 20:52:54.364 +09:00 [INF]  > [thread-15] C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Resamplers\resamp.exe "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-db464910.wav" "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\res-0603e9a4-58114326396e79e4.wav" G5 100 "g0Bi50Hu0Mo-100Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0" 3482.99 200 146.03 -354.65 100 0 !145 84#4#879A9I9S9f9t99+O+f+w/A/P/d/p/z/6/+AA#3#
+2026-04-26 20:52:54.380 +09:00 [ERR] ProcessRunner >>> [thread-15] [Resamp] in=C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-db464910.wav pitch=G5 vel=100 flags=g0Bi50Hu0Mo-100Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0 off=3482.99 len=200 con=146.03 cut=-354.65 vol=100
+2026-04-26 20:52:54.383 +09:00 [ERR] ProcessRunner >>> [thread-18] [Resamp] WORLD analyzed: n_frames=1605 fft_size=2048
+2026-04-26 20:52:54.387 +09:00 [ERR] ProcessRunner >>> [thread-15] [Resamp] WAV: sr=44100 ch=1 samples=258944
+2026-04-26 20:52:54.387 +09:00 [ERR] ProcessRunner >>> [thread-15] [Resamp] flags parsed: g=0 Bi=50 Hu=0 Mo=-100 Tn=0 t=0 Gr=0 Vtl=0 Vtr=0 Vtw=0 Vc=0 Nn=0 H=70 N=0 Bh=0 Tr=100 Cs=50 At=0 Rl=0 Ns=0 P=86 c=0
+2026-04-26 20:52:54.561 +09:00 [ERR] ProcessRunner >>> [thread-8] [Resamp] WORLD analyzed: n_frames=1746 fft_size=2048
+2026-04-26 20:52:54.564 +09:00 [ERR] ProcessRunner >>> [thread-18] [Resamp] WORLD synthesized: out_frames=440 warp_ratio=1 Mo=61 mo_eff=0.680076 mo_ratio=1.13022 mo_blend=0.586751
+2026-04-26 20:52:54.574 +09:00 [INF]  > [thread-18] C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Resamplers\resamp.exe "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-e2cfdd02.wav" "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\res-0603e9a4-337951e428c76a66.wav" F5 100 "g0Bi50Hu0Mo-100Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0" 1715.19 300 254.88 -271.2 100 0 !145 A2AoAbARAJADABAA#53#/+
+2026-04-26 20:52:54.589 +09:00 [ERR] ProcessRunner >>> [thread-18] [Resamp] in=C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-e2cfdd02.wav pitch=F5 vel=100 flags=g0Bi50Hu0Mo-100Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0 off=1715.19 len=300 con=254.88 cut=-271.2 vol=100
+2026-04-26 20:52:54.600 +09:00 [ERR] ProcessRunner >>> [thread-18] [Resamp] WAV: sr=44100 ch=1 samples=257152
+2026-04-26 20:52:54.601 +09:00 [ERR] ProcessRunner >>> [thread-18] [Resamp] flags parsed: g=0 Bi=50 Hu=0 Mo=-100 Tn=0 t=0 Gr=0 Vtl=0 Vtr=0 Vtw=0 Vc=0 Nn=0 H=70 N=0 Bh=0 Tr=100 Cs=50 At=0 Rl=0 Ns=0 P=86 c=0
+2026-04-26 20:52:54.623 +09:00 [ERR] ProcessRunner >>> [thread-10] [Resamp] WORLD analyzed: n_frames=1152 fft_size=2048
+2026-04-26 20:52:54.651 +09:00 [ERR] ProcessRunner >>> [thread-19] [Resamp] WORLD analyzed: n_frames=1468 fft_size=2048
+2026-04-26 20:52:54.789 +09:00 [ERR] ProcessRunner >>> [thread-15] [Resamp] WORLD analyzed: n_frames=814 fft_size=2048
+2026-04-26 20:52:54.816 +09:00 [ERR] ProcessRunner >>> [thread-8] [Resamp] WORLD synthesized: out_frames=602 warp_ratio=1 Mo=100 mo_eff=1 mo_ratio=1.19722 mo_blend=0.72
+2026-04-26 20:52:54.822 +09:00 [INF]  > [thread-8] C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Resamplers\resamp.exe "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-6608ade5.wav" "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\res-0603e9a4-24ef61faac0abe5f.wav" D5 100 "g0Bi50Hu0Mo100Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0" 1443.99 300 235.83 -432.65 100 0 !145 8J7n9p759D+W8i8u937h9E/08P76+l8p8k9M8A849V9M9o+A+M+Y+p+5/J/X/k/v/3/9//AA#10#
+2026-04-26 20:52:54.838 +09:00 [ERR] ProcessRunner >>> [thread-8] [Resamp] in=C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-6608ade5.wav pitch=D5 vel=100 flags=g0Bi50Hu0Mo100Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0 off=1443.99 len=300 con=235.83 cut=-432.65 vol=100
+2026-04-26 20:52:54.845 +09:00 [ERR] ProcessRunner >>> [thread-10] [Resamp] WORLD synthesized: out_frames=602 warp_ratio=1 Mo=12 mo_eff=0.19132 mo_ratio=1.03504 mo_blend=0.292016
+2026-04-26 20:52:54.846 +09:00 [ERR] ProcessRunner >>> [thread-8] [Resamp] WAV: sr=44100 ch=1 samples=259840
+2026-04-26 20:52:54.847 +09:00 [ERR] ProcessRunner >>> [thread-8] [Resamp] flags parsed: g=0 Bi=50 Hu=0 Mo=100 Tn=0 t=0 Gr=0 Vtl=0 Vtr=0 Vtw=0 Vc=0 Nn=0 H=70 N=0 Bh=0 Tr=100 Cs=50 At=0 Rl=0 Ns=0 P=86 c=0
+2026-04-26 20:52:54.935 +09:00 [ERR] ProcessRunner >>> [thread-15] [Resamp] WORLD synthesized: out_frames=402 warp_ratio=1 Mo=-100 mo_eff=-1 mo_ratio=0.83527 mo_blend=0.72
+2026-04-26 20:52:55.047 +09:00 [ERR] ProcessRunner >>> [thread-19] [Resamp] WORLD synthesized: out_frames=1002 warp_ratio=1 Mo=-100 mo_eff=-1 mo_ratio=0.83527 mo_blend=0.72
+2026-04-26 20:52:55.409 +09:00 [ERR] ProcessRunner >>> [thread-18] [Resamp] WORLD analyzed: n_frames=1538 fft_size=2048
+2026-04-26 20:52:55.615 +09:00 [ERR] ProcessRunner >>> [thread-18] [Resamp] WORLD synthesized: out_frames=602 warp_ratio=1 Mo=-100 mo_eff=-1 mo_ratio=0.83527 mo_blend=0.72
+2026-04-26 20:52:55.622 +09:00 [INF]  > [thread-18] C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Resamplers\resamp.exe "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-e2cfdd02.wav" "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\res-0603e9a4-81a3c5be22004080.wav" D#5 100 "g0Bi50Hu0Mo-100Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0" 2961.45 250 149.66 -357.37 100 0 !145 DI#6#DHDIDFDAC4CtCgCSCCByBhBQA/AwAiAWANAGABAA#14#
+2026-04-26 20:52:55.636 +09:00 [ERR] ProcessRunner >>> [thread-18] [Resamp] in=C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-e2cfdd02.wav pitch=D#5 vel=100 flags=g0Bi50Hu0Mo-100Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0 off=2961.45 len=250 con=149.66 cut=-357.37 vol=100
+2026-04-26 20:52:55.643 +09:00 [ERR] ProcessRunner >>> [thread-18] [Resamp] WAV: sr=44100 ch=1 samples=257152
+2026-04-26 20:52:55.643 +09:00 [ERR] ProcessRunner >>> [thread-18] [Resamp] flags parsed: g=0 Bi=50 Hu=0 Mo=-100 Tn=0 t=0 Gr=0 Vtl=0 Vtr=0 Vtw=0 Vc=0 Nn=0 H=70 N=0 Bh=0 Tr=100 Cs=50 At=0 Rl=0 Ns=0 P=86 c=0
+2026-04-26 20:52:55.853 +09:00 [ERR] ProcessRunner >>> [thread-8] [Resamp] WORLD analyzed: n_frames=1607 fft_size=2048
+2026-04-26 20:52:56.064 +09:00 [ERR] ProcessRunner >>> [thread-8] [Resamp] WORLD synthesized: out_frames=602 warp_ratio=1 Mo=100 mo_eff=1 mo_ratio=1.19722 mo_blend=0.72
+2026-04-26 20:52:56.121 +09:00 [ERR] ProcessRunner >>> [thread-18] [Resamp] WORLD analyzed: n_frames=1005 fft_size=2048
+2026-04-26 20:52:56.294 +09:00 [ERR] ProcessRunner >>> [thread-18] [Resamp] WORLD synthesized: out_frames=502 warp_ratio=1 Mo=-100 mo_eff=-1 mo_ratio=0.83527 mo_blend=0.72
+2026-04-26 20:52:56.315 +09:00 [WRN] Part rendered. not on main thread
+2026-04-26 20:52:56.315 +09:00 [INF] Publish notification Part rendered.
+2026-04-26 20:52:56.315 +09:00 [INF]  > [thread-21] C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Resamplers\resamp.exe "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-5f1d8399.wav" "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\res-0603e9a4-15923835cab8a103.wav" D#5 100 "g0Bi50Hu0Mo0Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0" 3230.84 300 225 -250 100 0 !145 DI#1#DGDBC5CvCjCVCFB1BkBTBDAzAlAZAPAHACAA#28#//AA/9/1/q
+2026-04-26 20:52:56.315 +09:00 [INF]  > [thread-18] C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Resamplers\resamp.exe "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-c347728e.wav" "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\res-0603e9a4-42b416eb915038ae.wav" C5 100 "g0Bi50Hu0Mo0Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0" 1081.18 350 304.76 -343.76 100 0 !145 G2GmGVGEFzFjFVFIE+E1EwEtEs#28#ErEqEkEZELD6DmDPC3CdCEBrBTA9AqAaAOAFABAA#5#/+/6/0
+2026-04-26 20:52:56.316 +09:00 [INF]  > [thread-22] C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Resamplers\resamp.exe "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-e2cfdd02.wav" "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\res-0603e9a4-e5ad22e703315589.wav" A#4 100 "g0Bi50Hu0Mo0Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0" 2224.04 300 240.875 -276.64 100 0 !145 DEC+C1CqCdCOB+BtBcBLA7AsAfAUALAFABAA#29#ABAEAKATAe
+2026-04-26 20:52:56.318 +09:00 [INF]  > [thread-8] C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Resamplers\resamp.exe "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-44c25ed8.wav" "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\res-0603e9a4-dd5991501e055c82.wav" F5 100 "g0Bi50Hu0Mo0Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0" 3190.93 300 237.64 -270.29 100 0 !145 AA#49#//AA/9/4
+2026-04-26 20:52:56.318 +09:00 [INF]  > [thread-6] C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Resamplers\resamp.exe "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-82116a51.wav" "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\res-0603e9a4-e5c00b1d9474a8a5.wav" F5 100 "g0Bi50Hu0Mo0Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0" 1448.53 100 41.72 -81.63 100 0 !145 AA#15#
+2026-04-26 20:52:56.333 +09:00 [ERR] ProcessRunner >>> [thread-18] [Resamp] in=C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-c347728e.wav pitch=C5 vel=100 flags=g0Bi50Hu0Mo0Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0 off=1081.18 len=350 con=304.76 cut=-343.76 vol=100
+2026-04-26 20:52:56.335 +09:00 [ERR] ProcessRunner >>> [thread-21] [Resamp] in=C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-5f1d8399.wav pitch=D#5 vel=100 flags=g0Bi50Hu0Mo0Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0 off=3230.84 len=300 con=225 cut=-250 vol=100
+2026-04-26 20:52:56.338 +09:00 [ERR] ProcessRunner >>> [thread-22] [Resamp] in=C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-e2cfdd02.wav pitch=A#4 vel=100 flags=g0Bi50Hu0Mo0Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0 off=2224.04 len=300 con=240.875 cut=-276.64 vol=100
+2026-04-26 20:52:56.340 +09:00 [ERR] ProcessRunner >>> [thread-8] [Resamp] in=C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-44c25ed8.wav pitch=F5 vel=100 flags=g0Bi50Hu0Mo0Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0 off=3190.93 len=300 con=237.64 cut=-270.29 vol=100
+2026-04-26 20:52:56.341 +09:00 [ERR] ProcessRunner >>> [thread-18] [Resamp] WAV: sr=44100 ch=1 samples=253568
+2026-04-26 20:52:56.341 +09:00 [ERR] ProcessRunner >>> [thread-18] [Resamp] flags parsed: g=0 Bi=50 Hu=0 Mo=0 Tn=0 t=0 Gr=0 Vtl=0 Vtr=0 Vtw=0 Vc=0 Nn=0 H=70 N=0 Bh=0 Tr=100 Cs=50 At=0 Rl=0 Ns=0 P=86 c=0
+2026-04-26 20:52:56.342 +09:00 [ERR] ProcessRunner >>> [thread-6] [Resamp] in=C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-82116a51.wav pitch=F5 vel=100 flags=g0Bi50Hu0Mo0Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0 off=1448.53 len=100 con=41.72 cut=-81.63 vol=100
+2026-04-26 20:52:56.344 +09:00 [ERR] ProcessRunner >>> [thread-21] [Resamp] WAV: sr=44100 ch=1 samples=257152
+2026-04-26 20:52:56.344 +09:00 [ERR] ProcessRunner >>> [thread-21] [Resamp] flags parsed: g=0 Bi=50 Hu=0 Mo=0 Tn=0 t=0 Gr=0 Vtl=0 Vtr=0 Vtw=0 Vc=0 Nn=0 H=70 N=0 Bh=0 Tr=100 Cs=50 At=0 Rl=0 Ns=0 P=86 c=0
+2026-04-26 20:52:56.345 +09:00 [ERR] ProcessRunner >>> [thread-22] [Resamp] WAV: sr=44100 ch=1 samples=257152
+2026-04-26 20:52:56.345 +09:00 [ERR] ProcessRunner >>> [thread-22] [Resamp] flags parsed: g=0 Bi=50 Hu=0 Mo=0 Tn=0 t=0 Gr=0 Vtl=0 Vtr=0 Vtw=0 Vc=0 Nn=0 H=70 N=0 Bh=0 Tr=100 Cs=50 At=0 Rl=0 Ns=0 P=86 c=0
+2026-04-26 20:52:56.352 +09:00 [ERR] ProcessRunner >>> [thread-8] [Resamp] WAV: sr=44100 ch=1 samples=258944
+2026-04-26 20:52:56.352 +09:00 [ERR] ProcessRunner >>> [thread-8] [Resamp] flags parsed: g=0 Bi=50 Hu=0 Mo=0 Tn=0 t=0 Gr=0 Vtl=0 Vtr=0 Vtw=0 Vc=0 Nn=0 H=70 N=0 Bh=0 Tr=100 Cs=50 At=0 Rl=0 Ns=0 P=86 c=0
+2026-04-26 20:52:56.357 +09:00 [ERR] ProcessRunner >>> [thread-6] [Resamp] WAV: sr=44100 ch=1 samples=258944
+2026-04-26 20:52:56.357 +09:00 [ERR] ProcessRunner >>> [thread-6] [Resamp] flags parsed: g=0 Bi=50 Hu=0 Mo=0 Tn=0 t=0 Gr=0 Vtl=0 Vtr=0 Vtw=0 Vc=0 Nn=0 H=70 N=0 Bh=0 Tr=100 Cs=50 At=0 Rl=0 Ns=0 P=86 c=0
+2026-04-26 20:52:56.844 +09:00 [ERR] ProcessRunner >>> [thread-21] [Resamp] WORLD analyzed: n_frames=941 fft_size=2048
+2026-04-26 20:52:56.888 +09:00 [ERR] ProcessRunner >>> [thread-21] [Resamp] WORLD synthesized: out_frames=602 warp_ratio=1 Mo=0 mo_eff=0 mo_ratio=1 mo_blend=0
+2026-04-26 20:52:56.894 +09:00 [INF]  > [thread-21] C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Resamplers\resamp.exe "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-5f1d8399.wav" "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\res-0603e9a4-676dae52de59c6cb.wav" C5 100 "g0Bi50Hu0Mo0Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0" 3431.29 150 112.47 -295.69 100 0 !145 Es#1#Er#1#EmEdEQD/DsDWC+ClCLByBaBDAvAe
+2026-04-26 20:52:56.898 +09:00 [ERR] ProcessRunner >>> [thread-8] [Resamp] WORLD analyzed: n_frames=965 fft_size=2048
+2026-04-26 20:52:56.911 +09:00 [ERR] ProcessRunner >>> [thread-21] [Resamp] in=C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-5f1d8399.wav pitch=C5 vel=100 flags=g0Bi50Hu0Mo0Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0 off=3431.29 len=150 con=112.47 cut=-295.69 vol=100
+2026-04-26 20:52:56.921 +09:00 [ERR] ProcessRunner >>> [thread-21] [Resamp] WAV: sr=44100 ch=1 samples=257152
+2026-04-26 20:52:56.921 +09:00 [ERR] ProcessRunner >>> [thread-21] [Resamp] flags parsed: g=0 Bi=50 Hu=0 Mo=0 Tn=0 t=0 Gr=0 Vtl=0 Vtr=0 Vtw=0 Vc=0 Nn=0 H=70 N=0 Bh=0 Tr=100 Cs=50 At=0 Rl=0 Ns=0 P=86 c=0
+2026-04-26 20:52:56.948 +09:00 [ERR] ProcessRunner >>> [thread-8] [Resamp] WORLD synthesized: out_frames=464 warp_ratio=1 Mo=0 mo_eff=0 mo_ratio=1 mo_blend=0
+2026-04-26 20:52:56.956 +09:00 [INF]  > [thread-8] C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Resamplers\resamp.exe "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-44c25ed8.wav" "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\res-0603e9a4-f6655f09040ca1b7.wav" D#5 100 "g0Bi50Hu0Mo0Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0" 2921.54 250 177.78 -409.98 100 0 !145 DI#4#DHDDC9C0CpCcCNB9BsBbBKA6ArAeATAKAEABAA#8#
+2026-04-26 20:52:56.972 +09:00 [ERR] ProcessRunner >>> [thread-8] [Resamp] in=C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-44c25ed8.wav pitch=D#5 vel=100 flags=g0Bi50Hu0Mo0Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0 off=2921.54 len=250 con=177.78 cut=-409.98 vol=100
+2026-04-26 20:52:56.979 +09:00 [ERR] ProcessRunner >>> [thread-8] [Resamp] WAV: sr=44100 ch=1 samples=258944
+2026-04-26 20:52:56.979 +09:00 [ERR] ProcessRunner >>> [thread-8] [Resamp] flags parsed: g=0 Bi=50 Hu=0 Mo=0 Tn=0 t=0 Gr=0 Vtl=0 Vtr=0 Vtw=0 Vc=0 Nn=0 H=70 N=0 Bh=0 Tr=100 Cs=50 At=0 Rl=0 Ns=0 P=86 c=0
+2026-04-26 20:52:57.131 +09:00 [ERR] ProcessRunner >>> [thread-22] [Resamp] WORLD analyzed: n_frames=1333 fft_size=2048
+2026-04-26 20:52:57.174 +09:00 [ERR] ProcessRunner >>> [thread-22] [Resamp] WORLD synthesized: out_frames=602 warp_ratio=1 Mo=0 mo_eff=0 mo_ratio=1 mo_blend=0
+2026-04-26 20:52:57.182 +09:00 [INF]  > [thread-22] C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Resamplers\resamp.exe "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-e2cfdd02.wav" "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\res-0603e9a4-9ac978c3430767d6.wav" C5 100 "g0Bi50Hu0Mo0Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0" 2484.35 200 97.96 -360.09 100 0 !145 84879A9I9T9g9u9++O+f+w/B/Q/e/q/z/6//AA#20#
+2026-04-26 20:52:57.200 +09:00 [ERR] ProcessRunner >>> [thread-22] [Resamp] in=C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-e2cfdd02.wav pitch=C5 vel=100 flags=g0Bi50Hu0Mo0Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0 off=2484.35 len=200 con=97.96 cut=-360.09 vol=100
+2026-04-26 20:52:57.207 +09:00 [ERR] ProcessRunner >>> [thread-22] [Resamp] WAV: sr=44100 ch=1 samples=257152
+2026-04-26 20:52:57.207 +09:00 [ERR] ProcessRunner >>> [thread-22] [Resamp] flags parsed: g=0 Bi=50 Hu=0 Mo=0 Tn=0 t=0 Gr=0 Vtl=0 Vtr=0 Vtw=0 Vc=0 Nn=0 H=70 N=0 Bh=0 Tr=100 Cs=50 At=0 Rl=0 Ns=0 P=86 c=0
+2026-04-26 20:52:57.272 +09:00 [ERR] ProcessRunner >>> [thread-6] [Resamp] WORLD analyzed: n_frames=1737 fft_size=2048
+2026-04-26 20:52:57.285 +09:00 [ERR] ProcessRunner >>> [thread-6] [Resamp] WORLD synthesized: out_frames=127 warp_ratio=1 Mo=0 mo_eff=0 mo_ratio=1 mo_blend=0
+2026-04-26 20:52:57.292 +09:00 [INF]  > [thread-6] C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Resamplers\resamp.exe "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-82116a51.wav" "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\res-0603e9a4-b4426018173ed121.wav" F5 100 "g0Bi50Hu0Mo0Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0" 2915.19 350 200.45 -411.79 100 0 !145 AA#65#
+2026-04-26 20:52:57.307 +09:00 [ERR] ProcessRunner >>> [thread-6] [Resamp] in=C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-82116a51.wav pitch=F5 vel=100 flags=g0Bi50Hu0Mo0Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0 off=2915.19 len=350 con=200.45 cut=-411.79 vol=100
+2026-04-26 20:52:57.314 +09:00 [ERR] ProcessRunner >>> [thread-6] [Resamp] WAV: sr=44100 ch=1 samples=258944
+2026-04-26 20:52:57.314 +09:00 [ERR] ProcessRunner >>> [thread-6] [Resamp] flags parsed: g=0 Bi=50 Hu=0 Mo=0 Tn=0 t=0 Gr=0 Vtl=0 Vtr=0 Vtw=0 Vc=0 Nn=0 H=70 N=0 Bh=0 Tr=100 Cs=50 At=0 Rl=0 Ns=0 P=86 c=0
+2026-04-26 20:52:57.331 +09:00 [ERR] ProcessRunner >>> [thread-21] [Resamp] WORLD analyzed: n_frames=842 fft_size=2048
+2026-04-26 20:52:57.345 +09:00 [ERR] ProcessRunner >>> [thread-18] [Resamp] WORLD analyzed: n_frames=1730 fft_size=2048
+2026-04-26 20:52:57.356 +09:00 [ERR] ProcessRunner >>> [thread-21] [Resamp] WORLD synthesized: out_frames=302 warp_ratio=1 Mo=0 mo_eff=0 mo_ratio=1 mo_blend=0
+2026-04-26 20:52:57.362 +09:00 [INF]  > [thread-21] C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Resamplers\resamp.exe "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-c347728e.wav" "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\res-0603e9a4-e1b8d3d1217f0df8.wav" A#4 100 "g0Bi50Hu0Mo0Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0" 1883.9 250 179.59 -370.07 100 0 !145 DI#5#DGDCC8CyCnCZCKB6BpBYBIA4ApAcASAJAEABAA#10#
+2026-04-26 20:52:57.379 +09:00 [ERR] ProcessRunner >>> [thread-21] [Resamp] in=C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-c347728e.wav pitch=A#4 vel=100 flags=g0Bi50Hu0Mo0Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0 off=1883.9 len=250 con=179.59 cut=-370.07 vol=100
+2026-04-26 20:52:57.386 +09:00 [ERR] ProcessRunner >>> [thread-21] [Resamp] WAV: sr=44100 ch=1 samples=253568
+2026-04-26 20:52:57.386 +09:00 [ERR] ProcessRunner >>> [thread-21] [Resamp] flags parsed: g=0 Bi=50 Hu=0 Mo=0 Tn=0 t=0 Gr=0 Vtl=0 Vtr=0 Vtw=0 Vc=0 Nn=0 H=70 N=0 Bh=0 Tr=100 Cs=50 At=0 Rl=0 Ns=0 P=86 c=0
+2026-04-26 20:52:57.400 +09:00 [ERR] ProcessRunner >>> [thread-18] [Resamp] WORLD synthesized: out_frames=702 warp_ratio=1 Mo=0 mo_eff=0 mo_ratio=1 mo_blend=0
+2026-04-26 20:52:57.413 +09:00 [INF]  > [thread-18] C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Resamplers\resamp.exe "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-4a8622f4.wav" "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\res-0603e9a4-ee23743e31dcce47.wav" A#4 100 "g0Bi50Hu0Mo0Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0" 1093.88 450 400 -544.22 100 0 !145 ABAAADAKASAbAoA2BGBaBrB4CJCYCmCzC9DCDHDI#40#DH#1#DEDAC4CtCgCPB/ByBhBQBAAuAkAf
+2026-04-26 20:52:57.430 +09:00 [ERR] ProcessRunner >>> [thread-18] [Resamp] in=C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-4a8622f4.wav pitch=A#4 vel=100 flags=g0Bi50Hu0Mo0Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0 off=1093.88 len=450 con=400 cut=-544.22 vol=100
+2026-04-26 20:52:57.441 +09:00 [ERR] ProcessRunner >>> [thread-18] [Resamp] WAV: sr=44100 ch=1 samples=257152
+2026-04-26 20:52:57.441 +09:00 [ERR] ProcessRunner >>> [thread-18] [Resamp] flags parsed: g=0 Bi=50 Hu=0 Mo=0 Tn=0 t=0 Gr=0 Vtl=0 Vtr=0 Vtw=0 Vc=0 Nn=0 H=70 N=0 Bh=0 Tr=100 Cs=50 At=0 Rl=0 Ns=0 P=86 c=0
+2026-04-26 20:52:57.553 +09:00 [ERR] ProcessRunner >>> [thread-8] [Resamp] WORLD analyzed: n_frames=1017 fft_size=2048
+2026-04-26 20:52:57.590 +09:00 [ERR] ProcessRunner >>> [thread-8] [Resamp] WORLD synthesized: out_frames=502 warp_ratio=1 Mo=0 mo_eff=0 mo_ratio=1 mo_blend=0
+2026-04-26 20:52:57.600 +09:00 [INF]  > [thread-8] C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Resamplers\resamp.exe "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-2c653235.wav" "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\res-0603e9a4-bbdac28313ac2af8.wav" D#5 100 "g0Bi50Hu0Mo0Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0" 1709.75 350 275.74 -282.99 100 0 !145 7U#18#7V7U7Y7g7s788P8k889V9u+I+g+3/M/e/s/3/+AA#2#
+2026-04-26 20:52:57.616 +09:00 [ERR] ProcessRunner >>> [thread-8] [Resamp] in=C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-2c653235.wav pitch=D#5 vel=100 flags=g0Bi50Hu0Mo0Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0 off=1709.75 len=350 con=275.74 cut=-282.99 vol=100
+2026-04-26 20:52:57.627 +09:00 [ERR] ProcessRunner >>> [thread-8] [Resamp] WAV: sr=44100 ch=1 samples=163072
+2026-04-26 20:52:57.627 +09:00 [ERR] ProcessRunner >>> [thread-8] [Resamp] flags parsed: g=0 Bi=50 Hu=0 Mo=0 Tn=0 t=0 Gr=0 Vtl=0 Vtr=0 Vtw=0 Vc=0 Nn=0 H=70 N=0 Bh=0 Tr=100 Cs=50 At=0 Rl=0 Ns=0 P=86 c=0
+2026-04-26 20:52:57.784 +09:00 [ERR] ProcessRunner >>> [thread-8] [Resamp] WORLD analyzed: n_frames=683 fft_size=2048
+2026-04-26 20:52:57.826 +09:00 [ERR] ProcessRunner >>> [thread-8] [Resamp] WORLD synthesized: out_frames=702 warp_ratio=1 Mo=0 mo_eff=0 mo_ratio=1 mo_blend=0
+2026-04-26 20:52:57.864 +09:00 [ERR] ProcessRunner >>> [thread-6] [Resamp] WORLD analyzed: n_frames=1018 fft_size=2048
+2026-04-26 20:52:57.870 +09:00 [ERR] ProcessRunner >>> [thread-22] [Resamp] WORLD analyzed: n_frames=1195 fft_size=2048
+2026-04-26 20:52:57.894 +09:00 [ERR] ProcessRunner >>> [thread-22] [Resamp] WORLD synthesized: out_frames=402 warp_ratio=1 Mo=0 mo_eff=0 mo_ratio=1 mo_blend=0
+2026-04-26 20:52:57.903 +09:00 [ERR] ProcessRunner >>> [thread-6] [Resamp] WORLD synthesized: out_frames=440 warp_ratio=1 Mo=0 mo_eff=0 mo_ratio=1 mo_blend=0
+2026-04-26 20:52:58.158 +09:00 [ERR] ProcessRunner >>> [thread-21] [Resamp] WORLD analyzed: n_frames=1399 fft_size=2048
+2026-04-26 20:52:58.186 +09:00 [ERR] ProcessRunner >>> [thread-21] [Resamp] WORLD synthesized: out_frames=502 warp_ratio=1 Mo=0 mo_eff=0 mo_ratio=1 mo_blend=0
+2026-04-26 20:52:58.371 +09:00 [ERR] ProcessRunner >>> [thread-18] [Resamp] WORLD analyzed: n_frames=1678 fft_size=2048
+2026-04-26 20:52:58.429 +09:00 [ERR] ProcessRunner >>> [thread-18] [Resamp] WORLD synthesized: out_frames=902 warp_ratio=1 Mo=0 mo_eff=0 mo_ratio=1 mo_blend=0
+2026-04-26 20:52:58.437 +09:00 [INF]  > [thread-18] C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Resamplers\resamp.exe "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-4a8622f4.wav" "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\res-0603e9a4-d78bfb1187a46d9b.wav" C5 100 "g0Bi50Hu0Mo0Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0" 1093.88 500 400 -544.22 100 0 !145 /B/Q/e/r/1/6//AA#40#//AA/8/4/w/l/Y/K+3+q+Z+I949m9c9X9V9Z9h9x9++O+f+w/B/T/e/q/z/6//AA#21#
+2026-04-26 20:52:58.453 +09:00 [ERR] ProcessRunner >>> [thread-18] [Resamp] in=C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-4a8622f4.wav pitch=C5 vel=100 flags=g0Bi50Hu0Mo0Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0 off=1093.88 len=500 con=400 cut=-544.22 vol=100
+2026-04-26 20:52:58.459 +09:00 [ERR] ProcessRunner >>> [thread-18] [Resamp] WAV: sr=44100 ch=1 samples=257152
+2026-04-26 20:52:58.460 +09:00 [ERR] ProcessRunner >>> [thread-18] [Resamp] flags parsed: g=0 Bi=50 Hu=0 Mo=0 Tn=0 t=0 Gr=0 Vtl=0 Vtr=0 Vtw=0 Vc=0 Nn=0 H=70 N=0 Bh=0 Tr=100 Cs=50 At=0 Rl=0 Ns=0 P=86 c=0
+2026-04-26 20:52:59.350 +09:00 [ERR] ProcessRunner >>> [thread-18] [Resamp] WORLD analyzed: n_frames=1678 fft_size=2048
+2026-04-26 20:52:59.412 +09:00 [ERR] ProcessRunner >>> [thread-18] [Resamp] WORLD synthesized: out_frames=1002 warp_ratio=1 Mo=0 mo_eff=0 mo_ratio=1 mo_blend=0
+2026-04-26 20:52:59.428 +09:00 [WRN] Part rendered. not on main thread
+2026-04-26 20:52:59.428 +09:00 [INF] Publish notification Part rendered.
+2026-04-26 20:52:59.429 +09:00 [INF]  > [thread-26] C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Resamplers\resamp.exe "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-e2cfdd02.wav" "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\res-0603e9a4-ef2c43ea5079cb6e.wav" F5 100 "g0Bi100Hu0Mo0Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0" 1202.72 300 257.6 -273.92 100 0 !145 x8#12#yf0d1B1E226698+b+c#4#+d+k+z/H/c/v/7AA#24#ADAJAR
+2026-04-26 20:52:59.431 +09:00 [INF]  > [thread-6] C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Resamplers\resamp.exe "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-0aeb6610-8164c14f.wav" "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\res-0603e9a4-e394aaf1f3bac066.wav" G#4 100 "g0Bi50Hu0Mo0Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0" 898 200 120 4811 100 0 !145 AA#29#
+2026-04-26 20:52:59.432 +09:00 [INF]  > [thread-18] C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Resamplers\resamp.exe "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-6d4c0ef7.wav" "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\res-0603e9a4-d3e98eab9727d530.wav" F5 100 "g0Bi50Hu0Mo0Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0" 2744.67 250 223.13 -236.74 100 0 !145 C3CtCgCRCCBxBgBPA/AwAiAWANAGACAA#30#/9/3/v/l/Y
+2026-04-26 20:52:59.433 +09:00 [INF]  > [thread-20] C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Resamplers\resamp.exe "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-6c66e7b6.wav" "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\res-0603e9a4-c71e488c4b2bc5af.wav" D#5 100 "g0Bi50Hu0Mo0Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0" 2246.71 250 225 -253.97 100 0 !145 AtAgAUALAFABAA#41#///6/x/l
+2026-04-26 20:52:59.433 +09:00 [INF]  > [thread-15] C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Resamplers\resamp.exe "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-2f73dbe8.wav" "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\res-0603e9a4-bc4b399ea8ae28d0.wav" G#5 100 "g0Bi50Hu0Mo0Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0" 3005.9 200 156.01 -361.9 100 0 !145 bTcEc8ePf7h/kSmxpWr8ufw6zM1S3K4v5+627a7p7m7c7W
+2026-04-26 20:52:59.446 +09:00 [ERR] ProcessRunner >>> [thread-26] [Resamp] in=C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-e2cfdd02.wav pitch=F5 vel=100 flags=g0Bi100Hu0Mo0Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0 off=1202.72 len=300 con=257.6 cut=-273.92 vol=100
+2026-04-26 20:52:59.448 +09:00 [ERR] ProcessRunner >>> [thread-6] [Resamp] in=C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-0aeb6610-8164c14f.wav pitch=G#4 vel=100 flags=g0Bi50Hu0Mo0Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0 off=898 len=200 con=120 cut=4811 vol=100
+2026-04-26 20:52:59.451 +09:00 [ERR] ProcessRunner >>> [thread-18] [Resamp] in=C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-6d4c0ef7.wav pitch=F5 vel=100 flags=g0Bi50Hu0Mo0Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0 off=2744.67 len=250 con=223.13 cut=-236.74 vol=100
+2026-04-26 20:52:59.452 +09:00 [ERR] ProcessRunner >>> [thread-20] [Resamp] in=C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-6c66e7b6.wav pitch=D#5 vel=100 flags=g0Bi50Hu0Mo0Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0 off=2246.71 len=250 con=225 cut=-253.97 vol=100
+2026-04-26 20:52:59.453 +09:00 [ERR] ProcessRunner >>> [thread-26] [Resamp] WAV: sr=44100 ch=1 samples=257152
+2026-04-26 20:52:59.454 +09:00 [ERR] ProcessRunner >>> [thread-26] [Resamp] flags parsed: g=0 Bi=100 Hu=0 Mo=0 Tn=0 t=0 Gr=0 Vtl=0 Vtr=0 Vtw=0 Vc=0 Nn=0 H=70 N=0 Bh=0 Tr=100 Cs=50 At=0 Rl=0 Ns=0 P=86 c=0
+2026-04-26 20:52:59.455 +09:00 [ERR] ProcessRunner >>> [thread-15] [Resamp] in=C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-2f73dbe8.wav pitch=G#5 vel=100 flags=g0Bi50Hu0Mo0Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0 off=3005.9 len=200 con=156.01 cut=-361.9 vol=100
+2026-04-26 20:52:59.460 +09:00 [INF] Publish notification Pre-render notification.
+2026-04-26 20:52:59.464 +09:00 [ERR] ProcessRunner >>> [thread-6] [Resamp] WAV: sr=44100 ch=1 samples=258485
+2026-04-26 20:52:59.468 +09:00 [ERR] ProcessRunner >>> [thread-20] [Resamp] WAV: sr=44100 ch=1 samples=257152
+2026-04-26 20:52:59.468 +09:00 [ERR] ProcessRunner >>> [thread-18] [Resamp] WAV: sr=44100 ch=1 samples=258944
+2026-04-26 20:52:59.469 +09:00 [ERR] ProcessRunner >>> [thread-20] [Resamp] flags parsed: g=0 Bi=50 Hu=0 Mo=0 Tn=0 t=0 Gr=0 Vtl=0 Vtr=0 Vtw=0 Vc=0 Nn=0 H=70 N=0 Bh=0 Tr=100 Cs=50 At=0 Rl=0 Ns=0 P=86 c=0
+2026-04-26 20:52:59.468 +09:00 [ERR] ProcessRunner >>> [thread-6] [Resamp] flags parsed: g=0 Bi=50 Hu=0 Mo=0 Tn=0 t=0 Gr=0 Vtl=0 Vtr=0 Vtw=0 Vc=0 Nn=0 H=70 N=0 Bh=0 Tr=100 Cs=50 At=0 Rl=0 Ns=0 P=86 c=0
+2026-04-26 20:52:59.469 +09:00 [ERR] ProcessRunner >>> [thread-18] [Resamp] flags parsed: g=0 Bi=50 Hu=0 Mo=0 Tn=0 t=0 Gr=0 Vtl=0 Vtr=0 Vtw=0 Vc=0 Nn=0 H=70 N=0 Bh=0 Tr=100 Cs=50 At=0 Rl=0 Ns=0 P=86 c=0
+2026-04-26 20:52:59.471 +09:00 [ERR] ProcessRunner >>> [thread-15] [Resamp] WAV: sr=44100 ch=1 samples=259840
+2026-04-26 20:52:59.471 +09:00 [ERR] ProcessRunner >>> [thread-15] [Resamp] flags parsed: g=0 Bi=50 Hu=0 Mo=0 Tn=0 t=0 Gr=0 Vtl=0 Vtr=0 Vtw=0 Vc=0 Nn=0 H=70 N=0 Bh=0 Tr=100 Cs=50 At=0 Rl=0 Ns=0 P=86 c=0
+2026-04-26 20:52:59.501 +09:00 [INF] Publish notification Phonemized
+2026-04-26 20:53:00.081 +09:00 [ERR] ProcessRunner >>> [thread-18] [Resamp] WORLD analyzed: n_frames=1157 fft_size=2048
+2026-04-26 20:53:00.119 +09:00 [ERR] ProcessRunner >>> [thread-18] [Resamp] WORLD synthesized: out_frames=502 warp_ratio=1 Mo=0 mo_eff=0 mo_ratio=1 mo_blend=0
+2026-04-26 20:53:00.124 +09:00 [INF]  > [thread-18] C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Resamplers\resamp.exe "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-6d4c0ef7.wav" "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\res-0603e9a4-0e71731018d073b2.wav" D#5 100 "g0Bi50Hu0Mo0Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0" 2487.98 150 95.24 -391.84 100 0 !145 C4CuCiCTCEBzBiBRBBAyAkAYAOAH
+2026-04-26 20:53:00.139 +09:00 [ERR] ProcessRunner >>> [thread-18] [Resamp] in=C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-6d4c0ef7.wav pitch=D#5 vel=100 flags=g0Bi50Hu0Mo0Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0 off=2487.98 len=150 con=95.24 cut=-391.84 vol=100
+2026-04-26 20:53:00.146 +09:00 [ERR] ProcessRunner >>> [thread-18] [Resamp] WAV: sr=44100 ch=1 samples=258944
+2026-04-26 20:53:00.146 +09:00 [ERR] ProcessRunner >>> [thread-18] [Resamp] flags parsed: g=0 Bi=50 Hu=0 Mo=0 Tn=0 t=0 Gr=0 Vtl=0 Vtr=0 Vtw=0 Vc=0 Nn=0 H=70 N=0 Bh=0 Tr=100 Cs=50 At=0 Rl=0 Ns=0 P=86 c=0
+2026-04-26 20:53:00.158 +09:00 [ERR] ProcessRunner >>> [thread-15] [Resamp] WORLD analyzed: n_frames=1010 fft_size=2048
+2026-04-26 20:53:00.208 +09:00 [ERR] ProcessRunner >>> [thread-15] [Resamp] WORLD synthesized: out_frames=402 warp_ratio=1 Mo=0 mo_eff=0 mo_ratio=1 mo_blend=0
+2026-04-26 20:53:00.213 +09:00 [INF]  > [thread-15] C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Resamplers\resamp.exe "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-11320e94.wav" "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\res-0603e9a4-02eec405d69a8b04.wav" F5 100 "g0Bi50Hu0Mo0Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0" 2026.3 400 359.18 -437.19 100 0 !145 84#9#8C7AxHkwd6dyd+ePele/fdgFg3hxjHk3m+pUr0uaxAzi184N6R8G9p+1/qAKAXARAHABAA#26#
+2026-04-26 20:53:00.228 +09:00 [ERR] ProcessRunner >>> [thread-15] [Resamp] in=C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-11320e94.wav pitch=F5 vel=100 flags=g0Bi50Hu0Mo0Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0 off=2026.3 len=400 con=359.18 cut=-437.19 vol=100
+2026-04-26 20:53:00.235 +09:00 [ERR] ProcessRunner >>> [thread-20] [Resamp] WORLD analyzed: n_frames=1333 fft_size=2048
+2026-04-26 20:53:00.237 +09:00 [ERR] ProcessRunner >>> [thread-15] [Resamp] WAV: sr=44100 ch=1 samples=261632
+2026-04-26 20:53:00.238 +09:00 [ERR] ProcessRunner >>> [thread-15] [Resamp] flags parsed: g=0 Bi=50 Hu=0 Mo=0 Tn=0 t=0 Gr=0 Vtl=0 Vtr=0 Vtw=0 Vc=0 Nn=0 H=70 N=0 Bh=0 Tr=100 Cs=50 At=0 Rl=0 Ns=0 P=86 c=0
+2026-04-26 20:53:00.271 +09:00 [ERR] ProcessRunner >>> [thread-20] [Resamp] WORLD synthesized: out_frames=502 warp_ratio=1 Mo=0 mo_eff=0 mo_ratio=1 mo_blend=0
+2026-04-26 20:53:00.279 +09:00 [INF]  > [thread-20] C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Resamplers\resamp.exe "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-6c66e7b6.wav" "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\res-0603e9a4-dca8aadcf804de00.wav" C5 100 "g0Bi50Hu0Mo0Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0" 1941.95 150 87.98 -456.24 100 0 !145 EsErEpEiEXEID2DiDLCyCZB/BnBPA6AnAY
+2026-04-26 20:53:00.296 +09:00 [ERR] ProcessRunner >>> [thread-20] [Resamp] in=C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-6c66e7b6.wav pitch=C5 vel=100 flags=g0Bi50Hu0Mo0Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0 off=1941.95 len=150 con=87.98 cut=-456.24 vol=100
+2026-04-26 20:53:00.303 +09:00 [ERR] ProcessRunner >>> [thread-20] [Resamp] WAV: sr=44100 ch=1 samples=257152
+2026-04-26 20:53:00.304 +09:00 [ERR] ProcessRunner >>> [thread-20] [Resamp] flags parsed: g=0 Bi=50 Hu=0 Mo=0 Tn=0 t=0 Gr=0 Vtl=0 Vtr=0 Vtw=0 Vc=0 Nn=0 H=70 N=0 Bh=0 Tr=100 Cs=50 At=0 Rl=0 Ns=0 P=86 c=0
+2026-04-26 20:53:00.444 +09:00 [ERR] ProcessRunner >>> [thread-26] [Resamp] WORLD analyzed: n_frames=1742 fft_size=2048
+2026-04-26 20:53:00.479 +09:00 [INF] Publish notification Save project
+2026-04-26 20:53:00.505 +09:00 [ERR] ProcessRunner >>> [thread-26] [Resamp] WORLD synthesized: out_frames=602 warp_ratio=1 Mo=0 mo_eff=0 mo_ratio=1 mo_blend=0
+2026-04-26 20:53:00.513 +09:00 [INF]  > [thread-26] C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Resamplers\resamp.exe "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-e2cfdd02.wav" "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\res-0603e9a4-65a28d1c82b5cf20.wav" G5 100 "g0Bi100Hu0Mo0Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0" 3475.74 300 106.12 -331.07 100 0 !145 84#1#85899E9N9Z9m92+G+X+o+4/I/X/j/u/3/8//AA#39#
+2026-04-26 20:53:00.528 +09:00 [ERR] ProcessRunner >>> [thread-26] [Resamp] in=C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-e2cfdd02.wav pitch=G5 vel=100 flags=g0Bi100Hu0Mo0Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0 off=3475.74 len=300 con=106.12 cut=-331.07 vol=100
+2026-04-26 20:53:00.534 +09:00 [ERR] ProcessRunner >>> [thread-26] [Resamp] WAV: sr=44100 ch=1 samples=257152
+2026-04-26 20:53:00.534 +09:00 [ERR] ProcessRunner >>> [thread-26] [Resamp] flags parsed: g=0 Bi=100 Hu=0 Mo=0 Tn=0 t=0 Gr=0 Vtl=0 Vtr=0 Vtw=0 Vc=0 Nn=0 H=70 N=0 Bh=0 Tr=100 Cs=50 At=0 Rl=0 Ns=0 P=86 c=0
+2026-04-26 20:53:00.541 +09:00 [ERR] ProcessRunner >>> [thread-6] [Resamp] WORLD analyzed: n_frames=1925 fft_size=2048
+2026-04-26 20:53:00.561 +09:00 [ERR] ProcessRunner >>> [thread-6] [Resamp] WORLD synthesized: out_frames=252 warp_ratio=1 Mo=0 mo_eff=0 mo_ratio=1 mo_blend=0
+2026-04-26 20:53:00.568 +09:00 [INF]  > [thread-6] C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Resamplers\resamp.exe "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-0aeb6610-8164c14f.wav" "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\res-0603e9a4-ea0ccee78c31d7c9.wav" A#4 100 "g0Bi50Hu0Mo0Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0" 898 200 120 4811 100 0 !145 84#25#9E+I/yAA
+2026-04-26 20:53:00.582 +09:00 [ERR] ProcessRunner >>> [thread-6] [Resamp] in=C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-0aeb6610-8164c14f.wav pitch=A#4 vel=100 flags=g0Bi50Hu0Mo0Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0 off=898 len=200 con=120 cut=4811 vol=100
+2026-04-26 20:53:00.589 +09:00 [ERR] ProcessRunner >>> [thread-6] [Resamp] WAV: sr=44100 ch=1 samples=258485
+2026-04-26 20:53:00.589 +09:00 [ERR] ProcessRunner >>> [thread-6] [Resamp] flags parsed: g=0 Bi=50 Hu=0 Mo=0 Tn=0 t=0 Gr=0 Vtl=0 Vtr=0 Vtw=0 Vc=0 Nn=0 H=70 N=0 Bh=0 Tr=100 Cs=50 At=0 Rl=0 Ns=0 P=86 c=0
+2026-04-26 20:53:00.859 +09:00 [ERR] ProcessRunner >>> [thread-18] [Resamp] WORLD analyzed: n_frames=1197 fft_size=2048
+2026-04-26 20:53:00.881 +09:00 [ERR] ProcessRunner >>> [thread-18] [Resamp] WORLD synthesized: out_frames=302 warp_ratio=1 Mo=0 mo_eff=0 mo_ratio=1 mo_blend=0
+2026-04-26 20:53:00.887 +09:00 [INF]  > [thread-18] C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Resamplers\resamp.exe "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-4a8622f4.wav" "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\res-0603e9a4-a60d6631f7903d5e.wav" D#5 100 "g0Bi50Hu0Mo0Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0" 1093.88 450 400 -544.22 100 0 !145 GFF7FwFjFXFEEzEiEREEDyDoDaDSDNDJDI#29#DHDDC9CzCrCbCMB8BrBdBJA8AqAdASAKAFABAA#15#/1+98Jxwn4hAg6hKhchyiNil
+2026-04-26 20:53:00.902 +09:00 [ERR] ProcessRunner >>> [thread-18] [Resamp] in=C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-4a8622f4.wav pitch=D#5 vel=100 flags=g0Bi50Hu0Mo0Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0 off=1093.88 len=450 con=400 cut=-544.22 vol=100
+2026-04-26 20:53:00.908 +09:00 [ERR] ProcessRunner >>> [thread-18] [Resamp] WAV: sr=44100 ch=1 samples=257152
+2026-04-26 20:53:00.909 +09:00 [ERR] ProcessRunner >>> [thread-18] [Resamp] flags parsed: g=0 Bi=50 Hu=0 Mo=0 Tn=0 t=0 Gr=0 Vtl=0 Vtr=0 Vtw=0 Vc=0 Nn=0 H=70 N=0 Bh=0 Tr=100 Cs=50 At=0 Rl=0 Ns=0 P=86 c=0
+2026-04-26 20:53:00.971 +09:00 [ERR] ProcessRunner >>> [thread-26] [Resamp] WORLD analyzed: n_frames=810 fft_size=2048
+2026-04-26 20:53:00.996 +09:00 [ERR] ProcessRunner >>> [thread-15] [Resamp] WORLD analyzed: n_frames=1388 fft_size=2048
+2026-04-26 20:53:01.022 +09:00 [ERR] ProcessRunner >>> [thread-26] [Resamp] WORLD synthesized: out_frames=602 warp_ratio=1 Mo=0 mo_eff=0 mo_ratio=1 mo_blend=0
+2026-04-26 20:53:01.029 +09:00 [INF]  > [thread-26] C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Resamplers\resamp.exe "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-44c25ed8.wav" "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\res-0603e9a4-182740f6cc4672cc.wav" G5 100 "g0Bi50Hu0Mo0Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0" 1275.28 300 227.66 -250.34 100 0 !145 AA#50#/9/4
+2026-04-26 20:53:01.044 +09:00 [ERR] ProcessRunner >>> [thread-26] [Resamp] in=C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-44c25ed8.wav pitch=G5 vel=100 flags=g0Bi50Hu0Mo0Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0 off=1275.28 len=300 con=227.66 cut=-250.34 vol=100
+2026-04-26 20:53:01.050 +09:00 [ERR] ProcessRunner >>> [thread-26] [Resamp] WAV: sr=44100 ch=1 samples=258944
+2026-04-26 20:53:01.051 +09:00 [ERR] ProcessRunner >>> [thread-26] [Resamp] flags parsed: g=0 Bi=50 Hu=0 Mo=0 Tn=0 t=0 Gr=0 Vtl=0 Vtr=0 Vtw=0 Vc=0 Nn=0 H=70 N=0 Bh=0 Tr=100 Cs=50 At=0 Rl=0 Ns=0 P=86 c=0
+2026-04-26 20:53:01.066 +09:00 [ERR] ProcessRunner >>> [thread-15] [Resamp] WORLD synthesized: out_frames=802 warp_ratio=1 Mo=0 mo_eff=0 mo_ratio=1 mo_blend=0
+2026-04-26 20:53:01.078 +09:00 [INF]  > [thread-15] C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Resamplers\resamp.exe "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-ca3a4b23.wav" "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\res-0603e9a4-4a292852d5da8adc.wav" F5 100 "g0Bi50Hu0Mo0Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0" 4206.8 300 273.02 -328.34 100 0 !145 AKAXARAHABAA#50#
+2026-04-26 20:53:01.094 +09:00 [ERR] ProcessRunner >>> [thread-15] [Resamp] in=C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-ca3a4b23.wav pitch=F5 vel=100 flags=g0Bi50Hu0Mo0Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0 off=4206.8 len=300 con=273.02 cut=-328.34 vol=100
+2026-04-26 20:53:01.096 +09:00 [ERR] ProcessRunner >>> [thread-20] [Resamp] WORLD analyzed: n_frames=1374 fft_size=2048
+2026-04-26 20:53:01.108 +09:00 [ERR] ProcessRunner >>> [thread-15] [Resamp] WAV: sr=44100 ch=1 samples=258944
+2026-04-26 20:53:01.108 +09:00 [ERR] ProcessRunner >>> [thread-15] [Resamp] flags parsed: g=0 Bi=50 Hu=0 Mo=0 Tn=0 t=0 Gr=0 Vtl=0 Vtr=0 Vtw=0 Vc=0 Nn=0 H=70 N=0 Bh=0 Tr=100 Cs=50 At=0 Rl=0 Ns=0 P=86 c=0
+2026-04-26 20:53:01.116 +09:00 [ERR] ProcessRunner >>> [thread-20] [Resamp] WORLD synthesized: out_frames=302 warp_ratio=1 Mo=0 mo_eff=0 mo_ratio=1 mo_blend=0
+2026-04-26 20:53:01.124 +09:00 [INF]  > [thread-20] C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Resamplers\resamp.exe "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-7d9e47bc.wav" "C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\res-0603e9a4-6a51a5d3a21937a7.wav" C5 100 "g0Bi50Hu0Mo0Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0" 1500.23 300 149.086 -328.275 100 0 !145 AoAZANAFABAA#51#
+2026-04-26 20:53:01.140 +09:00 [ERR] ProcessRunner >>> [thread-20] [Resamp] in=C:\Users\oyh57\SODAsoo1\VocalSynth\OpenUtauV-win-x64\Cache\src-0603e9a4-b4aabe6c-7d9e47bc.wav pitch=C5 vel=100 flags=g0Bi50Hu0Mo0Tn0t0Gr0Vtl0Vtr0Vtw0Vc0Nn0Hr70N0Bh0Tr100Cs50Rl0Ns0c0 off=1500.23 len=300 con=149.086 cut=-328.275 vol=100
+2026-04-26 20:53:01.147 +09:00 [ERR] ProcessRunner >>> [thread-20] [Resamp] WAV: sr=44100 ch=1 samples=259840
+2026-04-26 20:53:01.147 +09:00 [ERR] ProcessRunner >>> [thread-20] [Resamp] flags parsed: g=0 Bi=50 Hu=0 Mo=0 Tn=0 t=0 Gr=0 Vtl=0 Vtr=0 Vtw=0 Vc=0 Nn=0 H=70 N=0 Bh=0 Tr=100 Cs=50 At=0 Rl=0 Ns=0 P=86 c=0
+2026-04-26 20:53:01.277 +09:00 [INF] Clearing cache...
+2026-04-26 20:53:01.292 +09:00 [INF] Cache cleared.
+2026-04-26 20:53:01.309 +09:00 [ERR] ProcessRunner >>> [thread-15] [Resamp] WORLD analyzed: n_frames=535 fft_size=2048
+2026-04-26 20:53:01.350 +09:00 [INF] Exiting.
+2026-04-26 20:53:01.351 +09:00 [INF] Exited.

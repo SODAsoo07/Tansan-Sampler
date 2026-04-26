@@ -59,6 +59,7 @@ set(WAVTOOL_SOURCES
 
 add_executable(wavtool ${WAVTOOL_SOURCES})
 target_include_directories(wavtool PRIVATE src)
+set_target_properties(wavtool PROPERTIES OUTPUT_NAME "V_wavtool")
 
 # ── OpenUtau 테스트용 자동 배포 ─────────────────────────
 option(RESAMP_AUTO_COPY_TO_OPENUTAU "Copy built resamp.exe to OpenUtau Resamplers folder." ON)
@@ -77,7 +78,7 @@ if(WIN32 AND RESAMP_AUTO_COPY_TO_OPENUTAU)
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
             "$<TARGET_FILE:resamp>"
             "${OPENUTAU_RESAMPLERS_DIR}/resamp.exe"
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    COMMAND ${CMAKE_COMMAND} -E copy
             "${CMAKE_SOURCE_DIR}/resamp.yaml"
             "${OPENUTAU_RESAMPLERS_DIR}/resamp.yaml"
     COMMENT "Deploying resamp.exe/resamp.yaml to ${OPENUTAU_RESAMPLERS_DIR}")
@@ -93,10 +94,14 @@ if(WIN32 AND WAVTOOL_AUTO_COPY_TO_OPENUTAU)
     COMMENT "Deploying wavtool_probe.exe to ${OPENUTAU_RESAMPLERS_DIR}")
   add_custom_command(TARGET wavtool POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E make_directory "${OPENUTAU_WAVTOOLS_DIR}"
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${OPENUTAU_RESAMPLERS_DIR}"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
             "$<TARGET_FILE:wavtool>"
-            "${OPENUTAU_WAVTOOLS_DIR}/wavtool.exe"
-    COMMENT "Deploying wavtool.exe to ${OPENUTAU_WAVTOOLS_DIR}")
+            "${OPENUTAU_WAVTOOLS_DIR}/V_wavtool.exe"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "$<TARGET_FILE:wavtool>"
+            "${OPENUTAU_RESAMPLERS_DIR}/V_wavtool.exe"
+    COMMENT "Deploying V_wavtool.exe to ${OPENUTAU_WAVTOOLS_DIR} and ${OPENUTAU_RESAMPLERS_DIR}")
 endif()
 
 if(WIN32)

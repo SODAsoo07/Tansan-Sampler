@@ -1,0 +1,3 @@
+[ARGS] argc=14 argv=C:\Users\oyh57\SODAsoo1\Devs\Resamp\build\Release\resamp.exe | tools\diag\in.wav | tools\diag\out_check3.wav | C4 | 100 | Vtw40Vc40Nn40 | 0 | 900 | 0 | 0 | 100 | 0 | 120 | AA
+[PARSED] flags="Vtw40Vc40Nn40" off=0.000000 len=900.000000 con=0.000000 cut=0.000000
+[FLAGS] Vtl=0 Vtr=0 Vtw=40 Vc=40 Nn=40 Mo=0 Tn=0

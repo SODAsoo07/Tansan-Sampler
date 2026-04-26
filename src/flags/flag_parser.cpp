@@ -38,7 +38,7 @@ SynthParams parse_flags(const std::string& s) {
         else if (lname == "hu")
                             p.husky_tone     = math::clamp(val, -100, 100);
         else if (lname == "mo")
-                            p.mouth_open     = math::clamp(val, 0, 100);
+                            p.mouth_open     = math::clamp(val, -100, 100);
         else if (lname == "tn")
                             p.tension        = math::clamp(val, -100, 100);
         else if (lname == "t")
@@ -51,15 +51,15 @@ SynthParams parse_flags(const std::string& s) {
                             p.tract_resonance = math::clamp(val, -100, 100);
         else if (lname == "vtw")
                             p.tract_focus    = math::clamp(val, -100, 100);
-        else if (lname == "vc")
+        else if (lname == "vc" || lname == "vcs" || lname == "vcons")
                             p.tract_constriction = math::clamp(val, 0, 100);
-        else if (lname == "nn")
+        else if (lname == "nn" || lname == "nas" || lname == "nasal")
                             p.nasal_coupling = math::clamp(val, 0, 100);
         else if (lname == "h" || lname == "hr")
                             p.harmonics      = math::clamp(val, 0, 100);
-        else if (lname == "n") p.noise_level = math::clamp(val, 0, 100);
+        else if (lname == "n") p.noise_level = math::clamp(val, -100, 100);
         else if (lname == "bh" || lname == "brh")
-                            p.breathiness    = math::clamp(val, 0, 100);
+                            p.breathiness    = math::clamp(val, -100, 100);
         else if (lname == "tr") p.transition_length = math::clamp(val, 0, 200);
         else if (lname == "cs") p.consonant_stability = math::clamp(val, 0, 100);
         else if (lname == "at") p.attack = math::clamp(val, -100, 100);

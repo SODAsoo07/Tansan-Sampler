@@ -73,30 +73,71 @@ RenderParams parse_args(int argc, char** argv) {
         std::string v = argv[i];
         return v.empty() ? def : std::stoi(v);
     };
+    auto has_alpha = [](const std::string& s) -> bool {
+        for (unsigned char ch : s) {
+            if (std::isalpha(ch)) return true;
+        }
+        return false;
+    };
+    auto trim_copy = [](std::string s) -> std::string {
+        auto is_space = [](unsigned char ch) { return std::isspace(ch) != 0; };
+        while (!s.empty() && is_space(static_cast<unsigned char>(s.front()))) s.erase(s.begin());
+        while (!s.empty() && is_space(static_cast<unsigned char>(s.back()))) s.pop_back();
+        return s;
+    };
+    auto looks_number = [](const std::string& s) -> bool {
+        if (s.empty()) return false;
+        char* end = nullptr;
+        std::strtod(s.c_str(), &end);
+        return end != s.c_str() && *end == '\0';
+    };
 
-    // arg[5]: 플래그 ("_"=빈 플래그)
+    // OpenUtau/UTAU 구현에 따라 flags 인자가 생략되어
+    // optional 인자가 한 칸 당겨지는 경우가 있다.
+    // arg[5]에 알파벳이 없고 숫자 형태면 "flags 생략"으로 간주한다.
+    int opt_base = 5;
     if (argc > 5) {
-        p.flags = argv[5];
-        if (p.flags == "_") p.flags = "";
+        std::string a5 = trim_copy(get_str(5));
+        bool flags_present = false;
+        if (a5 == "_") {
+            flags_present = true; // placeholder로 전달된 경우
+        } else if (has_alpha(a5)) {
+            flags_present = true; // 정상 플래그 문자열
+        } else if (looks_number(a5)) {
+            flags_present = false; // flags 생략 + optional 당겨짐
+        } else {
+            // 공백/기타 특수 문자열은 flags로 간주하지 않고
+            // optional 인자 시작점으로 처리해 쉬프트 오판을 줄인다.
+            flags_present = false;
+        }
+
+        if (flags_present) {
+            p.flags = a5;
+            if (p.flags == "_") p.flags.clear();
+            opt_base = 6;
+        } else {
+            p.flags.clear();
+            opt_base = 5;
+        }
     }
 
-    p.offset_ms    = get_dbl(6,  0.0);
-    p.length_ms    = get_dbl(7,  500.0);
-    p.consonant_ms = get_dbl(8,  0.0);
-    p.cutoff_ms    = get_dbl(9,  0.0);
-    p.volume       = get_int(10, 100);
-    p.modulation   = get_int(11, 0);
+    p.offset_ms    = get_dbl(opt_base + 0, 0.0);
+    p.length_ms    = get_dbl(opt_base + 1, 500.0);
+    p.consonant_ms = get_dbl(opt_base + 2, 0.0);
+    p.cutoff_ms    = get_dbl(opt_base + 3, 0.0);
+    p.volume       = get_int(opt_base + 4, 100);
+    p.modulation   = get_int(opt_base + 5, 0);
 
-    // arg[12]: 템포 "!120" 또는 숫자
-    if (argc > 12) {
-        std::string t = argv[12];
+    // tempo: "!120" 또는 숫자
+    if (argc > (opt_base + 6)) {
+        std::string t = argv[opt_base + 6];
         if (!t.empty() && t[0] == '!') t = t.substr(1);
         if (!t.empty()) p.tempo = std::stod(t);
     }
 
-    // arg[13]: pitch_bend (base64)
-    if (argc > 13) {
-        std::string pb = argv[13];
+    // pitch_bend (base64)
+    if (argc > (opt_base + 7)) {
+        std::string pb = argv[opt_base + 7];
         if (!pb.empty() && pb != "AA==" && pb != "AA")
             p.pitch_bend = base64::decode_pitch_bend_cents(pb);
     }

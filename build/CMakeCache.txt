@@ -245,6 +245,9 @@ GIT_EXECUTABLE:FILEPATH=C:/Program Files/Git/mingw64/bin/git.exe
 //OpenUtau Resamplers directory for post-build deployment.
 OPENUTAU_RESAMPLERS_DIR:PATH=C:/Users/oyh57/SODAsoo1/VocalSynth/OpenUtauV-win-x64/Resamplers
 
+//OpenUtau Wavtools directory for post-build deployment.
+OPENUTAU_WAVTOOLS_DIR:PATH=C:/Users/oyh57/SODAsoo1/VocalSynth/OpenUtauV-win-x64/Wavtools
+
 //Copy built resamp.exe to OpenUtau Resamplers folder.
 RESAMP_AUTO_COPY_TO_OPENUTAU:BOOL=ON
 

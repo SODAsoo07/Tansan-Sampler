@@ -14,7 +14,7 @@ expressions:
     default_value: 0
     is_flag: true
     flag: g
-  bre:
+  bi:
     name: Brightness
     abbr: bi
     type: Numerical
@@ -33,12 +33,12 @@ expressions:
     is_flag: true
     flag: Hu
   mo:
-    name: Mouth Open
+    name: Mouth Open/Close
     abbr: mo
     type: Numerical
-    min: 0
+    min: -100
     max: 100
-    default_value: 50
+    default_value: 0
     is_flag: true
     flag: Mo
   tens:
@@ -95,7 +95,7 @@ expressions:
     default_value: 0
     is_flag: true
     flag: Vtw
-  vcons:
+  vcs:
     name: Tract Constriction
     abbr: vcs
     type: Numerical
@@ -104,7 +104,7 @@ expressions:
     default_value: 0
     is_flag: true
     flag: Vc
-  nas:
+  nn:
     name: Nasal Coupling
     abbr: nn
     type: Numerical
@@ -123,19 +123,19 @@ expressions:
     is_flag: true
     flag: Hr
   nois:
-    name: Noise Level
+    name: Noise Level (+/-)
     abbr: nois
     type: Numerical
-    min: 0
+    min: -100
     max: 100
     default_value: 0
     is_flag: true
     flag: N
   bh:
-    name: Breathiness
+    name: Breathiness (+/-)
     abbr: bh
     type: Numerical
-    min: 0
+    min: -100
     max: 100
     default_value: 0
     is_flag: true
@@ -149,7 +149,7 @@ expressions:
     default_value: 100
     is_flag: true
     flag: Tr
-  cstab:
+  cstb:
     name: Consonant Stability
     abbr: cstb
     type: Numerical

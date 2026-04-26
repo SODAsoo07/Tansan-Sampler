@@ -20,12 +20,37 @@
 #include <stdexcept>
 #include <algorithm>
 #include <cmath>
+#include <fstream>
+#include <cstdlib>
 
 int main(int argc, char** argv) {
     try {
+        auto append_debug_log = [&](const std::string& line) {
+            const char* path = std::getenv("RESAMP_DEBUG_LOG");
+            if (path == nullptr || *path == '\0') return;
+            std::ofstream ofs(path, std::ios::out | std::ios::app);
+            if (!ofs) return;
+            ofs << line << '\n';
+        };
+
         // ── 1. CLI 파싱 ────────────────────────────────────────────────
         resamp::RenderParams params = resamp::parse_args(argc, argv);
         int sample_rate = 44100;
+
+        {
+            std::string argv_joined;
+            for (int i = 0; i < argc; ++i) {
+                if (i > 0) argv_joined += " | ";
+                argv_joined += argv[i] ? argv[i] : "";
+            }
+            append_debug_log("[ARGS] argc=" + std::to_string(argc) +
+                             " argv=" + argv_joined);
+            append_debug_log("[PARSED] flags=\"" + params.flags +
+                             "\" off=" + std::to_string(params.offset_ms) +
+                             " len=" + std::to_string(params.length_ms) +
+                             " con=" + std::to_string(params.consonant_ms) +
+                             " cut=" + std::to_string(params.cutoff_ms));
+        }
 
         // ── 2. WAV 읽기 ────────────────────────────────────────────────
         std::cerr << "[Resamp] in=" << params.input_wav
@@ -92,6 +117,13 @@ int main(int argc, char** argv) {
                   << " Ns=" << sp.noise_color
                   << " P=" << sp.peak_comp
                   << " c=" << sp.voice_color << '\n';
+        append_debug_log("[FLAGS] Vtl=" + std::to_string(sp.tract_length) +
+                         " Vtr=" + std::to_string(sp.tract_resonance) +
+                         " Vtw=" + std::to_string(sp.tract_focus) +
+                         " Vc=" + std::to_string(sp.tract_constriction) +
+                         " Nn=" + std::to_string(sp.nasal_coupling) +
+                         " Mo=" + std::to_string(sp.mouth_open) +
+                         " Tn=" + std::to_string(sp.tension));
 
         // ── 6. WORLD 분석 (raw Harvest F0 + envelope/AP 추출) ─────────
         auto wa = resamp::synth::world_analyze(trimmed, sample_rate);
