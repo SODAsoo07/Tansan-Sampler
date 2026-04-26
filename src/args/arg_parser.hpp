@@ -22,7 +22,7 @@ struct RenderParams {
     int    volume          = 100;   // arg[10]: 볼륨 (0~200)
     int    modulation      = 0;     // arg[11]: 피치 모듈레이션 (0~200)
     double tempo           = 120.0; // arg[12]: 템포 (BPM, "!120" 형식)
-    std::vector<int8_t> pitch_bend; // arg[13]: base64 디코딩 후 반음×100 값
+    std::vector<int> pitch_bend;    // arg[13]: 디코딩된 pitch bend (cent 단위)
 
     // ── 파생 값 ───────────────────────────────────────
     double target_hz = 440.0; // pitch_str에서 변환된 Hz

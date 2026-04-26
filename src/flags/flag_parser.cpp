@@ -2,6 +2,7 @@
 #include "util/math_util.hpp"
 #include <cctype>
 #include <string>
+#include <algorithm>
 
 namespace resamp {
 
@@ -17,6 +18,9 @@ SynthParams parse_flags(const std::string& s) {
         std::string name;
         while (i < s.size() && std::isalpha(static_cast<unsigned char>(s[i])))
             name += s[i++];
+        std::string lname = name;
+        std::transform(lname.begin(), lname.end(), lname.begin(),
+                       [](unsigned char ch) { return static_cast<char>(std::tolower(ch)); });
 
         // 값 파싱 (부호 + 숫자, 없으면 0)
         std::string num_s;
@@ -28,13 +32,26 @@ SynthParams parse_flags(const std::string& s) {
         int val = num_s.empty() ? 0 : std::stoi(num_s);
 
         // 이름 → 파라미터 매핑
-        if      (name == "g") p.gender      = math::clamp(val, -100, 100);
-        else if (name == "B") p.brightness  = math::clamp(val, 0, 100);
-        else if (name == "t") p.tension     = math::clamp(val, -100, 100);
-        else if (name == "Hr") p.harmonics  = math::clamp(val, 0, 100);
-        else if (name == "N") p.noise_level = math::clamp(val, 0, 100);
-        else if (name == "P") p.peak_comp   = math::clamp(val, 0, 100);
-        else if (name == "c") p.voice_color = math::clamp(val, -100, 100);
+        if      (lname == "g") p.gender      = math::clamp(val, -100, 100);
+        else if (lname == "bi")
+                            p.brightness     = math::clamp(val, 0, 100);
+        else if (lname == "hu")
+                            p.husky_tone     = math::clamp(val, -100, 100);
+        else if (lname == "mo")
+                            p.mouth_open     = math::clamp(val, 0, 100);
+        else if (lname == "t") p.tension     = math::clamp(val, -100, 100);
+        else if (lname == "h" || lname == "hr")
+                            p.harmonics      = math::clamp(val, 0, 100);
+        else if (lname == "n") p.noise_level = math::clamp(val, 0, 100);
+        else if (lname == "bh" || lname == "brh")
+                            p.breathiness    = math::clamp(val, 0, 100);
+        else if (lname == "tr") p.transition_length = math::clamp(val, 0, 200);
+        else if (lname == "cs") p.consonant_stability = math::clamp(val, 0, 100);
+        else if (lname == "at") p.attack = math::clamp(val, -100, 100);
+        else if (lname == "rl") p.release_air = math::clamp(val, 0, 100);
+        else if (lname == "ns") p.noise_color = math::clamp(val, -100, 100);
+        else if (lname == "p") p.peak_comp   = math::clamp(val, 0, 100);
+        else if (lname == "c") p.voice_color = math::clamp(val, -100, 100);
         // 알 수 없는 플래그는 무시
     }
     return p;

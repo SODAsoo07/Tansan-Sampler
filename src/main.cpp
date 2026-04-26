@@ -69,6 +69,22 @@ int main(int argc, char** argv) {
 
         // ── 5. 플래그 파싱 ────────────────────────────────────────────
         resamp::SynthParams sp = resamp::parse_flags(params.flags);
+        std::cerr << "[Resamp] flags parsed:"
+                  << " g=" << sp.gender
+                  << " Bi=" << sp.brightness
+                  << " Hu=" << sp.husky_tone
+                  << " Mo=" << sp.mouth_open
+                  << " t=" << sp.tension
+                  << " H=" << sp.harmonics
+                  << " N=" << sp.noise_level
+                  << " Bh=" << sp.breathiness
+                  << " Tr=" << sp.transition_length
+                  << " Cs=" << sp.consonant_stability
+                  << " At=" << sp.attack
+                  << " Rl=" << sp.release_air
+                  << " Ns=" << sp.noise_color
+                  << " P=" << sp.peak_comp
+                  << " c=" << sp.voice_color << '\n';
 
         // ── 6. WORLD 분석 (raw Harvest F0 + envelope/AP 추출) ─────────
         auto wa = resamp::synth::world_analyze(trimmed, sample_rate);
@@ -88,8 +104,9 @@ int main(int argc, char** argv) {
         // 볼륨 스케일 + 피크 제한 (P 플래그)
         resamp::post::apply_volume(output, params.volume, sp);
 
-        // Fade in/out (5ms)
-        resamp::post::apply_fades(output, 5.0, 5.0, sample_rate);
+        // Fade in/out:
+        // 과도한 fade-in은 어두 자음 attack을 깎아 "툭 끊기는" 인상을 줄 수 있어 축소.
+        resamp::post::apply_fades(output, 1.0, 4.0, sample_rate);
 
         // ── 10. WAV 저장 ──────────────────────────────────────────────
         resamp::io::save_wav(params.output_wav, output,

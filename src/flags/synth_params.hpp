@@ -6,10 +6,18 @@ namespace resamp {
 struct SynthParams {
     // ── 성도 물리 파라미터 ─────────────────────────────
     int gender      = 0;    // g: -100~+100  성도 길이 (포먼트 워핑)
-    int brightness  = 50;   // B: 0~100      스펙트럼 기울기 (HF/LF 에너지)
+    int brightness  = 50;   // Bi: 0~100     스펙트럼 기울기 (HF/LF 에너지)
+    int husky_tone  = 0;    // Hu: -100~+100 허스키(+) ↔ 밝음(-) 톤
+    int mouth_open  = 50;   // Mo: 0~100     입 열림(포먼트 개방도)
     int tension     = 0;    // t: -100~+100  성대 긴장도
-    int harmonics   = 100;  // H: 0~100      배음 수 (소스 LPF cutoff)
+    int harmonics   = 70;   // H/Hr: 0~100   70 중립, 그 이상은 배음 강조
     int noise_level = 0;    // N: 0~100      배경 노이즈 혼합
+    int breathiness = 0;    // Bh: 0~100     숨소리(airy) 강도
+    int transition_length   = 100; // Tr: 0~200     VC 연결 길이 스케일
+    int consonant_stability = 50;  // Cs: 0~100     자음/연결 안정화 강도
+    int attack              = 0;   // At: -100~+100 어택 선명도/완화
+    int release_air         = 0;   // Rl: 0~100     릴리즈 airy 강도
+    int noise_color         = 0;   // Ns: -100~+100 노이즈 톤 (밝기/어둠)
     int peak_comp   = 86;   // P: 0~100      피크 제한 강도
     int voice_color = 0;    // c: -100~+100  음색 (고차 반사 계수 조정)
 

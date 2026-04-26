@@ -32,8 +32,9 @@ std::vector<double> make_f0_contour(const RenderParams& params,
     if (params.target_hz <= 0.0) return f0; // rest
 
     // ── pitch_bend 적용 ──────────────────────────────────────────────────
-    // UTAU 관례: 각 byte = 10 cents 단위.
-    // 안정성 우선: 선형 보간 + deadband(미세 요동 무시).
+    // 내부 pitch_bend 단위는 cent.
+    // (UTAU/OpenUtau 12bit 포맷은 그대로 cent, legacy int8은 10cent→cent 변환됨)
+    // 안정성 우선: 선형 보간 + deadband(아주 미세 요동만 무시).
     std::vector<double> cents_contour(output_samples, 0.0);
     bool has_effective_bend = false;
     if (!params.pitch_bend.empty()) {
@@ -41,31 +42,20 @@ std::vector<double> make_f0_contour(const RenderParams& params,
         std::vector<double> bend_cents(bend_size, 0.0);
         double cmin = 1.0e18;
         double cmax = -1.0e18;
+        double cabsmax = 0.0;
         for (int i = 0; i < bend_size; ++i) {
             // 극단값 클램프(안정성): 비정상 decode/입력으로 인한 폭주 방지
-            double c = static_cast<double>(params.pitch_bend[i]) * 10.0;
-            c = std::clamp(c, -1200.0, 1200.0);
+            double c = static_cast<double>(params.pitch_bend[i]);
+            c = std::clamp(c, -2400.0, 2400.0);
             bend_cents[i] = c;
             cmin = std::min(cmin, bend_cents[i]);
             cmax = std::max(cmax, bend_cents[i]);
+            cabsmax = std::max(cabsmax, std::fabs(c));
         }
 
-        // 기준선(baseline) 보정:
-        // 일부 엔진/프로토콜에서는 pit 배열에 상수 오프셋이 섞일 수 있어
-        // 노트 전체가 통째로 낮아지는 현상이 생긴다. 중앙값 기준으로 제거.
-        // (작은 오프셋은 유지해 원래 곡선 보존)
-        std::vector<double> tmp = bend_cents;
-        auto mid_it = tmp.begin() + tmp.size() / 2;
-        std::nth_element(tmp.begin(), mid_it, tmp.end());
-        double baseline_cents = *mid_it;
-        if (std::fabs(baseline_cents) >= 15.0) {
-            for (double& c : bend_cents) c -= baseline_cents;
-            cmin -= baseline_cents;
-            cmax -= baseline_cents;
-        }
-
-        // deadband를 과하게 잡으면 작은 비브라토까지 사라질 수 있어 보수적으로 설정
-        bool ignore_small_bend = ((cmax - cmin) <= 4.0);
+        // range만 보면 "상수 오프셋"을 놓쳐 실제 음정이 틀어질 수 있다.
+        // 따라서 range와 절대 크기를 함께 본다.
+        bool ignore_small_bend = ((cmax - cmin) <= 2.0 && cabsmax <= 2.0);
         if (!ignore_small_bend) {
             has_effective_bend = true;
             double denom = std::max(1, output_samples - 1);

@@ -5,6 +5,7 @@
 #include <cstdlib>
 #include <cctype>
 #include <algorithm>
+#include <cstring>
 
 namespace resamp {
 
@@ -96,8 +97,8 @@ RenderParams parse_args(int argc, char** argv) {
     // arg[13]: pitch_bend (base64)
     if (argc > 13) {
         std::string pb = argv[13];
-        if (!pb.empty() && pb != "AA==")
-            p.pitch_bend = base64::decode(pb);
+        if (!pb.empty() && pb != "AA==" && pb != "AA")
+            p.pitch_bend = base64::decode_pitch_bend_cents(pb);
     }
 
     return p;

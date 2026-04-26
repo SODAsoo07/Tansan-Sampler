@@ -160,7 +160,10 @@ static void map_out_time_to_src(
             src_time_ms = loop_start_ms + wrapped;
             in_vowel_loop = true;
         } else {
-            src_time_ms = consonant_src_ms + transition_src_len_ms;
+            // 루프를 쓰지 않는 경우에는 tail을 시간 순서대로 계속 진행.
+            // (정지 프레임 고정은 연결부 툭툭거림/메아리 유발)
+            double tail_time = std::max(0.0, vowel_time - transition_tgt_len_ms);
+            src_time_ms = consonant_src_ms + transition_src_len_ms + tail_time;
             in_vowel_loop = false;
         }
     }
@@ -287,13 +290,18 @@ std::vector<float> world_render(
 
     int fs             = src.fs;
     double anal_period = src.frame_period; // 분석 프레임 주기 (2.5 ms)
+    double out_total_ms = output_samples * 1000.0 / std::max(1, fs);
     // 합성 프레임 주기:
     // 0.125ms는 프레임 간 미세 흔들림을 과하게 노출시키는 경우가 있어 0.5ms로 고정.
-    bool has_f0_mod = (params.modulation > 0) || !params.pitch_bend.empty();
+    bool has_f0_mod = false;
     double frame_period = 0.5;
     int spec_dim       = src.fft_size / 2 + 1;
     double src_total_ms = src.n_frames * anal_period;
-    double consonant_scale = std::max(0.01, params.velocity / 100.0);
+    // UTAU velocity 관례:
+    // 값이 클수록 자음이 더 빠르게(짧게) 지나가야 하므로 역비율 사용.
+    // v=100 -> 1.0, v=200 -> 0.5, v=50 -> 2.0
+    double vel = static_cast<double>(std::max(1, params.velocity));
+    double consonant_scale = std::clamp(100.0 / vel, 0.25, 4.0);
     double consonant_src_ms = std::clamp(params.consonant_ms, 0.0, src_total_ms);
     double consonant_tgt_ms = consonant_src_ms * consonant_scale;
 
@@ -303,10 +311,53 @@ std::vector<float> world_render(
     int start_fi = static_cast<int>(std::round(consonant_src_ms / anal_period));
     start_fi = std::clamp(start_fi, 0, n_frames - 1);
 
+    // 분석 F0의 유/무성 마스크를 보정해 프레임 단위 깜빡임(chatter) 억제.
+    std::vector<double> src_voicing(n_frames, 0.0);
+    for (int fi = 0; fi < n_frames; ++fi)
+        src_voicing[fi] = (src.f0[fi] >= 55.0) ? 1.0 : 0.0;
+    {
+        // voiced 사이의 짧은 unvoiced gap 메우기 (<= 2프레임)
+        int run_s = -1;
+        for (int fi = 0; fi <= n_frames; ++fi) {
+            bool voiced = (fi < n_frames) ? (src_voicing[fi] >= 0.5) : true;
+            if (!voiced) {
+                if (run_s < 0) run_s = fi;
+            } else if (run_s >= 0) {
+                int run_e = fi - 1;
+                bool left_voiced  = (run_s - 1 >= 0) && (src_voicing[run_s - 1] >= 0.5);
+                bool right_voiced = (fi < n_frames) && (src_voicing[fi] >= 0.5);
+                int len = run_e - run_s + 1;
+                if (left_voiced && right_voiced && len <= 2) {
+                    for (int k = run_s; k <= run_e; ++k) src_voicing[k] = 1.0;
+                }
+                run_s = -1;
+            }
+        }
+    }
+    {
+        // unvoiced 사이의 1프레임 voiced spike 제거
+        int run_s = -1;
+        for (int fi = 0; fi <= n_frames; ++fi) {
+            bool voiced = (fi < n_frames) ? (src_voicing[fi] >= 0.5) : false;
+            if (voiced) {
+                if (run_s < 0) run_s = fi;
+            } else if (run_s >= 0) {
+                int run_e = fi - 1;
+                bool left_unvoiced  = (run_s - 1 >= 0) && (src_voicing[run_s - 1] < 0.5);
+                bool right_unvoiced = (fi < n_frames) && (src_voicing[fi] < 0.5);
+                int len = run_e - run_s + 1;
+                if (left_unvoiced && right_unvoiced && len <= 1) {
+                    for (int k = run_s; k <= run_e; ++k) src_voicing[k] = 0.0;
+                }
+                run_s = -1;
+            }
+        }
+    }
+
     int best_s = -1, best_e = -1;
     int cur_s = -1;
     for (int fi = start_fi; fi < n_frames; ++fi) {
-        bool voiced = (src.f0[fi] >= 50.0);
+        bool voiced = (src_voicing[fi] >= 0.5);
         if (voiced) {
             if (cur_s < 0) cur_s = fi;
         } else if (cur_s >= 0) {
@@ -389,14 +440,92 @@ std::vector<float> world_render(
     loop_start_fi = std::clamp(loop_start_fi, 0, n_frames - 2);
     loop_end_fi   = std::clamp(loop_end_fi, loop_start_fi + 1, n_frames - 1);
 
+    // 루프 경계 mismatch 최소화:
+    // end->start 스펙트럼 점프를 줄여 반복 시 "툭툭" 끊기는 인상을 완화.
+    if (loop_end_fi - loop_start_fi >= 2) {
+        int min_core = std::max(6, static_cast<int>(std::round(28.0 / anal_period)));
+        int search_w = std::max(1, static_cast<int>(std::round(8.0 / anal_period))); // ~8ms
+        int best_ls = loop_start_fi;
+        int best_le = loop_end_fi;
+        double best_cost = 1.0e30;
+        for (int ds = -search_w; ds <= search_w; ++ds) {
+            int ls = std::clamp(loop_start_fi + ds, 0, n_frames - 2);
+            for (int de = -search_w; de <= search_w; ++de) {
+                int le = std::clamp(loop_end_fi + de, ls + 1, n_frames - 1);
+                if ((le - ls + 1) < min_core) continue;
+                double wrap_jump = frame_flux(le, ls);
+                double edge_l = frame_flux(ls, ls + 1);
+                double edge_r = frame_flux(le - 1, le);
+                // wrap 불연속을 우선 최소화, 내부 급변 구간은 보조 패널티.
+                double cost = wrap_jump + 0.55 * (edge_l + edge_r);
+                if (cost < best_cost) {
+                    best_cost = cost;
+                    best_ls = ls;
+                    best_le = le;
+                }
+            }
+        }
+        loop_start_fi = best_ls;
+        loop_end_fi   = best_le;
+    }
+
     double loop_start_ms = loop_start_fi * anal_period;
     double loop_end_ms   = loop_end_fi * anal_period;
     double loop_len_ms   = std::max(0.0, loop_end_ms - loop_start_ms);
     bool has_vowel_loop  = loop_len_ms > (2.0 * anal_period);
     double transition_src_len_ms = std::max(0.0, loop_start_ms - consonant_src_ms);
+
+    // 루프가 유효하지 않으면 one-pass tail로 강제.
+    // (짧은/불안정 루프의 반복이 VC/자음 포함 노트에서 툭툭 끊김을 유발)
+    if (!has_vowel_loop) {
+        loop_start_ms = std::clamp(consonant_src_ms, 0.0, src_total_ms);
+        loop_end_ms   = src_total_ms;
+        loop_len_ms   = 0.0;
+        transition_src_len_ms = 0.0;
+        loop_start_fi = std::clamp(static_cast<int>(std::round(loop_start_ms / anal_period)), 0, n_frames - 1);
+        loop_end_fi   = loop_start_fi;
+    }
+
+    // 출력 길이가 소스의 자음 이후 길이보다 짧거나 같으면 루프가 필요 없다.
+    // 이 경우 루프 경로를 완전히 끄고 one-pass로만 진행해 끊김 가능성 최소화.
+    double required_after_consonant_ms = std::max(0.0, out_total_ms - consonant_tgt_ms);
+    double available_after_consonant_ms = std::max(0.0, src_total_ms - consonant_src_ms);
+    bool no_loop_needed = (required_after_consonant_ms <= (available_after_consonant_ms + 1.0));
+    if (no_loop_needed) {
+        has_vowel_loop = false;
+        loop_len_ms = 0.0;
+        loop_start_ms = std::clamp(consonant_src_ms, 0.0, src_total_ms);
+        loop_end_ms = loop_start_ms;
+        transition_src_len_ms = 0.0;
+        loop_start_fi = std::clamp(static_cast<int>(std::round(loop_start_ms / anal_period)), 0, n_frames - 1);
+        loop_end_fi = loop_start_fi;
+    }
+
+    // 연결부(자음→모음)의 유성 비율을 보고 길이 압축을 다르게 적용.
+    int trans_a = std::clamp(static_cast<int>(std::round(consonant_src_ms / anal_period)), 0, n_frames - 1);
+    int trans_b = std::clamp(static_cast<int>(std::round((consonant_src_ms + transition_src_len_ms) / anal_period)),
+                             trans_a, n_frames - 1);
+    double transition_voiced_ratio = 1.0;
+    if (trans_b >= trans_a) {
+        int vcnt = 0;
+        int tcnt = trans_b - trans_a + 1;
+        for (int fi = trans_a; fi <= trans_b; ++fi)
+            if (src_voicing[fi] >= 0.5) ++vcnt;
+        if (tcnt > 0) transition_voiced_ratio = static_cast<double>(vcnt) / tcnt;
+    }
+
     // 연결부는 너무 짧으면 끊김/툭툭거림이 생길 수 있어
-    // 과도한 단축은 피하고, 중간 정도만 압축.
-    double transition_tgt_len_ms = std::clamp(transition_src_len_ms * 0.85, 0.0, 35.0);
+    // 과도한 단축은 피하고, 무성 연결부에서는 충분히 길게 유지.
+    // Tr 플래그(transition length scale)를 곱해 사용자 제어 허용.
+    double transition_tgt_len_ms = 0.0;
+    if (transition_src_len_ms > 0.0) {
+        double scale  = (transition_voiced_ratio < 0.45) ? 1.00 : 0.85;
+        double min_ms = (transition_voiced_ratio < 0.45) ? 12.0 : 5.0;
+        double max_ms = (transition_voiced_ratio < 0.45) ? 52.0 : 35.0;
+        double tr_scale_local = std::clamp(sp.transition_length / 100.0, 0.35, 2.2);
+        transition_tgt_len_ms = std::clamp(transition_src_len_ms * scale * tr_scale_local,
+                                           min_ms * tr_scale_local, max_ms * tr_scale_local);
+    }
     // 타겟 F0가 거의 평탄한 노트면 강제 평탄화 (비브라토 없는 음정 떨림 억제).
     double voiced_min = 1.0e18;
     double voiced_max = 0.0;
@@ -411,8 +540,14 @@ std::vector<float> world_render(
         }
     }
     double flat_f0_hz = (voiced_cnt > 0) ? (voiced_sum / voiced_cnt) : 0.0;
-    bool flat_target_f0 = (!has_f0_mod && params.modulation <= 0 && voiced_cnt > 0 &&
-                           (voiced_max - voiced_min) <= 0.45);
+    double voiced_span_cents = 0.0;
+    if (voiced_cnt > 1 && voiced_min >= 1.0 && voiced_max > voiced_min) {
+        voiced_span_cents = 1200.0 * std::log2(voiced_max / voiced_min);
+    }
+    // 실제 타겟 F0 변화량 기준으로 modulation 여부 판정.
+    // (pit 배열 존재 여부만으로 판정하면 비브라토가 과도하게 눌릴 수 있음)
+    has_f0_mod = (voiced_span_cents >= 8.0);
+    bool flat_target_f0 = (voiced_cnt > 0 && voiced_span_cents <= 3.0);
 
     double seam_ms = 0.0;
     if (has_vowel_loop) {
@@ -420,8 +555,19 @@ std::vector<float> world_render(
         seam_ms = std::clamp(loop_len_ms * 0.12, 3.0, 12.0);
     }
 
-    // 안정화 모드: loop 구간(기본) + flat note(전체)에 anchor envelope/AP 적용.
+    // 안정화 모드:
+    // 음색이 노트마다 랜덤하게 꺼지는 현상을 막기 위해
+    // transition voiced ratio 의존을 줄이고 보수적 상수 혼합으로 고정.
     bool use_stable_vowel_env = has_vowel_loop || flat_target_f0;
+    bool has_consonant_head = (consonant_src_ms >= 1.0);
+    double anchor_mix_cap = flat_target_f0 ? 0.60 : (has_f0_mod ? 0.20 : (has_consonant_head ? 0.28 : 0.46));
+    if (has_consonant_head) anchor_mix_cap *= 0.75;
+    if (no_loop_needed) anchor_mix_cap *= 0.80;
+    // Cs: 높을수록 연결 안정성 강화(과도한 변화 억제)
+    double cs_local = std::clamp((sp.consonant_stability - 50) / 50.0, -1.0, 1.0);
+    if (cs_local >= 0.0) anchor_mix_cap *= (1.0 + 0.22 * cs_local);
+    else                 anchor_mix_cap *= (1.0 + 0.12 * cs_local);
+    if (anchor_mix_cap < 0.05) use_stable_vowel_env = false;
     std::vector<double> vowel_spec_anchor(spec_dim, 0.0);
     std::vector<double> vowel_ap_anchor(spec_dim, 0.0);
     if (use_stable_vowel_env) {
@@ -472,15 +618,50 @@ std::vector<float> world_render(
     //   g=-100 → ratio≈1.395 (포먼트 ↑, 여성화)
     //   g=    0 → ratio=1.0   (변경 없음)
     //   g=+100 → ratio≈0.717 (포먼트 ↓, 남성화)
-    double formant_ratio = std::exp(-static_cast<double>(sp.gender) / 300.0);
+    double formant_ratio = std::exp(-static_cast<double>(sp.gender) / 260.0);
     bool   do_warp       = std::fabs(formant_ratio - 1.0) > 0.005;
 
     // ── Brightness: 스펙트럼 기울기 (B=50 기본) ───────────────────────
     // power 도메인에서 freq에 대해 선형 dB 기울기 적용
-    double brightness_tilt_db = (sp.brightness - 50) / 50.0 * 12.0;
+    double brightness_tilt_db = (sp.brightness - 50) / 50.0 * 18.0;
+    double hu = std::clamp(sp.husky_tone / 100.0, -1.0, 1.0);
+    double hu_eff = (hu >= 0.0) ? std::pow(hu, 0.78) : -std::pow(-hu, 0.78);
+    double mo = std::clamp((sp.mouth_open - 50) / 50.0, -1.0, 1.0);
+    double mo_eff = (mo >= 0.0) ? std::pow(mo, 0.78) : -std::pow(-mo, 0.78);
+    // 기본 톤 캘리브레이션: 고역/잔향 과강조 완화
+    double global_hi_tilt_db = -2.4;
+    double global_hi_ap_trim = 0.045;
 
-    // ── Tension: 저역 부스트/감쇠 (간단 근사) ─────────────────────────
-    double tension_lf_db = sp.tension / 100.0 * 6.0;  // ±6dB
+    // ── Tension: 발성 강도/이완 근사 (체감 강화) ───────────────────────
+    // +값: 더 pressed/firm (주기성↑, 존재감↑, breathiness↓)
+    // -값: 더 relaxed/breathy (주기성↓, 거칠기/숨소리↑, 존재감↓)
+    double tension = std::clamp(sp.tension / 100.0, -1.0, 1.0);
+    double tension_eff = (tension >= 0.0)
+                       ? std::pow(tension, 0.70)
+                       : -std::pow(-tension, 0.70);
+
+    // ── Voice Color(c): 중고역 성분 컬러링 ───────────────────────────
+    double vc = std::clamp(sp.voice_color / 100.0, -1.0, 1.0);
+    double vc_eff = (vc >= 0.0) ? std::pow(vc, 0.70) : -std::pow(-vc, 0.70);
+    double voice_color_db = vc_eff * 14.0; // 체감 강화를 위해 ±14dB
+
+    // ── Breathiness(Bh): airy 질감 전용 제어 ─────────────────────────
+    // N과 달리 "노이즈 양"보다 "숨소리 질감"에 초점.
+    double breathiness_amt = std::pow(std::clamp(sp.breathiness / 100.0, 0.0, 1.0), 0.72);
+
+    // ── 추가 플래그 제어량 ───────────────────────────────────────────
+    // Tr: transition 길이 스케일
+    double tr_scale = std::clamp(sp.transition_length / 100.0, 0.35, 2.2);
+    // Cs: 자음/연결 안정화 강도
+    double cs = std::clamp((sp.consonant_stability - 50) / 50.0, -1.0, 1.0);
+    double cs_pos = std::max(0.0, cs);
+    double cs_neg = std::max(0.0, -cs);
+    // At: 어택 선명도/완화
+    double at = std::clamp(sp.attack / 100.0, -1.0, 1.0);
+    // Rl: 릴리즈 airy 강도
+    double rl = std::clamp(sp.release_air / 100.0, 0.0, 1.0);
+    // Ns: 노이즈 톤 컬러
+    double ns = std::clamp(sp.noise_color / 100.0, -1.0, 1.0);
 
     // 출력 프레임별 F0/envelope/AP 구성
     std::vector<double> out_f0(out_n_frames, 0.0);
@@ -488,6 +669,16 @@ std::vector<float> world_render(
     std::vector<std::vector<double>> out_ap  (out_n_frames, std::vector<double>(spec_dim, 0.0));
 
     double inv_ratio = 1.0 / formant_ratio;
+    double init_voiced = 1.0;
+    if (n_frames > 0) {
+        int a = std::clamp(start_fi, 0, n_frames - 1);
+        int b = std::clamp(a + 2, a, n_frames - 1);
+        double s = 0.0;
+        int c = 0;
+        for (int fi = a; fi <= b; ++fi) { s += src_voicing[fi]; ++c; }
+        if (c > 0) init_voiced = std::clamp(s / c, 0.0, 1.0);
+    }
+    double voiced_state = init_voiced; // frame 간 voicedness 상태 (AP 제어 안정화용)
 
     for (int i = 0; i < out_n_frames; ++i) {
         double out_time_ms = i * frame_period;
@@ -533,25 +724,37 @@ std::vector<float> world_render(
             out_f0[i] = sample_frame_f0_from_contour(target_f0_per_sample, sf, half_win);
         }
 
-        // source voicing 기반 F0 게이팅:
-        // 무성/자음 구간은 음소 보호를 위해 mute하지만,
-        // voiced로 판정된 구간에서는 F0를 감쇠하지 않아 보컬프라이 질감 방지.
-        double sv0 = (src.f0[src_fi] >= 50.0) ? 1.0 : 0.0;
-        double sv1 = (src.f0[src_fi2] >= 50.0) ? 1.0 : 0.0;
+        // source voicedness 추정:
+        // F0를 0으로 끊지 않고, 무성성은 AP 쪽에서 처리해 끊김(click) 억제.
+        double sv0 = src_voicing[src_fi];
+        double sv1 = src_voicing[src_fi2];
         double sv  = sv0 * (1.0 - frac) + sv1 * frac;
-        // hard mute 대신 soft gate로 끊김 억제
-        double vg;
-        if (sv <= 0.03) vg = 0.0;
-        else if (sv >= 0.25) vg = 1.0;
+        double voiced;
+        if (sv <= 0.02) voiced = 0.0;
+        else if (sv >= 0.35) voiced = 1.0;
         else {
-            double x = (sv - 0.03) / (0.25 - 0.03); // 0..1
+            double x = (sv - 0.02) / (0.35 - 0.02); // 0..1
             x = std::clamp(x, 0.0, 1.0);
-            vg = x * x * (3.0 - 2.0 * x);           // smoothstep
+            voiced = x * x * (3.0 - 2.0 * x);       // smoothstep
         }
-        out_f0[i] *= vg;
-        if (vg < 0.01) out_f0[i] = 0.0;
+        bool in_consonant = (out_time_ms <= consonant_tgt_ms);
+        bool in_transition = (out_time_ms > consonant_tgt_ms) &&
+                             (out_time_ms <= consonant_tgt_ms + transition_tgt_len_ms);
+        double voiced_floor = 0.0;
+        if (in_transition) {
+            voiced_floor = (transition_voiced_ratio < 0.45) ? 0.20 : 0.08;
+        }
+        double voiced_eff = std::max(voiced, voiced_floor);
+        // 프레임 단위 voiced/unvoiced 채터 억제
+        double alpha = (in_consonant || in_transition) ? 0.18 : 0.30;
+        alpha *= std::clamp(1.0 - 0.35 * cs_pos + 0.25 * cs_neg, 0.55, 1.35);
+        voiced_state += alpha * (voiced_eff - voiced_state);
+        voiced_eff = std::max(voiced_eff, voiced_state);
 
-        if (out_f0[i] < 50.0) out_f0[i] = 0.0;
+        // F0는 note contour를 최대한 유지.
+        // (자음/무성 처리는 AP에서 담당해 click/랜덤 저음색을 줄임)
+        double raw_target_f0 = out_f0[i];
+        out_f0[i] = (raw_target_f0 >= 50.0) ? raw_target_f0 : 0.0;
 
         // 3. envelope/AP 시간 보간 (linear)
         const auto& s1 = src.spectrogram[src_fi];
@@ -561,6 +764,67 @@ std::vector<float> world_render(
         for (int k = 0; k < spec_dim; ++k) {
             out_spec[i][k] = s1[k] * (1.0 - frac) + s2[k] * frac;
             out_ap[i][k]   = a1[k] * (1.0 - frac) + a2[k] * frac;
+        }
+
+        // 루프 경계 seam crossfade:
+        // end->start에서 파라미터가 급점프하지 않도록 boundary 인접 구간을 양방향 블렌드.
+        if (in_vowel_loop && has_vowel_loop && seam_ms > 0.5 && loop_len_ms > (2.0 * seam_ms + anal_period)) {
+            double loop_time = out_time_ms - consonant_tgt_ms - transition_tgt_len_ms;
+            double wrapped = std::fmod(loop_time, loop_len_ms);
+            if (wrapped < 0.0) wrapped += loop_len_ms;
+
+            double w_wrap = 0.0;
+            double alt_src_time_ms = src_time_ms;
+            if (wrapped < seam_ms) {
+                w_wrap = 1.0 - std::clamp(wrapped / seam_ms, 0.0, 1.0);
+                alt_src_time_ms = loop_end_ms - (seam_ms - wrapped);
+            } else if (wrapped > (loop_len_ms - seam_ms)) {
+                double d = loop_len_ms - wrapped;
+                w_wrap = 1.0 - std::clamp(d / seam_ms, 0.0, 1.0);
+                alt_src_time_ms = loop_start_ms + (seam_ms - d);
+            }
+
+            if (w_wrap > 1.0e-4) {
+                alt_src_time_ms = std::clamp(alt_src_time_ms, 0.0, std::max(0.0, src_total_ms - 1.0e-6));
+                double afid = alt_src_time_ms / anal_period;
+                int af0 = static_cast<int>(afid);
+                int af1 = af0 + 1;
+                if (af0 < loop_start_fi) af0 = loop_start_fi;
+                if (af0 > loop_end_fi) af0 = loop_end_fi;
+                af1 = af0 + 1;
+                if (af1 > loop_end_fi) af1 = loop_start_fi;
+                double at = std::clamp(afid - af0, 0.0, 1.0);
+                const auto& as1 = src.spectrogram[af0];
+                const auto& as2 = src.spectrogram[af1];
+                const auto& aa1 = src.aperiodicity[af0];
+                const auto& aa2 = src.aperiodicity[af1];
+                for (int k = 0; k < spec_dim; ++k) {
+                    double sp_alt = as1[k] * (1.0 - at) + as2[k] * at;
+                    double ap_alt = aa1[k] * (1.0 - at) + aa2[k] * at;
+                    out_spec[i][k] = out_spec[i][k] * (1.0 - w_wrap) + sp_alt * w_wrap;
+                    out_ap[i][k]   = out_ap[i][k]   * (1.0 - w_wrap) + ap_alt * w_wrap;
+                }
+            }
+        }
+
+        // 연결부/자음의 무성성은 AP 상승으로 처리해 파형 불연속을 줄인다.
+        {
+            double uv_boost = 0.0;
+            if (in_consonant || in_transition) {
+                double unvoiced = 1.0 - voiced_eff;
+                double base_boost = in_consonant ? 0.15 : 0.06;
+                uv_boost = base_boost * (0.20 + 0.80 * unvoiced * unvoiced);
+                if (transition_voiced_ratio < 0.40 && in_transition) uv_boost += 0.03;
+                uv_boost *= std::clamp(1.0 - 0.55 * cs_pos + 0.35 * cs_neg, 0.45, 1.65);
+            }
+            uv_boost = std::clamp(uv_boost, 0.0, 0.18);
+            if (uv_boost > 0.01) {
+                for (int k = 0; k < spec_dim; ++k) {
+                    double fn = static_cast<double>(k) / std::max(1, spec_dim - 1);
+                    double shaped = uv_boost * (0.62 + 0.38 * fn); // 고역 쪽 조금 더
+                    out_ap[i][k] = std::clamp(out_ap[i][k] + shaped, 0.0, 1.0);
+                }
+            }
         }
 
         // 모음 루프에서는 anchor envelope/AP로 고정해 주기성 modulation 억제.
@@ -577,6 +841,7 @@ std::vector<float> world_render(
                 // smoothstep
                 w_anchor = u * u * (3.0 - 2.0 * u);
             }
+            w_anchor *= anchor_mix_cap;
             for (int k = 0; k < spec_dim; ++k) {
                 out_spec[i][k] = out_spec[i][k] * (1.0 - w_anchor) + vowel_spec_anchor[k] * w_anchor;
                 out_ap[i][k]   = out_ap[i][k]   * (1.0 - w_anchor) + vowel_ap_anchor[k]   * w_anchor;
@@ -610,34 +875,261 @@ std::vector<float> world_render(
             }
         }
 
-        // 6. Tension: 저역 강조/감쇠 (저역 1/8 대역에 한정 적용)
-        if (std::fabs(tension_lf_db) > 0.5) {
-            int lf_end = std::max(1, spec_dim / 8);
-            double lf_gain = std::pow(10.0, tension_lf_db / 10.0);
-            for (int k = 0; k < lf_end; ++k) {
-                double w = 0.5 * (1.0 + std::cos(math::PI * static_cast<double>(k) / lf_end));
-                double g = 1.0 + (lf_gain - 1.0) * w;
-                out_spec[i][k] *= g;
+        // 5.3. Mouth Open(Mo): 입 열림(개방도) 톤 이동
+        // AP(기식량)는 유지하고 스펙트럼만 이동한 뒤 에너지 정규화.
+        if (std::fabs(mo_eff) > 0.01) {
+            double e0 = 0.0;
+            double e1 = 0.0;
+            for (int k = 0; k < spec_dim; ++k) {
+                double p0 = std::max(0.0, out_spec[i][k]);
+                e0 += p0;
+
+                double fn = static_cast<double>(k) / std::max(1, spec_dim - 1);
+                double hz = fn * (fs * 0.5);
+                double x_f1 = std::log2((hz + 120.0) / 850.0);
+                double f1 = std::exp(-0.5 * (x_f1 * x_f1) / (0.80 * 0.80));
+                double x_f2 = std::log2((hz + 120.0) / 1900.0);
+                double f2 = std::exp(-0.5 * (x_f2 * x_f2) / (0.90 * 0.90));
+                double hi = std::max(0.0, fn - 0.45);
+                // +Mo: 개방형(저/중포먼트 강조), -Mo: 덜 열린 밝은 톤
+                double shape = (1.35 * f1 + 0.65 * f2 - 0.55 * hi);
+                double db = mo_eff * 6.8 * shape;
+                double gain_pow = std::pow(10.0, db / 10.0);
+                out_spec[i][k] = p0 * gain_pow;
+                e1 += out_spec[i][k];
+            }
+            if (e0 > 1.0e-12 && e1 > 1.0e-12) {
+                double norm = std::clamp(e0 / e1, 0.65, 1.65);
+                for (int k = 0; k < spec_dim; ++k) out_spec[i][k] *= norm;
+            }
+        }
+
+        // 5.5. Attack(At): 노트 초반 선명도/완화
+        if (std::fabs(at) > 0.01) {
+            double attack_win_ms = std::clamp(22.0 + tr_scale * 6.0, 18.0, 34.0);
+            if (out_time_ms <= attack_win_ms) {
+                double u = 1.0 - std::clamp(out_time_ms / attack_win_ms, 0.0, 1.0);
+                double a_pos = std::max(0.0, at);
+                double a_neg = std::max(0.0, -at);
+                for (int k = 0; k < spec_dim; ++k) {
+                    double fn = static_cast<double>(k) / std::max(1, spec_dim - 1);
+                    double hz = fn * (fs * 0.5);
+                    double x = std::log2((hz + 120.0) / 3000.0);
+                    double bell = std::exp(-0.5 * (x * x) / (0.75 * 0.75));
+                    double db = u * (a_pos * (5.8 * bell + 2.6 * std::max(0.0, fn - 0.22))
+                                   - a_neg * (4.2 * bell + 1.6 * std::max(0.0, fn - 0.16)));
+                    out_spec[i][k] *= std::pow(10.0, db / 10.0);
+                    double ap_delta = u * (-a_pos * (0.12 * bell + 0.05) + a_neg * (0.14 * bell + 0.07));
+                    out_ap[i][k] = std::clamp(out_ap[i][k] + ap_delta, 0.0, 1.0);
+                }
+            }
+        }
+
+        // 6. Tension: 스펙트럼 + 비주기성(AP) 동시 제어 (강화)
+        if (std::fabs(tension_eff) > 0.01) {
+            double t_pos = std::max(0.0, tension_eff);
+            double t_neg = std::max(0.0, -tension_eff);
+            for (int k = 0; k < spec_dim; ++k) {
+                double fn = static_cast<double>(k) / std::max(1, spec_dim - 1); // 0..1
+                double hz = fn * (fs * 0.5);
+
+                // spectral effort:
+                // - pressed: 1~4k presence 상승
+                // - relaxed: presence 하강 + 기울기 완화
+                double x_pres = std::log2((hz + 120.0) / 2500.0);
+                double presence = std::exp(-0.5 * (x_pres * x_pres) / (0.75 * 0.75));
+                double x_mid = std::log2((hz + 120.0) / 1300.0);
+                double mid = std::exp(-0.5 * (x_mid * x_mid) / (0.85 * 0.85));
+                double slope = fn - 0.22;
+                double db = t_pos * (9.5 * presence + 4.2 * slope + 2.0 * mid)
+                          - t_neg * (7.2 * presence + 3.5 * std::max(0.0, fn - 0.08) + 1.8 * mid);
+                double gain_pow = std::pow(10.0, db / 10.0); // power
+                out_spec[i][k] *= gain_pow;
+
+                // aperiodicity effort:
+                // - pressed: 저/중역 AP 감소(주기성 증가)
+                // - relaxed: 전대역 AP 증가(숨/힘빠짐)
+                double low_mid = std::exp(-0.5 * std::pow((fn - 0.18) / 0.20, 2.0));
+                double hi = std::clamp((fn - 0.35) / 0.65, 0.0, 1.0);
+                double ap_delta = 0.0;
+                ap_delta -= t_pos * (0.26 * low_mid + 0.10 * (1.0 - hi));
+                ap_delta += t_neg * (0.30 + 0.18 * low_mid + 0.14 * hi);
+                out_ap[i][k] = std::clamp(out_ap[i][k] + ap_delta, 0.0, 1.0);
+            }
+        }
+
+        // 6.5. Voice Color: 폼ант 존재감/톤 컬러링 (강화)
+        if (std::fabs(voice_color_db) > 0.2) {
+            for (int k = 0; k < spec_dim; ++k) {
+                double fn = static_cast<double>(k) / std::max(1, spec_dim - 1);
+                double hz = fn * (fs * 0.5);
+                double x1 = std::log2((hz + 120.0) / 2200.0);
+                double bell1 = std::exp(-0.5 * (x1 * x1) / (0.85 * 0.85));
+                double x2 = std::log2((hz + 120.0) / 4200.0);
+                double bell2 = std::exp(-0.5 * (x2 * x2) / (0.90 * 0.90));
+                double shelf = fn - 0.30;
+                double db = voice_color_db * (0.90 * bell1 + 0.55 * bell2 + 0.50 * shelf);
+                double gain_pow = std::pow(10.0, db / 10.0); // power
+                out_spec[i][k] *= gain_pow;
+
+                // 컬러 변화가 단순 EQ처럼 들리지 않게 AP도 약하게 연동.
+                double ap_col = -vc_eff * (0.06 * bell1 + 0.03 * bell2);
+                out_ap[i][k] = std::clamp(out_ap[i][k] + ap_col, 0.0, 1.0);
+            }
+        }
+
+        // 6.7. Breathiness(Bh): airy 질감 강화 (N과 별도)
+        if (breathiness_amt > 0.01) {
+            for (int k = 0; k < spec_dim; ++k) {
+                double fn = static_cast<double>(k) / std::max(1, spec_dim - 1);
+                double hz = fn * (fs * 0.5);
+                double x_air = std::log2((hz + 120.0) / 4300.0);
+                double air = std::exp(-0.5 * (x_air * x_air) / (0.95 * 0.95));
+                double x_body = std::log2((hz + 120.0) / 1200.0);
+                double body = std::exp(-0.5 * (x_body * x_body) / (0.95 * 0.95));
+
+                // 중역 배음은 조금 눌러 airy 대비를 키우고, 상부 에너지는 살짝 부스트.
+                double db = breathiness_amt * (2.4 * air - 1.8 * body + 1.2 * std::max(0.0, fn - 0.35));
+                double gain_pow = std::pow(10.0, db / 10.0);
+                out_spec[i][k] *= gain_pow;
+
+                double ap_delta = breathiness_amt * (0.05 + 0.24 * fn + 0.30 * air);
+                out_ap[i][k] = std::clamp(out_ap[i][k] + ap_delta, 0.0, 1.0);
             }
         }
 
         // 7. Noise (N): aperiodicity 부스트 (숨소리 추가)
         if (sp.noise_level > 0) {
-            double ap_boost = sp.noise_level / 100.0 * 0.5;
+            double ap_boost = sp.noise_level / 100.0 * 0.8;
             for (int k = 0; k < spec_dim; ++k)
                 out_ap[i][k] = std::min(1.0, out_ap[i][k] + ap_boost);
         }
 
-        // 8. Harmonics (Hr): 비주기성 스케일 (default 100=원본, 0=완전 노이즈)
-        //    Hr<100 → AP↑ (조화성↓, 노이즈↑)
-        if (sp.harmonics != 100) {
-            double k_h = sp.harmonics / 100.0;
+        // 8. Harmonics (H/Hr): 70 중립, 그 이상은 배음 강조
+        {
+            double h = std::clamp(static_cast<double>(sp.harmonics), 0.0, 100.0);
+            constexpr double h0 = 70.0; // neutral
+            if (std::fabs(h - h0) > 0.5) {
+                if (h >= h0) {
+                    double x = (h - h0) / (100.0 - h0); // 0..1
+                    double boost = 1.0 + 1.20 * std::pow(x, 0.85); // 1.0..2.2
+                    for (int k = 0; k < spec_dim; ++k) {
+                        double harm = (1.0 - out_ap[i][k]) * boost;
+                        harm = std::clamp(harm, 0.0, 1.0);
+                        out_ap[i][k] = 1.0 - harm;
+
+                        // 배음 강조가 단순 노이즈 감소로만 들리지 않도록 존재감 보강
+                        double fn = static_cast<double>(k) / std::max(1, spec_dim - 1);
+                        double body = std::exp(-0.5 * std::pow((fn - 0.22) / 0.18, 2.0));
+                        double pres = std::exp(-0.5 * std::pow((fn - 0.46) / 0.16, 2.0));
+                        double db = std::pow(x, 0.90) * (1.2 * body + 1.6 * pres);
+                        out_spec[i][k] *= std::pow(10.0, db / 10.0);
+                    }
+                } else {
+                    double x = h / h0; // 0..1
+                    double atten = std::pow(x, 1.25);
+                    for (int k = 0; k < spec_dim; ++k) {
+                        double harm = (1.0 - out_ap[i][k]) * atten;
+                        harm = std::clamp(harm, 0.0, 1.0);
+                        out_ap[i][k] = 1.0 - harm;
+                    }
+                }
+            }
+        }
+
+        // 8.5. Noise Color(Ns): 노이즈 톤(밝기/어둠) 제어
+        if (std::fabs(ns) > 0.01) {
+            double noise_presence = std::max(0.12, std::max({sp.noise_level / 100.0, breathiness_amt, rl * 0.8}));
+            if (noise_presence > 0.01) {
+                for (int k = 0; k < spec_dim; ++k) {
+                    double fn = static_cast<double>(k) / std::max(1, spec_dim - 1);
+                    double s = (fn - 0.45);
+                    double db = ns * noise_presence * (2.8 * s);
+                    out_spec[i][k] *= std::pow(10.0, db / 10.0);
+                    double ap_delta = ns * noise_presence * (0.12 * s);
+                    out_ap[i][k] = std::clamp(out_ap[i][k] + ap_delta, 0.0, 1.0);
+                }
+            }
+        }
+
+        // 8.7. Release Air(Rl): 노트 말미 airy tail
+        if (rl > 0.01) {
+            double rel_win_ms = std::clamp(30.0 + tr_scale * 14.0, 24.0, 60.0);
+            if (out_time_ms >= (out_total_ms - rel_win_ms)) {
+                double v = (out_time_ms - (out_total_ms - rel_win_ms)) / std::max(1.0, rel_win_ms);
+                v = std::clamp(v, 0.0, 1.0);
+                double r = v * v * (3.0 - 2.0 * v); // smoothstep
+                for (int k = 0; k < spec_dim; ++k) {
+                    double fn = static_cast<double>(k) / std::max(1, spec_dim - 1);
+                    double db = rl * r * (1.6 * std::max(0.0, fn - 0.25));
+                    out_spec[i][k] *= std::pow(10.0, db / 10.0);
+                    double ap_delta = rl * r * (0.05 + 0.26 * fn);
+                    out_ap[i][k] = std::clamp(out_ap[i][k] + ap_delta, 0.0, 1.0);
+                }
+            }
+        }
+
+        // 8.8. Airy-weak voice 보정:
+        // 숨소리가 많은 약한 음성에서 과한 거칠기(상부 hiss)를 줄이고 바디를 보강.
+        {
+            double airy_mix = std::clamp(0.65 * breathiness_amt + 0.45 * (sp.noise_level / 100.0), 0.0, 1.0);
+            double weak_harm = std::clamp((75.0 - sp.harmonics) / 75.0, 0.0, 1.0);
+            double ctrl = airy_mix * (0.35 + 0.65 * weak_harm);
+            if (ctrl > 0.02) {
+                for (int k = 0; k < spec_dim; ++k) {
+                    double fn = static_cast<double>(k) / std::max(1, spec_dim - 1);
+                    double hi = std::clamp((fn - 0.50) / 0.50, 0.0, 1.0);
+                    double body = std::exp(-0.5 * std::pow((fn - 0.20) / 0.20, 2.0));
+                    double db = ctrl * (1.6 * body - 1.8 * hi);
+                    out_spec[i][k] *= std::pow(10.0, db / 10.0);
+                    double ap_delta = ctrl * (-0.08 * hi + 0.03 * body);
+                    out_ap[i][k] = std::clamp(out_ap[i][k] + ap_delta, 0.0, 1.0);
+                }
+            }
+        }
+
+        // 8.9. Husky Tone(Hu): 파워/AP 유지형 톤 이동
+        // +Hu: husky(저중역 질감↑, 상부 밝기↓)
+        // -Hu: brighter(상부 명료도↑, 저중역 질감↓)
+        if (std::fabs(hu_eff) > 0.01) {
+            double e0 = 0.0;
+            double e1 = 0.0;
             for (int k = 0; k < spec_dim; ++k) {
-                // (1 - ap)를 k_h배 → 조화 비율 조절
-                double harm = (1.0 - out_ap[i][k]) * k_h;
-                if (harm < 0.0) harm = 0.0;
-                if (harm > 1.0) harm = 1.0;
-                out_ap[i][k] = 1.0 - harm;
+                double p0 = out_spec[i][k];
+                if (p0 < 0.0) p0 = 0.0;
+                e0 += p0;
+
+                double fn = static_cast<double>(k) / std::max(1, spec_dim - 1);
+                double hz = fn * (fs * 0.5);
+                double x_lm = std::log2((hz + 120.0) / 1100.0);
+                double lowmid = std::exp(-0.5 * (x_lm * x_lm) / (0.90 * 0.90));
+                double x_pr = std::log2((hz + 120.0) / 3600.0);
+                double presence = std::exp(-0.5 * (x_pr * x_pr) / (0.85 * 0.85));
+                double air = std::max(0.0, fn - 0.45);
+                double shape = (1.25 * lowmid - 1.10 * presence - 0.75 * air);
+                double db = hu_eff * 8.5 * shape;
+                double gain_pow = std::pow(10.0, db / 10.0);
+                out_spec[i][k] = p0 * gain_pow;
+                e1 += out_spec[i][k];
+            }
+            // 프레임 에너지 정규화: 파워 변화 최소화
+            if (e0 > 1.0e-12 && e1 > 1.0e-12) {
+                double norm = e0 / e1;
+                norm = std::clamp(norm, 0.6, 1.8);
+                for (int k = 0; k < spec_dim; ++k) out_spec[i][k] *= norm;
+            }
+        }
+
+        // 9. Global tone calibration: 고역/잔향 과강조 완화
+        {
+            for (int k = 0; k < spec_dim; ++k) {
+                double fn = static_cast<double>(k) / std::max(1, spec_dim - 1);
+                double hi = std::clamp((fn - 0.34) / 0.66, 0.0, 1.0);
+                double db = global_hi_tilt_db * hi;
+                out_spec[i][k] *= std::pow(10.0, db / 10.0);
+
+                double ap_cut = global_hi_ap_trim * hi * hi;
+                out_ap[i][k] = std::clamp(out_ap[i][k] - ap_cut, 0.0, 1.0);
             }
         }
     }
@@ -647,12 +1139,12 @@ std::vector<float> world_render(
     if (flat_target_f0) {
         smooth_out_f0_log_zero_phase(out_f0, 4);
     } else if (has_f0_mod) {
-        smooth_out_f0_log_zero_phase(out_f0, 3);
+        smooth_out_f0_log_zero_phase(out_f0, 2);
     }
     // slew limiter 강도:
     // - flat note: 강하게(잔떨림 억제)
     // - bend/mod note: 약하게(음정 추종성 확보)
-    double slew_cents_per_ms = flat_target_f0 ? 2.1 : (has_f0_mod ? 12.0 : 6.0);
+    double slew_cents_per_ms = flat_target_f0 ? 2.0 : (has_f0_mod ? 18.0 : 6.0);
     stabilize_out_f0(out_f0, frame_period, slew_cents_per_ms);
 
     // ── WORLD Synthesis ───────────────────────────────────────────────
