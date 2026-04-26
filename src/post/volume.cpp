@@ -50,15 +50,18 @@ void apply_volume(std::vector<float>& samples,
     // 적응형 loudness 정규화:
     // 다양한 음색/발성에서도 출력 음량을 최대한 일정하게 유지.
     float cur_p95 = abs_percentile(samples, 0.95f);
+    float cur_p995 = abs_percentile(samples, 0.995f);
     float gate_abs = std::max(0.0025f, cur_p95 * 0.09f);
     float cur_rms = gated_rms(samples, gate_abs);
 
     float target_rms = 0.105f;
     float target_p95 = 0.70f;
+    float target_p995 = 0.92f;
 
     float gain_rms = (cur_rms > 1e-9f) ? (target_rms / cur_rms) : 1.0f;
     float gain_p95 = (cur_p95 > 1e-9f) ? (target_p95 / cur_p95) : 1.0f;
-    float norm_gain = std::min(gain_rms, gain_p95);
+    float gain_p995 = (cur_p995 > 1e-9f) ? (target_p995 / cur_p995) : 1.0f;
+    float norm_gain = std::min({gain_rms, gain_p95, gain_p995});
     norm_gain = std::clamp(norm_gain, 0.35f, 3.20f);
     // 과도한 보정으로 잔향/히스가 전면으로 나오지 않도록 보정량을 일부 완화.
     norm_gain = 1.0f + 0.80f * (norm_gain - 1.0f);
@@ -73,13 +76,23 @@ void apply_volume(std::vector<float>& samples,
         }
 
         s *= norm_gain * user_scale * tail_damp;
-        if (comp < 0.99f) {
-            float k = (1.0f - comp) * 3.0f;
+        // T+에서 crest factor가 증가하므로 limiter를 소폭 강화.
+        float t_pos = std::clamp(sp.tension / 100.0f, 0.0f, 1.0f);
+        float comp_eff = std::clamp(comp - 0.10f * t_pos, 0.35f, 0.99f);
+        if (comp_eff < 0.99f) {
+            float k = (1.0f - comp_eff) * 3.0f;
             if (k > 1e-4f) {
                 float norm = std::tanh(k);
                 s = std::tanh(k * s) / norm;
             }
         }
+    }
+
+    // 최종 hard peak guard: 드문 순간 피크만 정리해 파형 피크 튐 방지.
+    float peak = abs_percentile(samples, 0.999f);
+    if (peak > 0.985f) {
+        float pg = 0.985f / peak;
+        for (auto& s : samples) s *= pg;
     }
 }
 

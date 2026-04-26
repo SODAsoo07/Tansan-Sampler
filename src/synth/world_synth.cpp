@@ -925,36 +925,58 @@ std::vector<float> world_render(
             }
         }
 
-        // 6. Tension: 스펙트럼 + 비주기성(AP) 동시 제어 (강화)
+        // 6. Tension: 스펙트럼 + 비주기성(AP) 제어
+        // T+ 최대에서도 볼륨 저하/먹먹함이 나지 않도록
+        // 고역 선명도 보강 + 프레임 에너지 정규화를 함께 적용.
         if (std::fabs(tension_eff) > 0.01) {
             double t_pos = std::max(0.0, tension_eff);
             double t_neg = std::max(0.0, -tension_eff);
+            double e0 = 0.0;
+            double e1 = 0.0;
             for (int k = 0; k < spec_dim; ++k) {
                 double fn = static_cast<double>(k) / std::max(1, spec_dim - 1); // 0..1
                 double hz = fn * (fs * 0.5);
+                double p0 = std::max(0.0, out_spec[i][k]);
+                e0 += p0;
 
                 // spectral effort:
-                // - pressed: 1~4k presence 상승
-                // - relaxed: presence 하강 + 기울기 완화
-                double x_pres = std::log2((hz + 120.0) / 2500.0);
-                double presence = std::exp(-0.5 * (x_pres * x_pres) / (0.75 * 0.75));
+                // - pressed(T+): 2~5k 존재감 + 상부 선명도 보강, 저중역 과중 억제
+                // - relaxed(T-): 기존과 유사하게 존재감/긴장도 완화
+                double x_pres = std::log2((hz + 120.0) / 2800.0);
+                double presence = std::exp(-0.5 * (x_pres * x_pres) / (0.72 * 0.72));
                 double x_mid = std::log2((hz + 120.0) / 1300.0);
                 double mid = std::exp(-0.5 * (x_mid * x_mid) / (0.85 * 0.85));
-                double slope = fn - 0.22;
-                double db = t_pos * (9.5 * presence + 4.2 * slope + 2.0 * mid)
-                          - t_neg * (7.2 * presence + 3.5 * std::max(0.0, fn - 0.08) + 1.8 * mid);
-                double gain_pow = std::pow(10.0, db / 10.0); // power
-                out_spec[i][k] *= gain_pow;
+                double x_low = std::log2((hz + 120.0) / 650.0);
+                double low = std::exp(-0.5 * (x_low * x_low) / (0.95 * 0.95));
+                double hi = std::clamp((fn - 0.42) / 0.58, 0.0, 1.0);
+                double air = std::clamp((fn - 0.55) / 0.45, 0.0, 1.0);
+
+                double db = t_pos * (8.4 * presence + 2.4 * mid + 4.0 * hi + 2.0 * air - 2.1 * low)
+                          - t_neg * (7.2 * presence + 3.6 * std::max(0.0, fn - 0.08) + 2.0 * mid);
+                out_spec[i][k] = p0 * std::pow(10.0, db / 10.0); // power
+                e1 += out_spec[i][k];
 
                 // aperiodicity effort:
-                // - pressed: 저/중역 AP 감소(주기성 증가)
-                // - relaxed: 전대역 AP 증가(숨/힘빠짐)
+                // - pressed(T+): 저/중역 AP 감소는 유지하되, 상부 AP를 약간 살려 먹먹함 방지
+                // - relaxed(T-): 전대역 AP 증가
                 double low_mid = std::exp(-0.5 * std::pow((fn - 0.18) / 0.20, 2.0));
-                double hi = std::clamp((fn - 0.35) / 0.65, 0.0, 1.0);
                 double ap_delta = 0.0;
-                ap_delta -= t_pos * (0.26 * low_mid + 0.10 * (1.0 - hi));
+                ap_delta -= t_pos * (0.18 * low_mid + 0.05 * (1.0 - hi));
+                ap_delta += t_pos * (0.05 * hi);
                 ap_delta += t_neg * (0.30 + 0.18 * low_mid + 0.14 * hi);
                 out_ap[i][k] = std::clamp(out_ap[i][k] + ap_delta, 0.0, 1.0);
+            }
+
+            // T+에서 과도한 피크 상승을 막기 위해
+            // 프레임 에너지를 맞추되 crest를 약하게 가드.
+            if (e0 > 1.0e-12 && e1 > 1.0e-12) {
+                double norm = e0 / e1;
+                norm = std::clamp(norm, 0.86, 1.24);
+                // pressed(T+)에서 crest factor가 커지므로 소량 감쇠로 피크를 억제.
+                double crest_guard = std::pow(10.0, (-0.8 * t_pos) / 10.0); // max -0.8dB
+                norm *= crest_guard;
+                norm = std::clamp(norm, 0.82, 1.24);
+                for (int k = 0; k < spec_dim; ++k) out_spec[i][k] *= norm;
             }
         }
 
