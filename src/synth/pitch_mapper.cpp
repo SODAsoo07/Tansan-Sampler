@@ -25,11 +25,18 @@ static void smooth_cents_zero_phase(std::vector<double>& cents, int radius) {
 }
 
 std::vector<double> make_f0_contour(const RenderParams& params,
+                                    const SynthParams& sp,
                                     int output_samples,
                                     int sample_rate) {
     std::vector<double> f0(output_samples, params.target_hz);
 
     if (params.target_hz <= 0.0) return f0; // rest
+
+    // 플래그 t: 노트 전체 cents 오프셋 (피치 벤드와 독립)
+    if (sp.pitch_cents != 0) {
+        double ratio = std::pow(2.0, static_cast<double>(sp.pitch_cents) / 1200.0);
+        for (double& v : f0) v *= ratio;
+    }
 
     // ── pitch_bend 적용 ──────────────────────────────────────────────────
     // 내부 pitch_bend 단위는 cent.
@@ -84,7 +91,7 @@ std::vector<double> make_f0_contour(const RenderParams& params,
     // contour 적용
     if (has_effective_bend) {
         for (int i = 0; i < output_samples; ++i) {
-            f0[i] = params.target_hz * std::pow(2.0, cents_contour[i] / 1200.0);
+            f0[i] = f0[i] * std::pow(2.0, cents_contour[i] / 1200.0);
         }
     }
 

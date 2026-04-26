@@ -39,7 +39,22 @@ SynthParams parse_flags(const std::string& s) {
                             p.husky_tone     = math::clamp(val, -100, 100);
         else if (lname == "mo")
                             p.mouth_open     = math::clamp(val, 0, 100);
-        else if (lname == "t") p.tension     = math::clamp(val, -100, 100);
+        else if (lname == "tn")
+                            p.tension        = math::clamp(val, -100, 100);
+        else if (lname == "t")
+                            p.pitch_cents    = math::clamp(val, -1200, 1200);
+        else if (lname == "gr")
+                            p.growl          = math::clamp(val, 0, 100);
+        else if (lname == "vtl")
+                            p.tract_length   = math::clamp(val, -100, 100);
+        else if (lname == "vtr")
+                            p.tract_resonance = math::clamp(val, -100, 100);
+        else if (lname == "vtw")
+                            p.tract_focus    = math::clamp(val, -100, 100);
+        else if (lname == "vc")
+                            p.tract_constriction = math::clamp(val, 0, 100);
+        else if (lname == "nn")
+                            p.nasal_coupling = math::clamp(val, 0, 100);
         else if (lname == "h" || lname == "hr")
                             p.harmonics      = math::clamp(val, 0, 100);
         else if (lname == "n") p.noise_level = math::clamp(val, 0, 100);

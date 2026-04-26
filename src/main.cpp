@@ -74,7 +74,14 @@ int main(int argc, char** argv) {
                   << " Bi=" << sp.brightness
                   << " Hu=" << sp.husky_tone
                   << " Mo=" << sp.mouth_open
-                  << " t=" << sp.tension
+                  << " Tn=" << sp.tension
+                  << " t=" << sp.pitch_cents
+                  << " Gr=" << sp.growl
+                  << " Vtl=" << sp.tract_length
+                  << " Vtr=" << sp.tract_resonance
+                  << " Vtw=" << sp.tract_focus
+                  << " Vc=" << sp.tract_constriction
+                  << " Nn=" << sp.nasal_coupling
                   << " H=" << sp.harmonics
                   << " N=" << sp.noise_level
                   << " Bh=" << sp.breathiness
@@ -91,7 +98,7 @@ int main(int argc, char** argv) {
 
         // ── 7. 타겟 F0 컨투어 ─────────────────────────────────────────
         auto f0_contour = resamp::synth::make_f0_contour(
-            params, output_samples, sample_rate);
+            params, sp, output_samples, sample_rate);
 
         // ── 8. WORLD 합성 ─────────────────────────────────────────────
         auto output = resamp::synth::world_render(

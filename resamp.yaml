@@ -49,7 +49,70 @@ expressions:
     max: 100
     default_value: 0
     is_flag: true
+    flag: Tn
+  ptc:
+    name: Pitch Cents
+    abbr: ptc
+    type: Numerical
+    min: -1200
+    max: 1200
+    default_value: 0
+    is_flag: true
     flag: t
+  gr:
+    name: Growl
+    abbr: gr
+    type: Numerical
+    min: 0
+    max: 100
+    default_value: 0
+    is_flag: true
+    flag: Gr
+  vtl:
+    name: Tract Length
+    abbr: vtl
+    type: Numerical
+    min: -100
+    max: 100
+    default_value: 0
+    is_flag: true
+    flag: Vtl
+  vtr:
+    name: Tract Resonance
+    abbr: vtr
+    type: Numerical
+    min: -100
+    max: 100
+    default_value: 0
+    is_flag: true
+    flag: Vtr
+  vtw:
+    name: Tract Focus
+    abbr: vtw
+    type: Numerical
+    min: -100
+    max: 100
+    default_value: 0
+    is_flag: true
+    flag: Vtw
+  vcons:
+    name: Tract Constriction
+    abbr: vcs
+    type: Numerical
+    min: 0
+    max: 100
+    default_value: 0
+    is_flag: true
+    flag: Vc
+  nas:
+    name: Nasal Coupling
+    abbr: nn
+    type: Numerical
+    min: 0
+    max: 100
+    default_value: 0
+    is_flag: true
+    flag: Nn
   harm:
     name: Harmonics
     abbr: harm

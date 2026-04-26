@@ -40,6 +40,25 @@ add_executable(resamp ${SOURCES})
 target_include_directories(resamp PRIVATE src)
 target_link_libraries(resamp PRIVATE world)
 
+# ── OpenUtau 테스트용 자동 배포 ─────────────────────────
+option(RESAMP_AUTO_COPY_TO_OPENUTAU "Copy built resamp.exe to OpenUtau Resamplers folder." ON)
+set(OPENUTAU_RESAMPLERS_DIR
+  "C:/Users/oyh57/SODAsoo1/VocalSynth/OpenUtauV-win-x64/Resamplers"
+  CACHE PATH
+  "OpenUtau Resamplers directory for post-build deployment.")
+
+if(WIN32 AND RESAMP_AUTO_COPY_TO_OPENUTAU)
+  add_custom_command(TARGET resamp POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${OPENUTAU_RESAMPLERS_DIR}"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "$<TARGET_FILE:resamp>"
+            "${OPENUTAU_RESAMPLERS_DIR}/resamp.exe"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${CMAKE_SOURCE_DIR}/resamp.yaml"
+            "${OPENUTAU_RESAMPLERS_DIR}/resamp.yaml"
+    COMMENT "Deploying resamp.exe/resamp.yaml to ${OPENUTAU_RESAMPLERS_DIR}")
+endif()
+
 if(WIN32)
   target_compile_definitions(resamp PRIVATE
     _UNICODE UNICODE NOMINMAX WIN32_LEAN_AND_MEAN
