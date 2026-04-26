@@ -29,6 +29,9 @@ compile_commands.json
 # Audio/render artifacts
 *.wav
 *.frq
+*.jsonl
+resamp_wavtool_calls*.log
+resamp_wavtool_calls*.jsonl
 
 # IDE / temp
 .vs/

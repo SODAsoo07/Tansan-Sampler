@@ -64,6 +64,11 @@
 - 최근 튜닝:
   - 중간값 체감 강도 상향(응답 커브/가중치/drive 강화)
   - `Vtl/Vtr/Vtw` ±방향 변화가 더 명확하게 들리도록 조정
+  - 극단값(±100)에서 변화량이 분명하게 들리도록 워프/포먼트 이동량/스펙트럼 가중치를 추가 상향
+  - 과구동으로 인한 파열/노이즈 방지를 위해 tract layer에 soft-limit + mix cap 적용
+  - 공통 drive/mix 바닥값을 낮춰 파라미터 값별 반응 차이를 복원
+  - AP(노이즈) 연동을 크게 축소해 활성화 시 음성 마스킹 문제를 완화
+  - `Vc/Nn`은 `0..100` 범위만 지원(음수 입력 시 0으로 클램프)
 
 ## 후처리
 - 적응형 라우드니스 정규화 (`RMS`, `p95`, `p99.5`).
@@ -75,6 +80,14 @@
 - `resamp` 빌드 후 자동 복사:
   - `C:/Users/oyh57/SODAsoo1/VocalSynth/OpenUtauV-win-x64/Resamplers/resamp.exe`
   - `C:/Users/oyh57/SODAsoo1/VocalSynth/OpenUtauV-win-x64/Resamplers/resamp.yaml`
+- `wavtool_probe` 빌드 후 자동 복사:
+  - `C:/Users/oyh57/SODAsoo1/VocalSynth/OpenUtauV-win-x64/Resamplers/wavtool_probe.exe`
+
+## Wavtool M0 (인터페이스 캡처)
+- 목적: OpenUtau 외부 wavtool 호출 인자 계약 캡처.
+- 실행 파일: `wavtool_probe.exe`
+- 로그: 기본 `%TEMP%/resamp_wavtool_calls.jsonl` (`RESAMP_WAVTOOL_LOG`로 변경 가능)
+- 참고 문서: [WAVTOOL_M0.md](/C:/Users/oyh57/SODAsoo1/Devs/Resamp/WAVTOOL_M0.md)
 
 ## 운영 참고
 - 밝기 `B` alias는 제거되었고 `Bi`만 사용.

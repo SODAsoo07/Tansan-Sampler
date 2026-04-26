@@ -242,6 +242,12 @@ CMAKE_VERBOSE_MAKEFILE:BOOL=FALSE
 //Git command line client
 GIT_EXECUTABLE:FILEPATH=C:/Program Files/Git/mingw64/bin/git.exe
 
+//OpenUtau Resamplers directory for post-build deployment.
+OPENUTAU_RESAMPLERS_DIR:PATH=C:/Users/oyh57/SODAsoo1/VocalSynth/OpenUtauV-win-x64/Resamplers
+
+//Copy built resamp.exe to OpenUtau Resamplers folder.
+RESAMP_AUTO_COPY_TO_OPENUTAU:BOOL=ON
+
 //Value Computed by CMake
 Resamp_BINARY_DIR:STATIC=C:/Users/oyh57/SODAsoo1/Devs/Resamp/build
 
@@ -250,6 +256,9 @@ Resamp_IS_TOP_LEVEL:STATIC=ON
 
 //Value Computed by CMake
 Resamp_SOURCE_DIR:STATIC=C:/Users/oyh57/SODAsoo1/Devs/Resamp
+
+//Copy built wavtool_probe.exe to OpenUtau Resamplers folder.
+WAVTOOL_AUTO_COPY_TO_OPENUTAU:BOOL=ON
 
 //Value Computed by CMake
 WORLD_BINARY_DIR:STATIC=C:/Users/oyh57/SODAsoo1/Devs/Resamp/build/external/World

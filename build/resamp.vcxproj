@@ -125,6 +125,22 @@
       <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
       <ProxyFileName>%(Filename)_p.c</ProxyFileName>
     </Midl>
+    <PostBuildEvent>
+      <Message>Deploying resamp.exe/resamp.yaml to C:/Users/oyh57/SODAsoo1/VocalSynth/OpenUtauV-win-x64/Resamplers</Message>
+      <Command>setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -E make_directory C:/Users/oyh57/SODAsoo1/VocalSynth/OpenUtauV-win-x64/Resamplers
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E copy_if_different C:/Users/oyh57/SODAsoo1/Devs/Resamp/build/Debug/resamp.exe C:/Users/oyh57/SODAsoo1/VocalSynth/OpenUtauV-win-x64/Resamplers/resamp.exe
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E copy_if_different C:/Users/oyh57/SODAsoo1/Devs/Resamp/resamp.yaml C:/Users/oyh57/SODAsoo1/VocalSynth/OpenUtauV-win-x64/Resamplers/resamp.yaml
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+    </PostBuildEvent>
     <Link>
       <AdditionalDependencies>lib\Debug\world.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
@@ -185,6 +201,22 @@
       <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
       <ProxyFileName>%(Filename)_p.c</ProxyFileName>
     </Midl>
+    <PostBuildEvent>
+      <Message>Deploying resamp.exe/resamp.yaml to C:/Users/oyh57/SODAsoo1/VocalSynth/OpenUtauV-win-x64/Resamplers</Message>
+      <Command>setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -E make_directory C:/Users/oyh57/SODAsoo1/VocalSynth/OpenUtauV-win-x64/Resamplers
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E copy_if_different C:/Users/oyh57/SODAsoo1/Devs/Resamp/build/Release/resamp.exe C:/Users/oyh57/SODAsoo1/VocalSynth/OpenUtauV-win-x64/Resamplers/resamp.exe
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E copy_if_different C:/Users/oyh57/SODAsoo1/Devs/Resamp/resamp.yaml C:/Users/oyh57/SODAsoo1/VocalSynth/OpenUtauV-win-x64/Resamplers/resamp.yaml
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+    </PostBuildEvent>
     <Link>
       <AdditionalDependencies>lib\Release\world.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
@@ -245,6 +277,22 @@
       <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
       <ProxyFileName>%(Filename)_p.c</ProxyFileName>
     </Midl>
+    <PostBuildEvent>
+      <Message>Deploying resamp.exe/resamp.yaml to C:/Users/oyh57/SODAsoo1/VocalSynth/OpenUtauV-win-x64/Resamplers</Message>
+      <Command>setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -E make_directory C:/Users/oyh57/SODAsoo1/VocalSynth/OpenUtauV-win-x64/Resamplers
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E copy_if_different C:/Users/oyh57/SODAsoo1/Devs/Resamp/build/MinSizeRel/resamp.exe C:/Users/oyh57/SODAsoo1/VocalSynth/OpenUtauV-win-x64/Resamplers/resamp.exe
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E copy_if_different C:/Users/oyh57/SODAsoo1/Devs/Resamp/resamp.yaml C:/Users/oyh57/SODAsoo1/VocalSynth/OpenUtauV-win-x64/Resamplers/resamp.yaml
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+    </PostBuildEvent>
     <Link>
       <AdditionalDependencies>lib\MinSizeRel\world.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
@@ -304,6 +352,22 @@
       <InterfaceIdentifierFileName>%(Filename)_i.c</InterfaceIdentifierFileName>
       <ProxyFileName>%(Filename)_p.c</ProxyFileName>
     </Midl>
+    <PostBuildEvent>
+      <Message>Deploying resamp.exe/resamp.yaml to C:/Users/oyh57/SODAsoo1/VocalSynth/OpenUtauV-win-x64/Resamplers</Message>
+      <Command>setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -E make_directory C:/Users/oyh57/SODAsoo1/VocalSynth/OpenUtauV-win-x64/Resamplers
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E copy_if_different C:/Users/oyh57/SODAsoo1/Devs/Resamp/build/RelWithDebInfo/resamp.exe C:/Users/oyh57/SODAsoo1/VocalSynth/OpenUtauV-win-x64/Resamplers/resamp.exe
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E copy_if_different C:/Users/oyh57/SODAsoo1/Devs/Resamp/resamp.yaml C:/Users/oyh57/SODAsoo1/VocalSynth/OpenUtauV-win-x64/Resamplers/resamp.yaml
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd</Command>
+    </PostBuildEvent>
     <Link>
       <AdditionalDependencies>lib\RelWithDebInfo\world.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>

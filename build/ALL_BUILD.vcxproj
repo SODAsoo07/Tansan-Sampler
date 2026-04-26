@@ -178,6 +178,10 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
       <Project>{AD86ED91-55B0-382A-B36E-C3DF866FD416}</Project>
       <Name>resamp</Name>
     </ProjectReference>
+    <ProjectReference Include="C:\Users\oyh57\SODAsoo1\Devs\Resamp\build\wavtool_probe.vcxproj">
+      <Project>{25E5C8B9-3C26-35D6-A6CB-F65828CB03D1}</Project>
+      <Name>wavtool_probe</Name>
+    </ProjectReference>
     <ProjectReference Include="C:\Users\oyh57\SODAsoo1\Devs\Resamp\build\external\World\world.vcxproj">
       <Project>{64B30026-8CA3-3B03-8D9E-953C2E444B99}</Project>
       <Name>world</Name>

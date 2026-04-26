@@ -40,12 +40,36 @@ add_executable(resamp ${SOURCES})
 target_include_directories(resamp PRIVATE src)
 target_link_libraries(resamp PRIVATE world)
 
+# ── Wavtool Probe (M0: 호출 인자 캡처 + 최소 누적 동작) ───────────────
+set(WAVTOOL_PROBE_SOURCES
+  src/wavtool/wavtool_probe.cpp
+  src/io/wav_reader.cpp
+  src/io/wav_writer.cpp
+)
+
+add_executable(wavtool_probe ${WAVTOOL_PROBE_SOURCES})
+target_include_directories(wavtool_probe PRIVATE src)
+
+# ── Resamp Wavtool (M1~M3: 경계 품질 개선용 누적 합성기) ───────────────
+set(WAVTOOL_SOURCES
+  src/wavtool/wavtool.cpp
+  src/io/wav_reader.cpp
+  src/io/wav_writer.cpp
+)
+
+add_executable(wavtool ${WAVTOOL_SOURCES})
+target_include_directories(wavtool PRIVATE src)
+
 # ── OpenUtau 테스트용 자동 배포 ─────────────────────────
 option(RESAMP_AUTO_COPY_TO_OPENUTAU "Copy built resamp.exe to OpenUtau Resamplers folder." ON)
 set(OPENUTAU_RESAMPLERS_DIR
   "C:/Users/oyh57/SODAsoo1/VocalSynth/OpenUtauV-win-x64/Resamplers"
   CACHE PATH
   "OpenUtau Resamplers directory for post-build deployment.")
+set(OPENUTAU_WAVTOOLS_DIR
+  "C:/Users/oyh57/SODAsoo1/VocalSynth/OpenUtauV-win-x64/Wavtools"
+  CACHE PATH
+  "OpenUtau Wavtools directory for post-build deployment.")
 
 if(WIN32 AND RESAMP_AUTO_COPY_TO_OPENUTAU)
   add_custom_command(TARGET resamp POST_BUILD
@@ -59,10 +83,32 @@ if(WIN32 AND RESAMP_AUTO_COPY_TO_OPENUTAU)
     COMMENT "Deploying resamp.exe/resamp.yaml to ${OPENUTAU_RESAMPLERS_DIR}")
 endif()
 
+option(WAVTOOL_AUTO_COPY_TO_OPENUTAU "Copy built wavtool_probe.exe to OpenUtau Resamplers folder." ON)
+if(WIN32 AND WAVTOOL_AUTO_COPY_TO_OPENUTAU)
+  add_custom_command(TARGET wavtool_probe POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${OPENUTAU_RESAMPLERS_DIR}"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "$<TARGET_FILE:wavtool_probe>"
+            "${OPENUTAU_RESAMPLERS_DIR}/wavtool_probe.exe"
+    COMMENT "Deploying wavtool_probe.exe to ${OPENUTAU_RESAMPLERS_DIR}")
+  add_custom_command(TARGET wavtool POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${OPENUTAU_WAVTOOLS_DIR}"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "$<TARGET_FILE:wavtool>"
+            "${OPENUTAU_WAVTOOLS_DIR}/wavtool.exe"
+    COMMENT "Deploying wavtool.exe to ${OPENUTAU_WAVTOOLS_DIR}")
+endif()
+
 if(WIN32)
   target_compile_definitions(resamp PRIVATE
     _UNICODE UNICODE NOMINMAX WIN32_LEAN_AND_MEAN
   )
+  target_compile_definitions(wavtool_probe PRIVATE
+    _UNICODE UNICODE NOMINMAX WIN32_LEAN_AND_MEAN
+  )
+  target_compile_definitions(wavtool PRIVATE
+    _UNICODE UNICODE NOMINMAX WIN32_LEAN_AND_MEAN
+  )
 endif()
 
-install(TARGETS resamp RUNTIME DESTINATION bin)
+install(TARGETS resamp wavtool_probe wavtool RUNTIME DESTINATION bin)
