@@ -17,7 +17,7 @@ struct SynthParams {
     int tract_resonance = 0;     // Vtr: -100~+100 공명 중심 이동
     int tract_focus = 0;         // Vtw: -100~+100 공명 폭/집중도
     int tract_constriction = 0;  // Vc: 0~100 협착 강도
-    int nasal_coupling = 0;      // Nn: 0~100 비성 결합 강도
+    int nasal_coupling = 0;      // Nn: -100~+100 비성 결합(+)/비성 억제(-)
     int harmonics   = 70;   // H/Hr: 0~100   70 중립, 그 이상은 배음 강조
     int noise_level = 0;    // N: -100~+100  노이즈 추가(+)/억제(-)
     int breathiness = 0;    // Bh: -100~+100 숨소리 추가(+)/억제(-)

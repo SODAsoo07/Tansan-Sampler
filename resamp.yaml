@@ -108,7 +108,7 @@ expressions:
     name: Nasal Coupling
     abbr: nn
     type: Numerical
-    min: 0
+    min: -100
     max: 100
     default_value: 0
     is_flag: true

@@ -54,7 +54,7 @@ SynthParams parse_flags(const std::string& s) {
         else if (lname == "vc" || lname == "vcs" || lname == "vcons")
                             p.tract_constriction = math::clamp(val, 0, 100);
         else if (lname == "nn" || lname == "nas" || lname == "nasal")
-                            p.nasal_coupling = math::clamp(val, 0, 100);
+                            p.nasal_coupling = math::clamp(val, -100, 100);
         else if (lname == "h" || lname == "hr")
                             p.harmonics      = math::clamp(val, 0, 100);
         else if (lname == "n") p.noise_level = math::clamp(val, -100, 100);
