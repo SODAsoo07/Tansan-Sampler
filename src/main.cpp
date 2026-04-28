@@ -25,6 +25,17 @@
 
 int main(int argc, char** argv) {
     try {
+        auto env_enabled = [](const char* name, bool default_value) {
+            const char* v = std::getenv(name);
+            if (v == nullptr || *v == '\0') return default_value;
+            std::string s(v);
+            std::transform(s.begin(), s.end(), s.begin(),
+                           [](unsigned char ch) { return static_cast<char>(std::tolower(ch)); });
+            if (s == "0" || s == "false" || s == "off" || s == "no") return false;
+            if (s == "1" || s == "true" || s == "on" || s == "yes") return true;
+            return default_value;
+        };
+        const bool verbose_log = env_enabled("RESAMP_VERBOSE", false);
         auto append_debug_log = [&](const std::string& line) {
             const char* path = std::getenv("RESAMP_DEBUG_LOG");
             if (path == nullptr || *path == '\0') return;
@@ -53,21 +64,25 @@ int main(int argc, char** argv) {
         }
 
         // ── 2. WAV 읽기 ────────────────────────────────────────────────
-        std::cerr << "[Resamp] in=" << params.input_wav
-                  << " pitch=" << params.pitch_str
-                  << " vel=" << params.velocity
-                  << " flags=" << params.flags
-                  << " off=" << params.offset_ms
-                  << " len=" << params.length_ms
-                  << " con=" << params.consonant_ms
-                  << " cut=" << params.cutoff_ms
-                  << " vol=" << params.volume << '\n';
+        if (verbose_log) {
+            std::cerr << "[Resamp] in=" << params.input_wav
+                      << " pitch=" << params.pitch_str
+                      << " vel=" << params.velocity
+                      << " flags=" << params.flags
+                      << " off=" << params.offset_ms
+                      << " len=" << params.length_ms
+                      << " con=" << params.consonant_ms
+                      << " cut=" << params.cutoff_ms
+                      << " vol=" << params.volume << '\n';
+        }
         resamp::io::WavInfo wav_info;
         auto signal = resamp::io::load_wav(params.input_wav, wav_info);
         sample_rate = static_cast<int>(wav_info.sample_rate);
-        std::cerr << "[Resamp] WAV: sr=" << sample_rate
-                  << " ch=" << wav_info.num_channels
-                  << " samples=" << wav_info.num_samples << '\n';
+        if (verbose_log) {
+            std::cerr << "[Resamp] WAV: sr=" << sample_rate
+                      << " ch=" << wav_info.num_channels
+                      << " samples=" << wav_info.num_samples << '\n';
+        }
 
         // ── 3. 소스 트리밍 (offset_ms, cutoff_ms) ─────────────────────
         int src_start = static_cast<int>(params.offset_ms * sample_rate / 1000.0);
@@ -94,29 +109,42 @@ int main(int argc, char** argv) {
 
         // ── 5. 플래그 파싱 ────────────────────────────────────────────
         resamp::SynthParams sp = resamp::parse_flags(params.flags);
-        std::cerr << "[Resamp] flags parsed:"
-                  << " g=" << sp.gender
-                  << " Bi=" << sp.brightness
-                  << " Hu=" << sp.husky_tone
-                  << " Mo=" << sp.mouth_open
-                  << " Tn=" << sp.tension
-                  << " t=" << sp.pitch_cents
-                  << " Gr=" << sp.growl
-                  << " Vtl=" << sp.tract_length
-                  << " Vtr=" << sp.tract_resonance
-                  << " Vtw=" << sp.tract_focus
-                  << " Vc=" << sp.tract_constriction
-                  << " Nn=" << sp.nasal_coupling
-                  << " H=" << sp.harmonics
-                  << " N=" << sp.noise_level
-                  << " Bh=" << sp.breathiness
-                  << " Tr=" << sp.transition_length
-                  << " Cs=" << sp.consonant_stability
-                  << " At=" << sp.attack
-                  << " Rl=" << sp.release_air
-                  << " Ns=" << sp.noise_color
-                  << " P=" << sp.peak_comp
-                  << " c=" << sp.voice_color << '\n';
+        if (verbose_log) {
+            std::cerr << "[Resamp] flags parsed:"
+                      << " g=" << sp.gender
+                      << " Bi=" << sp.brightness
+                      << " Hu=" << sp.husky_tone
+                      << " Mo=" << sp.mouth_open
+                      << " Tn=" << sp.tension
+                      << " t=" << sp.pitch_cents
+                      << " Gr=" << sp.growl
+                      << " Vg=" << sp.voiced_growl
+                      << " Vtl=" << sp.tract_length
+                      << " Vtr=" << sp.tract_resonance
+                      << " Vtw=" << sp.tract_focus
+                      << " Vc=" << sp.tract_constriction
+                      << " Nn=" << sp.nasal_coupling
+                      << " Hr=" << sp.harmonics
+                      << " N=" << sp.noise_level
+                      << " Bh=" << sp.breathiness
+                      << " Cs=" << sp.consonant_stability
+                      << " At=" << sp.attack
+                      << " Ns=" << sp.noise_color
+                      << " P=" << sp.peak_comp
+                      << " Ln=" << sp.loud_norm
+                      << " Lp=" << sp.loop_mode
+                      << " Cw=" << sp.consonant_power
+                      << " Vw=" << sp.vowel_power
+                      << " Rv=" << sp.reverse_mode
+                      << " Vo=" << sp.voicing
+                      << " Fc=" << sp.final_filter
+                      << " Eb=" << sp.end_breath
+                      << " Fh=" << sp.fry_head
+                      << " Ft=" << sp.fry_tail
+                      << " Tm=" << sp.tremolo
+                      << " Ds=" << sp.distortion
+                      << " Bc=" << sp.bitcrusher << '\n';
+        }
         append_debug_log("[FLAGS] Vtl=" + std::to_string(sp.tract_length) +
                          " Vtr=" + std::to_string(sp.tract_resonance) +
                          " Vtw=" + std::to_string(sp.tract_focus) +
@@ -126,7 +154,9 @@ int main(int argc, char** argv) {
                          " Tn=" + std::to_string(sp.tension));
 
         // ── 6. WORLD 분석 (raw Harvest F0 + envelope/AP 추출) ─────────
-        auto wa = resamp::synth::world_analyze(trimmed, sample_rate);
+        // 디스크 캐시를 사용해 반복 렌더 시 분석 비용을 절감.
+        auto wa = resamp::synth::world_analyze_cached(
+            trimmed, sample_rate, params.input_wav, src_start, src_end);
 
         // ── 7. 타겟 F0 컨투어 ─────────────────────────────────────────
         auto f0_contour = resamp::synth::make_f0_contour(
@@ -146,6 +176,12 @@ int main(int argc, char** argv) {
         // Fade in/out:
         // 과도한 fade-in은 어두 자음 attack을 깎아 "툭 끊기는" 인상을 줄 수 있어 축소.
         resamp::post::apply_fades(output, 1.0, 4.0, sample_rate);
+
+        // 역재생/디스토션/비트크러셔/최종 컷 필터.
+        // Fc 하이컷/로우컷은 apply_flag_post_effects 내부에서 항상 마지막에 적용된다.
+        double consonant_tgt_ms = params.consonant_ms *
+            std::clamp(100.0 / static_cast<double>(std::max(1, params.velocity)), 0.25, 4.0);
+        resamp::post::apply_flag_post_effects(output, sample_rate, consonant_tgt_ms, sp);
 
         // ── 10. WAV 저장 ──────────────────────────────────────────────
         resamp::io::save_wav(params.output_wav, output,

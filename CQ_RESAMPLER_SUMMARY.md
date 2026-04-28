@@ -34,7 +34,7 @@
   - `Bi` 밝기
   - `Hu` 허스키/브라이트 톤 (`+` 밝음, `-` 허스키)
   - `Mo` 입 열림(+)/입 닫힘(-)
-  - `Tn` 텐션 (기존 `t`에서 이름 변경)
+  - `Tn` 텐션 (기존 `t`에서 이름 변경, 현재는 성도 시뮬레이터 레이어에도 직접 결합)
   - `Gr` 그로울
   - `c` 보이스 컬러
 - 배음/노이즈:
@@ -43,12 +43,11 @@
   - `Bh` 브레스니스 (+추가/-억제)
   - `Ns` 노이즈 컬러
 - 연결/아티큘레이션:
-  - `Tr` 연결 길이
   - `Cs` 자음 안정화
   - `At` 어택
-  - `Rl` 릴리즈 에어
 - 다이내믹:
   - `P` 피크 컴프레션
+  - `Ln` 음량 정규화 강도 (`+` 균일화 강화 / `-` 정규화 완화)
 - 성도 시뮬레이터 레이어:
   - `Vtl` 성도 길이
   - `Vtr` 공명 중심 이동
@@ -89,6 +88,7 @@
   - 최신 빌드에서 `Vtl+`와 `Vtw` 체감 강도를 올리고, 전역 바람/팝 노이즈 가드를 추가
   - 최신 빌드에서 `H/Hr`를 70보다 조금 낮춘 구간의 과도한 거칠기를 완화
   - 최신 빌드에서 `Hu-`는 약한 포먼트 하향과 제한된 rasp를 더해 낮고 쉰 듯한 인상을 강화
+  - 최신 빌드에서 THROAT식 성도 플래그(`Vtl/Vtr/Vtw/Vc/Nn/Mo`)가 활성화될 때만 5구간 tube-response 곡선을 추가 적용
   - 최신 빌드에서 `Vtr/Vc/Nn` 모듈 강도 및 wet mix를 추가 상향해 체감 반응을 강화
   - 최신 빌드에서 성도 레이어 정규화 임계/보정량을 조정해 강도 상승 시 볼륨 요동을 완화
   - 최신 빌드에서 `Ns`는 기본 노이즈가 낮은 구간에서도 색조 변화가 들리도록 게이팅과 대역 가중을 상향
@@ -98,20 +98,20 @@
 
 ## 후처리
 - 적응형 라우드니스 정규화 (`RMS`, `p95`, `p99.5`).
+  - `Ln`으로 정규화 개입 강도 조절.
 - 텐션 연동 리미팅.
 - 최종 hard peak guard (`p99.9` 기반).
 - 짧은 fade in/out 적용.
 
 ## OpenUtau 배포 동작
 - `resamp` 빌드 후 자동 복사:
-  - `C:/Users/oyh57/SODAsoo1/VocalSynth/OpenUtauV-win-x64/Resamplers/resamp.exe`
-  - `C:/Users/oyh57/SODAsoo1/VocalSynth/OpenUtauV-win-x64/Resamplers/resamp.yaml`
+  - `C:/Users/oyh57/SODAsoo1/VocalSynth/OpenUtauV-win-x64/Resamplers/T_Sampler.exe`
+  - `C:/Users/oyh57/SODAsoo1/VocalSynth/OpenUtauV-win-x64/Resamplers/T_Sampler.yaml`
 - `wavtool_probe` 빌드 후 자동 복사:
   - `C:/Users/oyh57/SODAsoo1/VocalSynth/OpenUtauV-win-x64/Resamplers/wavtool_probe.exe`
 - `wavtool` 빌드 후 자동 복사:
   - `C:/Users/oyh57/SODAsoo1/VocalSynth/OpenUtauV-win-x64/Wavtools/V_wavtool.exe`
   - `C:/Users/oyh57/SODAsoo1/VocalSynth/OpenUtauV-win-x64/Resamplers/V_wavtool.exe`
-
 ## Wavtool M0 (인터페이스 캡처)
 - 목적: OpenUtau 외부 wavtool 호출 인자 계약 캡처.
 - 실행 파일: `wavtool_probe.exe`
@@ -122,9 +122,11 @@
 - 목적: resampler 음색 개입 없이 음소 경계 연결 품질 개선.
 - 실행 파일: `V_wavtool.exe`
 - 참고 문서: [WAVTOOL.md](/C:/Users/oyh57/SODAsoo1/Devs/Resamp/WAVTOOL.md)
-- 기본 모드: 최종 output wav 직접 갱신. 출력 wav 전체 재작성 없이 raw PCM을 `output_length - overlap` 위치에 배치.
+- 기본 모드: `WT_MODE=natural`. OpenUtau 외부 wavtool 계약대로 `.whd/.dat`를 갱신하고 최종 `output.wav`는 렌더 마지막 copy 단계에서만 생성.
 - phrase 진행 길이는 wavtool duration 인자로 계산.
-- 기본 모드에서는 envelope/DC/phase/OLA 처리를 하지 않아 타이밍 개입을 최소화.
+- `WT_MODE=natural`: fast와 같은 타이밍/완료 계약을 유지하면서 overlap 내부에 envelope, RMS 레벨 매칭, 자음 보호 OLA 적용.
+- `WT_MODE=fast`: envelope/DC/phase/OLA 처리 없이 타이밍 개입과 처리 비용 최소화.
+- `WT_LEVEL=1`, `WT_CV=1`: fast 경로에서 각각 레벨 매칭/자음 보호만 개별 활성화.
 - `WT_ENV=1`: 고속 경로에서 envelope 적용. 기본값은 렌더 속도 우선으로 off.
 - `WT_MODE=smart`/`xfade`: 경계 품질 개선 실험 모드. 발음 지연/렌더 속도 문제가 있으면 기본값 사용.
 - `WT_PHASE=1`: 입력 skip 기반 phase 보정 실험 옵션. 발음 지연 가능성이 있어 기본값은 off.
@@ -140,11 +142,12 @@
 ## 운영 참고
 - 밝기 `B` alias는 제거되었고 `Bi`만 사용.
 - `modulation` 인수는 인위적 LFO 비브라토 합성에 사용하지 않음.
+- 커브 베이크/슬롯 플래그(`--bake`, `Tna..Tnd`, `Bha..Bhd`, `Pca..Pcd`)는 폐기되어 현재 미지원.
 - 외부 Classic resampler 경로는 호출 1회당 플래그 1세트만 전달됨(음소 내부 연속 커브 자동화 없음).
 - `Mo` 적용 확인은 stderr의 다음 두 줄로 판별:
   - `flags parsed: ... Mo=...`
   - `WORLD synthesized: ... Mo=... mo_eff=... mo_ratio=... mo_blend=... Vtl=... Vtr=... Vtw=... Vc=... Nn=... vtr_eff=... vtw_eff=... vc_amt=... nn_amt=... Ns=... ns_eff=...`
-- OpenUtau `expression_filter: true`에서는 manifest key로 지원 플래그를 필터링하므로, `resamp.yaml`의 key/abbr 불일치 시 플래그가 조용히 누락될 수 있음.
+- OpenUtau `expression_filter: true`에서는 manifest key로 지원 플래그를 필터링하므로, `T_Sampler.yaml`의 key/abbr 불일치 시 플래그가 조용히 누락될 수 있음.
   - 현재 key/abbr를 `bi/vcs/nn/cstb` 포함 동일 값으로 정렬해 `Vc/Nn` 누락 문제를 방지.
 
 ## ML 확장 설계

@@ -14,7 +14,7 @@ expressions:
     default_value: 0
     is_flag: true
     flag: g
-  bre:
+  bi:
     name: Brightness
     abbr: bi
     type: Numerical
@@ -32,6 +32,15 @@ expressions:
     default_value: 0
     is_flag: true
     flag: Hu
+  mo:
+    name: Mouth Open/Close
+    abbr: mo
+    type: Numerical
+    min: -100
+    max: 100
+    default_value: 0
+    is_flag: true
+    flag: Mo
   tens:
     name: Tension (Phonation)
     abbr: tens
@@ -40,7 +49,70 @@ expressions:
     max: 100
     default_value: 0
     is_flag: true
+    flag: Tn
+  ptc:
+    name: Pitch Cents
+    abbr: ptc
+    type: Numerical
+    min: -1200
+    max: 1200
+    default_value: 0
+    is_flag: true
     flag: t
+  gr:
+    name: Growl
+    abbr: gr
+    type: Numerical
+    min: 0
+    max: 100
+    default_value: 0
+    is_flag: true
+    flag: Gr
+  vtl:
+    name: Tract Length
+    abbr: vtl
+    type: Numerical
+    min: -100
+    max: 100
+    default_value: 0
+    is_flag: true
+    flag: Vtl
+  vtr:
+    name: Tract Resonance
+    abbr: vtr
+    type: Numerical
+    min: -100
+    max: 100
+    default_value: 0
+    is_flag: true
+    flag: Vtr
+  vtw:
+    name: Tract Focus
+    abbr: vtw
+    type: Numerical
+    min: -100
+    max: 100
+    default_value: 0
+    is_flag: true
+    flag: Vtw
+  vcs:
+    name: Tract Constriction
+    abbr: vcs
+    type: Numerical
+    min: 0
+    max: 100
+    default_value: 0
+    is_flag: true
+    flag: Vc
+  nn:
+    name: Nasal Coupling
+    abbr: nn
+    type: Numerical
+    min: -100
+    max: 100
+    default_value: 0
+    is_flag: true
+    flag: Nn
   harm:
     name: Harmonics
     abbr: harm
@@ -51,19 +123,19 @@ expressions:
     is_flag: true
     flag: Hr
   nois:
-    name: Noise Level
+    name: Noise Level (+/-)
     abbr: nois
     type: Numerical
-    min: 0
+    min: -100
     max: 100
     default_value: 0
     is_flag: true
     flag: N
   bh:
-    name: Breathiness
+    name: Breathiness (+/-)
     abbr: bh
     type: Numerical
-    min: 0
+    min: -100
     max: 100
     default_value: 0
     is_flag: true
@@ -77,9 +149,9 @@ expressions:
     default_value: 100
     is_flag: true
     flag: Tr
-  cstab:
+  cstb:
     name: Consonant Stability
-    abbr: cstab
+    abbr: cstb
     type: Numerical
     min: 0
     max: 100

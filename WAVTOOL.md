@@ -34,21 +34,26 @@ wavtool_probe.exe output.wav input.wav 0 0 100
 
 | 변수 | 값 | 동작 |
 |---|---|---|
-| `WT_MODE` | unset / `fast` | 기본값. 최종 output wav에 raw PCM을 overlap 위치로 직접 배치 |
-| `WT_MODE` | `append` / `legacy` / `off` | `fast`와 동일한 고속 배치 |
+| `WT_MODE` | unset / `natural` | 기본값. fast와 같은 타이밍으로 envelope, 레벨 매칭, 자음 보호 OLA 적용 |
+| `WT_MODE` | `fast` / `append` / `legacy` / `off` | 품질 처리 없는 고속 배치 |
 | `WT_MODE` | `xfade` / `basic` | 실험용. 위상 정렬 없이 짧은 OLA 적용 |
 | `WT_MODE` | `smart` | 실험용. adaptive overlap과 경계 분석 적용 |
-| `WT_ENV` | `1` / `true` | 기본 off. 고속 경로에서 envelope gain 적용 |
-| `WT_PHASE` | `1` / `true` | 실험용. 입력 skip 기반 phase 보정 사용 |
+| `WT_ENV` / `WT_LEVEL` | reserved | 현재 기본 natural에 통합됨. 고속 모드에서는 속도 우선으로 무시 |
+| `WT_CV` | `1` / `true` | 자음 attack 보존을 조금 강화. 경계 잡음이 늘 수 있어 기본 off |
+| `WT_PHASE` | `1` / `true` | 타이밍을 움직이지 않는 phase-aware OLA 사용 |
 | `WT_STRICT` | `1` / `true` | 오류 시 fallback하지 않고 실패 반환 |
 | `WT_LOG` / `WT_DEBUG` | `1` / `true` | 기본 off. 호출 JSONL 로그 기록 |
 | `WT_DEBUG_LOG` | path | 호출 JSONL 로그 경로 지정 |
 
 ## 구현된 품질 처리
 
-- 기본 모드는 출력 wav 전체를 재작성하지 않고 최종 output wav를 직접 갱신
+- 기본 natural 모드는 렌더 중 최종 output wav를 만들지 않고 `.whd/.dat`만 갱신
+- OpenUtau의 마지막 `copy /B output.whd + output.dat output.wav` 단계가 끝나야 최종 wav가 생김
 - 현재 조각은 `output_length - overlap` 위치에 배치하고, phrase 진행 길이는 `duration`으로 계산
-- 기본 모드는 envelope/DC/phase/OLA 처리를 하지 않아 타이밍 개입을 최소화
+- `WT_MODE=fast`는 envelope/DC/phase/OLA 처리를 하지 않아 타이밍 개입과 처리 비용을 최소화
+- 기본 `WT_MODE=natural`은 fast와 같은 길이/위치를 유지하면서 overlap 내부에만 envelope, 보수적 레벨 매칭, OLA를 적용
+- natural 경로는 입력 WAV 단일 open/read, piecewise envelope, polynomial OLA, 로그 지연 생성을 사용해 호출당 비용을 줄임
+- `WT_PHASE=1`은 입력 skip이나 샘플 위치를 바꾸지 않고, 위상 충돌이 큰 유성 overlap에서 fade 곡선만 가파르게 바꿈
 - `WT_MODE=smart`에서만 DC offset, envelope 근사, adaptive overlap, tail 억제 등 실험 기능 적용
 - 실패 시 기본 append fallback
 
@@ -73,5 +78,6 @@ powershell -ExecutionPolicy Bypass -File tools\test_wavtool.ps1
 - 현재 구현은 외부 wavtool 단계에서 가능한 접합 품질 개선에 집중합니다. 보이스뱅크 oto 자동 보정이나 resampler 음색 보정은 하지 않습니다.
 - OpenUtau의 외부 wavtool argv 계약은 버전과 렌더 경로에 따라 달라질 수 있어, 실제 프로젝트 렌더 로그 기반 보정이 필요합니다.
 - 완전한 내장 `convergence` 동일 동작은 아닙니다. 기본값은 품질 개선보다 정박/속도 안정성을 우선합니다.
+- 기본 natural에 문제가 있으면 `WT_MODE=fast`로 되돌리면 됩니다.
 - `WT_MODE=smart`/`xfade`는 아직 실험용입니다. 발음이 늦거나 렌더가 느리면 기본값으로 되돌리는 것이 맞습니다.
 - `WT_PHASE=1`은 아직 실험용입니다. 발음이 늦거나 흐려지면 끄는 것이 맞습니다.

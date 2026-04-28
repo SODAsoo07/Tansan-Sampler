@@ -1,5 +1,5 @@
-# Resamp — OpenUTAU Resampler Manifest
-# 이 파일을 resamp.exe 와 같은 폴더(Resamplers/)에 함께 배치하세요.
+# C_Resamp — OpenUTAU Resampler Manifest
+# 이 파일을 C_Resamp.exe 와 같은 폴더(Resamplers/)에 함께 배치하세요.
 # expression_filter: true 를 활성화하면 여기 없는 기본 표현은 자동으로 비활성화됩니다.
 
 expression_filter: true
@@ -176,15 +176,6 @@ expressions:
     default_value: 0
     is_flag: true
     flag: Ns
-  lnrm:
-    name: Loudness Normalize
-    abbr: lnrm
-    type: Numerical
-    min: -100
-    max: 100
-    default_value: 15
-    is_flag: true
-    flag: Ln
   loop:
     name: Stretch/Loop Mode
     abbr: loop

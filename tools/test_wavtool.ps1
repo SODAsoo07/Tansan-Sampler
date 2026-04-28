@@ -1,6 +1,6 @@
 param(
-    [string]$WavtoolPath = "build\Release\wavtool.exe",
-    [string]$InputWav = "build\test_voice.wav",
+    [string]$WavtoolPath = "build\Release\V_wavtool.exe",
+    [string]$InputWav = "external\World\test\vaiueo2d.wav",
     [string]$OutPath = "build\wavtool_test.wav",
     [string]$DebugLog = "build\wavtool_debug.jsonl"
 )

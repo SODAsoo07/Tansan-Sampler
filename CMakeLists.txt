@@ -39,6 +39,7 @@ set(SOURCES
 add_executable(resamp ${SOURCES})
 target_include_directories(resamp PRIVATE src)
 target_link_libraries(resamp PRIVATE world)
+set_target_properties(resamp PROPERTIES OUTPUT_NAME "T_Sampler")
 
 # ── Wavtool Probe (M0: 호출 인자 캡처 + 최소 누적 동작) ───────────────
 set(WAVTOOL_PROBE_SOURCES
@@ -60,6 +61,10 @@ set(WAVTOOL_SOURCES
 add_executable(wavtool ${WAVTOOL_SOURCES})
 target_include_directories(wavtool PRIVATE src)
 set_target_properties(wavtool PROPERTIES OUTPUT_NAME "V_wavtool")
+if(MSVC)
+  target_compile_options(wavtool PRIVATE /Oi /Gy /Gw /GL)
+  target_link_options(wavtool PRIVATE /LTCG /OPT:REF /OPT:ICF)
+endif()
 
 # ── OpenUtau 테스트용 자동 배포 ─────────────────────────
 option(RESAMP_AUTO_COPY_TO_OPENUTAU "Copy built resamp.exe to OpenUtau Resamplers folder." ON)
@@ -77,11 +82,11 @@ if(WIN32 AND RESAMP_AUTO_COPY_TO_OPENUTAU)
     COMMAND ${CMAKE_COMMAND} -E make_directory "${OPENUTAU_RESAMPLERS_DIR}"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
             "$<TARGET_FILE:resamp>"
-            "${OPENUTAU_RESAMPLERS_DIR}/resamp.exe"
+            "${OPENUTAU_RESAMPLERS_DIR}/T_Sampler.exe"
     COMMAND ${CMAKE_COMMAND} -E copy
-            "${CMAKE_SOURCE_DIR}/resamp.yaml"
-            "${OPENUTAU_RESAMPLERS_DIR}/resamp.yaml"
-    COMMENT "Deploying resamp.exe/resamp.yaml to ${OPENUTAU_RESAMPLERS_DIR}")
+            "${CMAKE_SOURCE_DIR}/T_Sampler.yaml"
+            "${OPENUTAU_RESAMPLERS_DIR}/T_Sampler.yaml"
+    COMMENT "Deploying T_Sampler.exe/T_Sampler.yaml to ${OPENUTAU_RESAMPLERS_DIR}")
 endif()
 
 option(WAVTOOL_AUTO_COPY_TO_OPENUTAU "Copy built wavtool_probe.exe to OpenUtau Resamplers folder." ON)

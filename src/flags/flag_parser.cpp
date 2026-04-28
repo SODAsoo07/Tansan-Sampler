@@ -45,6 +45,8 @@ SynthParams parse_flags(const std::string& s) {
                             p.pitch_cents    = math::clamp(val, -1200, 1200);
         else if (lname == "gr")
                             p.growl          = math::clamp(val, 0, 100);
+        else if (lname == "vg" || lname == "vgrl" || lname == "vgrowl")
+                            p.voiced_growl   = math::clamp(val, 0, 100);
         else if (lname == "vtl")
                             p.tract_length   = math::clamp(val, -100, 100);
         else if (lname == "vtr")
@@ -55,18 +57,41 @@ SynthParams parse_flags(const std::string& s) {
                             p.tract_constriction = math::clamp(val, 0, 100);
         else if (lname == "nn" || lname == "nas" || lname == "nasal")
                             p.nasal_coupling = math::clamp(val, -100, 100);
-        else if (lname == "h" || lname == "hr")
+        else if (lname == "hr")
                             p.harmonics      = math::clamp(val, 0, 100);
         else if (lname == "n") p.noise_level = math::clamp(val, -100, 100);
         else if (lname == "bh" || lname == "brh")
                             p.breathiness    = math::clamp(val, -100, 100);
-        else if (lname == "tr") p.transition_length = math::clamp(val, 0, 200);
         else if (lname == "cs") p.consonant_stability = math::clamp(val, 0, 100);
         else if (lname == "at") p.attack = math::clamp(val, -100, 100);
-        else if (lname == "rl") p.release_air = math::clamp(val, 0, 100);
         else if (lname == "ns") p.noise_color = math::clamp(val, -100, 100);
         else if (lname == "p") p.peak_comp   = math::clamp(val, 0, 100);
-        else if (lname == "c") p.voice_color = math::clamp(val, -100, 100);
+        else if (lname == "ln" || lname == "lnrm")
+                            p.loud_norm     = math::clamp(val, -100, 100);
+        else if (lname == "lp" || lname == "loop")
+                            p.loop_mode = math::clamp(val, 0, 2);
+        else if (lname == "cw" || lname == "cp")
+                            p.consonant_power = math::clamp(val, -100, 100);
+        else if (lname == "vw" || lname == "vp")
+                            p.vowel_power = math::clamp(val, -100, 100);
+        else if (lname == "rv" || lname == "rev")
+                            p.reverse_mode = (val > 0) ? 1 : 0;
+        else if (lname == "vo" || lname == "voi")
+                            p.voicing = math::clamp(val, -100, 100);
+        else if (lname == "fc" || lname == "flt")
+                            p.final_filter = math::clamp(val, -1, 1);
+        else if (lname == "eb" || lname == "endbr")
+                            p.end_breath = math::clamp(val, 0, 100);
+        else if (lname == "fh")
+                            p.fry_head = math::clamp(val, 0, 100);
+        else if (lname == "ft")
+                            p.fry_tail = math::clamp(val, 0, 100);
+        else if (lname == "tm" || lname == "trem")
+                            p.tremolo = math::clamp(val, 0, 100);
+        else if (lname == "ds" || lname == "dist")
+                            p.distortion = math::clamp(val, 0, 100);
+        else if (lname == "bc" || lname == "bit")
+                            p.bitcrusher = math::clamp(val, 0, 100);
         // 알 수 없는 플래그는 무시
     }
     return p;

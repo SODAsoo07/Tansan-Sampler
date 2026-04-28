@@ -37,6 +37,19 @@ struct FastWavtoolArgs {
     double overlap_ms = 0.0;
 };
 
+struct JoinOptions {
+    bool envelope = false;
+    bool level_match = false;
+    bool consonant_guard = false;
+    bool phase = false;
+};
+
+struct MixShape {
+    bool consonant_like = false;
+    bool phase_mismatch = false;
+    double level_gain = 1.0;
+};
+
 struct JoinAnalysis {
     bool voiced = false;
     int period = 0;
@@ -186,9 +199,8 @@ uint32_t read_u32_stream(std::istream& f) {
     return static_cast<uint32_t>(b[0] | (b[1] << 8) | (b[2] << 16) | (b[3] << 24));
 }
 
-bool probe_wav_data(const std::string& path, WavDataInfo& info) {
-    std::ifstream f(path, std::ios::binary);
-    if (!f) return false;
+bool probe_wav_data_stream(std::istream& f, WavDataInfo& info) {
+    info = WavDataInfo{};
     char riff[4] = {};
     char wave[4] = {};
     f.read(riff, 4);
@@ -220,6 +232,12 @@ bool probe_wav_data(const std::string& path, WavDataInfo& info) {
         f.seekg(payload + static_cast<std::streamoff>(chunk_size), std::ios::beg);
     }
     return found_fmt && found_data;
+}
+
+bool probe_wav_data(const std::string& path, WavDataInfo& info) {
+    std::ifstream f(path, std::ios::binary);
+    if (!f) return false;
+    return probe_wav_data_stream(f, info);
 }
 
 void write_pcm16_header(std::ostream& f, uint32_t sample_rate, uint32_t data_size) {
@@ -317,7 +335,9 @@ std::vector<int16_t> load_pcm16_segment(const WavtoolArgs& args,
 std::vector<int16_t> load_pcm16_segment_fast(const FastWavtoolArgs& args,
                                              uint32_t& sample_rate) {
     WavDataInfo wi{};
-    if (probe_wav_data(args.input_path, wi) &&
+    std::ifstream f(args.input_path, std::ios::binary);
+    if (f &&
+        probe_wav_data_stream(f, wi) &&
         wi.audio_format == 1 &&
         wi.bits_per_sample == 16 &&
         wi.channels >= 1) {
@@ -331,8 +351,6 @@ std::vector<int16_t> load_pcm16_segment_fast(const FastWavtoolArgs& args,
             : available;
 
         std::vector<int16_t> out(static_cast<size_t>(wanted), 0);
-        std::ifstream f(args.input_path, std::ios::binary);
-        if (!f) throw std::runtime_error("Cannot open WAV: " + args.input_path);
         const std::streamoff start = static_cast<std::streamoff>(wi.data_offset) +
             static_cast<std::streamoff>(skip_samples) * wi.channels * 2;
         f.seekg(start, std::ios::beg);
@@ -363,6 +381,46 @@ std::vector<int16_t> load_pcm16_segment_fast(const FastWavtoolArgs& args,
     return load_pcm16_segment(slow_args, sample_rate, 0);
 }
 
+std::vector<double> parse_envelope_args(int argc, char** argv) {
+    std::vector<double> envelope;
+    if (argc <= 5) return envelope;
+    envelope.reserve(static_cast<size_t>(argc - 5));
+    for (int i = 5; i < argc; ++i) {
+        envelope.push_back(parse_double_prefix(argv[i] ? argv[i] : "", 0.0));
+    }
+    return envelope;
+}
+
+int16_t scale_pcm16(int16_t sample, double gain) {
+    const int v = static_cast<int>(std::llround(static_cast<double>(sample) * gain));
+    return static_cast<int16_t>(std::clamp(v, -32768, 32767));
+}
+
+void apply_gain_range_pcm16(std::vector<int16_t>& samples,
+                            int begin,
+                            int end,
+                            double start_gain,
+                            double end_gain) {
+    begin = std::max(0, std::min(begin, static_cast<int>(samples.size())));
+    end = std::max(begin, std::min(end, static_cast<int>(samples.size())));
+    const int count = end - begin;
+    if (count <= 0) return;
+    if (std::abs(start_gain - end_gain) < 1e-9) {
+        if (std::abs(start_gain - 1.0) < 1e-9) return;
+        for (int i = begin; i < end; ++i) {
+            samples[static_cast<size_t>(i)] = scale_pcm16(samples[static_cast<size_t>(i)], start_gain);
+        }
+        return;
+    }
+    const double denom = static_cast<double>(std::max(1, count - 1));
+    const double step = (end_gain - start_gain) / denom;
+    double gain = start_gain;
+    for (int i = begin; i < end; ++i) {
+        samples[static_cast<size_t>(i)] = scale_pcm16(samples[static_cast<size_t>(i)], gain);
+        gain += step;
+    }
+}
+
 void apply_envelope_pcm16(std::vector<int16_t>& samples,
                           const std::vector<double>& env,
                           double duration_ms,
@@ -380,20 +438,133 @@ void apply_envelope_pcm16(std::vector<int16_t>& samples,
     const double y4 = std::clamp(env[6] / 100.0, 0.0, 2.0);
     const double y2 = std::clamp((env.size() > 10 ? env[10] : env[4]) / 100.0, 0.0, 2.0);
 
-    auto lerp = [](double a, double b, double x) {
-        return a + (b - a) * std::clamp(x, 0.0, 1.0);
-    };
-    auto gain_at = [&](double t_ms) {
-        if (t_ms <= x1) return lerp(y0, y1, x1 > 0.0 ? t_ms / x1 : 1.0);
-        if (t_ms <= x2) return lerp(y1, y2, x2 > x1 ? (t_ms - x1) / (x2 - x1) : 1.0);
-        if (t_ms <= x3) return lerp(y2, y3, x3 > x2 ? (t_ms - x2) / (x3 - x2) : 1.0);
-        return lerp(y3, y4, x4 > x3 ? (t_ms - x3) / (x4 - x3) : 1.0);
-    };
+    if (std::abs(y0 - 1.0) < 1e-9 &&
+        std::abs(y1 - 1.0) < 1e-9 &&
+        std::abs(y2 - 1.0) < 1e-9 &&
+        std::abs(y3 - 1.0) < 1e-9 &&
+        std::abs(y4 - 1.0) < 1e-9) {
+        return;
+    }
 
-    for (size_t i = 0; i < samples.size(); ++i) {
-        const double t_ms = static_cast<double>(i) * 1000.0 / static_cast<double>(sample_rate);
-        const int v = static_cast<int>(std::llround(static_cast<double>(samples[i]) * gain_at(t_ms)));
-        samples[i] = static_cast<int16_t>(std::clamp(v, -32768, 32767));
+    const int n = static_cast<int>(samples.size());
+    const int s1 = std::clamp(ms_to_samples(x1, sample_rate), 0, n);
+    const int s2 = std::clamp(ms_to_samples(x2, sample_rate), s1, n);
+    const int s3 = std::clamp(ms_to_samples(x3, sample_rate), s2, n);
+
+    apply_gain_range_pcm16(samples, 0, s1, y0, y1);
+    apply_gain_range_pcm16(samples, s1, s2, y1, y2);
+    apply_gain_range_pcm16(samples, s2, s3, y2, y3);
+    apply_gain_range_pcm16(samples, s3, n, y3, y4);
+}
+
+double rms_pcm16(const int16_t* samples, int count) {
+    if (!samples || count <= 0) return 0.0;
+    double sum = 0.0;
+    for (int i = 0; i < count; ++i) {
+        const double v = static_cast<double>(samples[i]) / 32768.0;
+        sum += v * v;
+    }
+    return std::sqrt(sum / static_cast<double>(count));
+}
+
+double zero_crossing_rate_pcm16(const int16_t* samples, int count) {
+    if (!samples || count <= 1) return 0.0;
+    int crossings = 0;
+    for (int i = 1; i < count; ++i) {
+        if ((samples[i - 1] < 0 && samples[i] >= 0) ||
+            (samples[i - 1] >= 0 && samples[i] < 0)) {
+            crossings++;
+        }
+    }
+    return static_cast<double>(crossings) / static_cast<double>(count - 1);
+}
+
+double correlation_pcm16(const int16_t* a, const int16_t* b, int count) {
+    if (!a || !b || count <= 16) return 0.0;
+    double num = 0.0;
+    double da = 0.0;
+    double db = 0.0;
+    for (int i = 0; i < count; ++i) {
+        const double x = static_cast<double>(a[i]);
+        const double y = static_cast<double>(b[i]);
+        num += x * y;
+        da += x * x;
+        db += y * y;
+    }
+    return (da > 1e-9 && db > 1e-9) ? num / std::sqrt(da * db) : 0.0;
+}
+
+int estimate_period_pcm16(const int16_t* a,
+                          const int16_t* b,
+                          int count,
+                          uint32_t sample_rate,
+                          double& confidence) {
+    confidence = 0.0;
+    if (!a || !b || count < 128) return 0;
+    const int min_lag = std::max(24, static_cast<int>(sample_rate / 900));
+    const int max_lag = std::min(count / 2, static_cast<int>(sample_rate / 70));
+    if (max_lag <= min_lag) return 0;
+    int best_lag = 0;
+    double best = -1.0;
+    for (int lag = min_lag; lag <= max_lag; ++lag) {
+        const int n = count - lag;
+        double num = 0.0;
+        double da = 0.0;
+        double db = 0.0;
+        for (int i = 0; i < n; ++i) {
+            const double x0 = 0.5 * (static_cast<double>(a[i]) + static_cast<double>(b[i]));
+            const double x1 = 0.5 * (static_cast<double>(a[i + lag]) + static_cast<double>(b[i + lag]));
+            num += x0 * x1;
+            da += x0 * x0;
+            db += x1 * x1;
+        }
+        const double corr = (da > 1e-9 && db > 1e-9) ? num / std::sqrt(da * db) : 0.0;
+        if (corr > best) {
+            best = corr;
+            best_lag = lag;
+        }
+    }
+    confidence = best;
+    return best_lag;
+}
+
+int find_best_phase_shift_pcm16(const int16_t* old_tail,
+                                const std::vector<int16_t>& samples,
+                                int overlap,
+                                int period) {
+    if (!old_tail || overlap <= 32 || period <= 0) return 0;
+    const int max_shift = std::min({period / 2, 96, static_cast<int>(samples.size()) - overlap - 1});
+    if (max_shift <= 0) return 0;
+    auto corr_at = [&](int shift) {
+        double num = 0.0;
+        double da = 0.0;
+        double db = 0.0;
+        for (int i = 0; i < overlap; ++i) {
+            const double a = old_tail[i];
+            const double b = samples[shift + i];
+            num += a * b;
+            da += a * a;
+            db += b * b;
+        }
+        return (da > 1e-9 && db > 1e-9) ? num / std::sqrt(da * db) : -1.0;
+    };
+    int best_shift = 0;
+    double best = corr_at(0);
+    for (int shift = 1; shift <= max_shift; ++shift) {
+        const double c = corr_at(shift);
+        if (c > best) {
+            best = c;
+            best_shift = shift;
+        }
+    }
+    return best_shift;
+}
+
+void apply_phase_shift_in_overlap(std::vector<int16_t>& samples, int shift, int overlap) {
+    if (shift <= 0 || overlap <= 0 || static_cast<int>(samples.size()) <= overlap + shift) return;
+    const int n = std::min(overlap, static_cast<int>(samples.size()) - shift);
+    for (int i = 0; i < n; ++i) {
+        samples[i] = samples[shift + i];
     }
 }
 
@@ -754,6 +925,10 @@ void debug_log(const std::string& line) {
     }
 }
 
+bool logging_enabled() {
+    return env_truthy("WT_LOG") || env_truthy("WT_DEBUG");
+}
+
 void log_render_fast(int argc,
                      char** argv,
                      const std::string& mode,
@@ -838,27 +1013,25 @@ void write_whd_dat_positioned(const std::string& output_path,
                               const std::vector<int16_t>& samples,
                               uint32_t sample_rate,
                               int overlap_samples,
-                              int duration_samples) {
+                              int duration_samples,
+                              const JoinOptions& options = {}) {
     fs::path out_path(output_path);
     if (out_path.has_parent_path()) fs::create_directories(out_path.parent_path());
     const fs::path whd_path = fs::path(output_path + ".whd");
     const fs::path dat_path = fs::path(output_path + ".dat");
-
-    if (!fs::exists(out_path)) {
-        std::error_code ec;
-        fs::remove(whd_path, ec);
-        fs::remove(dat_path, ec);
-    }
 
     uint32_t old_data_size = 0;
     if (fs::exists(dat_path)) {
         old_data_size = static_cast<uint32_t>(fs::file_size(dat_path));
     }
     const int old_samples = static_cast<int>(old_data_size / 2);
-    const int start_sample = std::max(0, old_samples - std::max(0, overlap_samples));
-    const int advance_samples = std::max(0, duration_samples - std::max(0, overlap_samples));
+    const int effective_overlap = std::min(old_samples, std::max(0, overlap_samples));
+    const int start_sample = old_samples - effective_overlap;
+    const int advance_samples = std::max(0, duration_samples - effective_overlap);
     const int final_samples = old_samples + advance_samples;
     const uint32_t final_data_size = static_cast<uint32_t>(final_samples * 2);
+    const int writable_samples = std::max(0, final_samples - start_sample);
+    const int copy_count = std::min(static_cast<int>(samples.size()), writable_samples);
 
     {
         std::ofstream whd(whd_path, std::ios::binary | std::ios::trunc);
@@ -881,32 +1054,67 @@ void write_whd_dat_positioned(const std::string& output_path,
         dat.write(zeros.data(), static_cast<std::streamsize>(zeros.size()));
     }
 
-    const int mix_count = std::max(0, std::min(old_samples - start_sample, static_cast<int>(samples.size())));
+    const int mix_count = std::max(0, std::min(old_samples - start_sample, copy_count));
     if (mix_count > 0) {
         dat.seekg(static_cast<std::streamoff>(start_sample) * 2, std::ios::beg);
         std::vector<int16_t> old(static_cast<size_t>(mix_count));
         dat.read(reinterpret_cast<char*>(old.data()), static_cast<std::streamsize>(mix_count * 2));
+
+        MixShape mix{};
+        const int probe = std::min(mix_count, 256);
+        mix.consonant_like = options.consonant_guard &&
+            zero_crossing_rate_pcm16(samples.data(), probe) > 0.18;
+        if (options.level_match && probe > 16) {
+            const double old_rms = rms_pcm16(old.data(), probe);
+            const double new_rms = rms_pcm16(samples.data(), probe);
+            if (old_rms > 0.0005 && new_rms > 0.0005) {
+                mix.level_gain = std::clamp(old_rms / new_rms, 0.88, mix.consonant_like ? 1.06 : 1.16);
+            }
+        }
+        if (options.phase && probe > 64) {
+            const double old_zcr = zero_crossing_rate_pcm16(old.data(), probe);
+            const double new_zcr = zero_crossing_rate_pcm16(samples.data(), probe);
+            const double corr = correlation_pcm16(old.data(), samples.data(), probe);
+            mix.phase_mismatch = old_zcr < 0.15 && new_zcr < 0.15 && corr < 0.10;
+        }
+
         dat.seekp(static_cast<std::streamoff>(start_sample) * 2, std::ios::beg);
         const int fade = std::max(1, mix_count);
         for (int i = 0; i < mix_count; ++i) {
             const double t = static_cast<double>(i) / static_cast<double>(std::max(1, fade - 1));
-            const double w_in = 0.5 - 0.5 * std::cos(kPi * t);
+            double w_in = t * t * (3.0 - 2.0 * t);
+            if (mix.phase_mismatch) {
+                const double steep = std::clamp((t - 0.5) * 1.65 + 0.5, 0.0, 1.0);
+                w_in = steep * steep * (3.0 - 2.0 * steep);
+            }
+            if (mix.consonant_like) {
+                w_in = std::min(1.0, w_in * 1.04 + 0.02 * t);
+            }
             const double w_old = 1.0 - w_in;
-            const int mixed = static_cast<int>(std::llround(old[i] * w_old + samples[i] * w_in));
+            const double adjusted = static_cast<double>(samples[i]) * mix.level_gain;
+            const int mixed = static_cast<int>(std::llround(old[i] * w_old + adjusted * w_in));
             const int16_t s = static_cast<int16_t>(std::clamp(mixed, -32768, 32767));
             dat.write(reinterpret_cast<const char*>(&s), 2);
         }
     }
 
-    if (static_cast<int>(samples.size()) > mix_count) {
+    if (copy_count > mix_count) {
         dat.seekp(static_cast<std::streamoff>(start_sample + mix_count) * 2, std::ios::beg);
         dat.write(reinterpret_cast<const char*>(samples.data() + mix_count),
-                  static_cast<std::streamsize>((samples.size() - mix_count) * 2));
+                  static_cast<std::streamsize>((copy_count - mix_count) * 2));
     }
 
-    dat.seekp(static_cast<std::streamoff>(final_data_size) - 1, std::ios::beg);
-    const char zero = 0;
-    dat.write(&zero, 1);
+    const uint32_t written_data_size = static_cast<uint32_t>((start_sample + copy_count) * 2);
+    if (final_data_size > written_data_size) {
+        dat.seekp(static_cast<std::streamoff>(final_data_size) - 1, std::ios::beg);
+        const char zero = 0;
+        dat.write(&zero, 1);
+    }
+    dat.close();
+    if (old_data_size > final_data_size || written_data_size > final_data_size) {
+        std::error_code resize_error;
+        fs::resize_file(dat_path, final_data_size, resize_error);
+    }
 }
 
 int write_output_wav_positioned(const std::string& output_path,
@@ -950,8 +1158,9 @@ int write_output_wav_positioned(const std::string& output_path,
 
     const uint32_t old_data_size = read_u32_at(wav, 40);
     const int old_samples = static_cast<int>(old_data_size / 2);
-    const int start_sample = std::max(0, old_samples - std::max(0, overlap_samples));
-    const int advance_samples = std::max(0, duration_samples - std::max(0, overlap_samples));
+    const int effective_overlap = std::min(old_samples, std::max(0, overlap_samples));
+    const int start_sample = old_samples - effective_overlap;
+    const int advance_samples = std::max(0, duration_samples - effective_overlap);
     const int final_samples = old_samples + advance_samples;
     const uint32_t final_data_size = static_cast<uint32_t>(final_samples * 2);
 
@@ -991,20 +1200,33 @@ int write_output_wav_positioned(const std::string& output_path,
 
 int render_fast_append(int argc, char** argv, const std::string& mode) {
     FastWavtoolArgs args = parse_fast_args(argc, argv);
+    const bool natural_mode = mode == "natural";
     double overlap_ms = args.overlap_ms;
     uint32_t sr = 44100;
     std::vector<int16_t> segment = load_pcm16_segment_fast(args, sr);
     const int duration_samples_sr = std::max(0, ms_to_samples(args.duration_ms, sr));
     const int overlap_samples = std::max(0, ms_to_samples(overlap_ms, sr));
-    if (env_truthy("WT_ENV")) {
-        WavtoolArgs full_args = parse_args(argc, argv);
-        apply_envelope_pcm16(segment, full_args.envelope, full_args.duration_ms, sr);
+    JoinOptions join_options{};
+    join_options.envelope = natural_mode;
+    join_options.level_match = natural_mode;
+    join_options.consonant_guard = env_truthy("WT_CV");
+    join_options.phase = env_truthy("WT_PHASE");
+
+    if (join_options.envelope) {
+        apply_envelope_pcm16(segment, parse_envelope_args(argc, argv), args.duration_ms, sr);
     }
-    const int final_samples = write_output_wav_positioned(
-        args.output_path, segment, sr, overlap_samples, duration_samples_sr);
+
+    write_whd_dat_positioned(args.output_path, segment, sr, overlap_samples,
+                             duration_samples_sr, join_options);
     const int advance_samples = std::max(0, duration_samples_sr - overlap_samples);
-    log_render_fast(argc, argv, mode, args, segment.size(), segment.size(), sr,
-                    overlap_ms, advance_samples, final_samples);
+    const fs::path dat_path = fs::path(args.output_path + ".dat");
+    const int final_samples = fs::exists(dat_path)
+        ? static_cast<int>(fs::file_size(dat_path) / 2)
+        : 0;
+    if (logging_enabled()) {
+        log_render_fast(argc, argv, mode, args, segment.size(), segment.size(), sr,
+                        overlap_ms, advance_samples, final_samples);
+    }
     return 0;
 }
 
@@ -1026,11 +1248,13 @@ std::vector<float> render_basic_append(const WavtoolArgs& args, uint32_t& write_
 }
 
 int render_wavtool(int argc, char** argv) {
-    WavtoolArgs args = parse_args(argc, argv);
     const std::string mode = lower_ascii(read_env("WT_MODE"));
-    if (mode.empty() || mode == "fast" || mode == "append" || mode == "off" || mode == "legacy") {
-        return render_fast_append(argc, argv, mode.empty() ? "fast" : mode);
+    if (mode.empty() || mode == "natural" || mode == "fast" ||
+        mode == "append" || mode == "off" || mode == "legacy") {
+        return render_fast_append(argc, argv, mode.empty() ? "natural" : mode);
     }
+
+    WavtoolArgs args = parse_args(argc, argv);
 
     const bool append_mode = false;
     const bool xfade_only = mode == "xfade" || mode == "basic";
@@ -1074,26 +1298,28 @@ int render_wavtool(int argc, char** argv) {
     if (out_path.has_parent_path()) fs::create_directories(out_path.parent_path());
     resamp::io::save_wav(args.output_path, out, sr);
 
-    std::ostringstream ss;
-    ss << "{\"event\":\"render\",\"mode\":\"" << (mode.empty() ? "smart" : mode)
-       << "\",\"argc\":" << argc
-       << ",\"args\":[";
-    for (int i = 0; i < argc; ++i) {
-        if (i > 0) ss << ",";
-        ss << "\"" << json_escape(argv[i] ? argv[i] : "") << "\"";
+    if (logging_enabled()) {
+        std::ostringstream ss;
+        ss << "{\"event\":\"render\",\"mode\":\"" << (mode.empty() ? "smart" : mode)
+           << "\",\"argc\":" << argc
+           << ",\"args\":[";
+        for (int i = 0; i < argc; ++i) {
+            if (i > 0) ss << ",";
+            ss << "\"" << json_escape(argv[i] ? argv[i] : "") << "\"";
+        }
+        ss << "]"
+           << ",\"input_samples\":" << segment.size()
+           << ",\"previous_samples\":" << previous_size
+           << ",\"output_samples\":" << out.size()
+           << ",\"overlap\":" << overlap
+           << ",\"skip_adjust\":" << join.skip_adjust
+           << ",\"voiced\":" << (join.voiced ? "true" : "false")
+           << ",\"confidence\":" << join.confidence
+           << ",\"skip_ms\":" << args.skip_ms
+           << ",\"duration_ms\":" << args.duration_ms
+           << "}";
+        debug_log(ss.str());
     }
-    ss << "]"
-       << ",\"input_samples\":" << segment.size()
-       << ",\"previous_samples\":" << previous_size
-       << ",\"output_samples\":" << out.size()
-       << ",\"overlap\":" << overlap
-       << ",\"skip_adjust\":" << join.skip_adjust
-       << ",\"voiced\":" << (join.voiced ? "true" : "false")
-       << ",\"confidence\":" << join.confidence
-       << ",\"skip_ms\":" << args.skip_ms
-       << ",\"duration_ms\":" << args.duration_ms
-       << "}";
-    debug_log(ss.str());
     return 0;
 }
 

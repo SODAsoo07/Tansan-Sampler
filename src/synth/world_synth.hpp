@@ -1,6 +1,8 @@
 #pragma once
 #include "args/arg_parser.hpp"
 #include "flags/synth_params.hpp"
+#include <array>
+#include <string>
 #include <vector>
 
 namespace resamp::synth {
@@ -15,6 +17,7 @@ struct WorldAnalysis {
     std::vector<double> temporal_positions;            // [n_frames] (s 단위)
     std::vector<std::vector<double>> spectrogram;      // [n_frames][fft_size/2+1]
     std::vector<std::vector<double>> aperiodicity;     // [n_frames][fft_size/2+1]
+    std::vector<std::array<double, 4>> formant_peaks;  // [n_frames] F1..F4 peak Hz
 };
 
 // 입력 신호를 WORLD로 분석 (F0 + spectral envelope + aperiodicity).
@@ -22,6 +25,15 @@ struct WorldAnalysis {
 WorldAnalysis world_analyze(
     const std::vector<float>& signal,
     int                       sample_rate);
+
+// 디스크 캐시를 사용한 WORLD 분석.
+// cache key: source_wav_path + source file mtime/size + trim range + sample_rate
+WorldAnalysis world_analyze_cached(
+    const std::vector<float>& signal,
+    int                       sample_rate,
+    const std::string&        source_wav_path,
+    int                       src_start_sample,
+    int                       src_end_sample);
 
 // 시간 매핑 + 피치/포먼트 변환 + WORLD 합성
 //   src: 분석 결과 (트리밍된 소스 신호 기준)

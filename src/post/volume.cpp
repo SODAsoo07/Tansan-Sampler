@@ -54,17 +54,22 @@ void apply_volume(std::vector<float>& samples,
     float gate_abs = std::max(0.0025f, cur_p95 * 0.09f);
     float cur_rms = gated_rms(samples, gate_abs);
 
-    float target_rms = 0.105f;
-    float target_p95 = 0.70f;
-    float target_p995 = 0.92f;
+    float ln = std::clamp(sp.loud_norm / 100.0f, -1.0f, 1.0f);
+    float ln_pos = std::max(0.0f, ln);
+    float ln_neg = std::max(0.0f, -ln);
+    float target_rms = 0.105f + 0.012f * ln_pos - 0.010f * ln_neg;
+    float target_p95 = 0.70f  + 0.020f * ln_pos - 0.050f * ln_neg;
+    float target_p995 = 0.92f + 0.010f * ln_pos - 0.030f * ln_neg;
 
     float gain_rms = (cur_rms > 1e-9f) ? (target_rms / cur_rms) : 1.0f;
     float gain_p95 = (cur_p95 > 1e-9f) ? (target_p95 / cur_p95) : 1.0f;
     float gain_p995 = (cur_p995 > 1e-9f) ? (target_p995 / cur_p995) : 1.0f;
     float norm_gain = std::min({gain_rms, gain_p95, gain_p995});
     norm_gain = std::clamp(norm_gain, 0.35f, 3.20f);
-    // 과도한 보정으로 잔향/히스가 전면으로 나오지 않도록 보정량을 일부 완화.
-    norm_gain = 1.0f + 0.80f * (norm_gain - 1.0f);
+    // 과도한 보정으로 잔향/히스가 전면으로 나오지 않도록 기본은 완화,
+    // Ln으로 정규화 개입 강도를 조절한다.
+    float norm_blend = std::clamp(0.80f + 0.75f * ln_pos - 0.65f * ln_neg, 0.10f, 1.55f);
+    norm_gain = 1.0f + norm_blend * (norm_gain - 1.0f);
 
     for (auto& s : samples) {
         // low-level 성분(잔향/히스)은 완만히 감쇠해 거친 질감 부각 방지.
@@ -93,6 +98,117 @@ void apply_volume(std::vector<float>& samples,
     if (peak > 0.985f) {
         float pg = 0.985f / peak;
         for (auto& s : samples) s *= pg;
+    }
+}
+
+static void apply_distortion(std::vector<float>& samples, int amount) {
+    float a = std::clamp(amount / 100.0f, 0.0f, 1.0f);
+    if (a <= 1.0e-4f) return;
+
+    float pre_p95 = abs_percentile(samples, 0.95f);
+    float pre_p999 = abs_percentile(samples, 0.999f);
+    float drive = 1.0f + 8.0f * a + 30.0f * a * a;
+    float wet = std::clamp(0.24f + 0.76f * a, 0.0f, 0.98f);
+    float norm = std::tanh(drive);
+    if (norm < 1.0e-6f) norm = 1.0f;
+    for (auto& s : samples) {
+        float dry = s;
+        float biased = s + 0.12f * a * s * std::fabs(s);
+        float shaped = std::tanh(drive * biased) / norm;
+        s = dry * (1.0f - wet) + shaped * wet;
+    }
+
+    float post_p95 = abs_percentile(samples, 0.95f);
+    if (pre_p95 > 1.0e-5f && post_p95 > 1.0e-5f) {
+        float keep = std::clamp(pre_p95 * (1.0f + 0.18f * a), 0.04f, 0.86f);
+        float g = std::clamp(keep / post_p95, 0.35f, 1.15f);
+        for (auto& s : samples) s *= g;
+    }
+
+    float peak = abs_percentile(samples, 0.999f);
+    float peak_target = std::max(0.82f, std::min(0.98f, pre_p999 * (1.0f + 0.10f * a)));
+    if (peak > peak_target && peak > 1.0e-5f) {
+        float g = peak_target / peak;
+        for (auto& s : samples) s *= g;
+    }
+}
+
+static void apply_bitcrusher(std::vector<float>& samples, int amount) {
+    float a = std::clamp(amount / 100.0f, 0.0f, 1.0f);
+    if (a <= 1.0e-4f) return;
+    int bits = std::clamp(static_cast<int>(std::round(16.0f - 11.0f * a)), 5, 16);
+    int hold = std::clamp(static_cast<int>(std::round(1.0f + 9.0f * a * a)), 1, 10);
+    float levels = static_cast<float>(1 << (bits - 1));
+    float held = 0.0f;
+    for (size_t i = 0; i < samples.size(); ++i) {
+        if ((i % static_cast<size_t>(hold)) == 0) {
+            held = std::round(std::clamp(samples[i], -1.0f, 1.0f) * levels) / levels;
+        }
+        samples[i] = held;
+    }
+}
+
+static void apply_one_pole_lowpass(std::vector<float>& samples, int sample_rate, float cutoff_hz) {
+    if (samples.empty() || sample_rate <= 0) return;
+    float dt = 1.0f / static_cast<float>(sample_rate);
+    float rc = 1.0f / (2.0f * 3.14159265358979323846f * cutoff_hz);
+    float alpha = dt / (rc + dt);
+    float y = samples.front();
+    for (auto& s : samples) {
+        y += alpha * (s - y);
+        s = y;
+    }
+}
+
+static void apply_one_pole_highpass(std::vector<float>& samples, int sample_rate, float cutoff_hz) {
+    if (samples.empty() || sample_rate <= 0) return;
+    float dt = 1.0f / static_cast<float>(sample_rate);
+    float rc = 1.0f / (2.0f * 3.14159265358979323846f * cutoff_hz);
+    float alpha = rc / (rc + dt);
+    float y = 0.0f;
+    float prev_x = samples.front();
+    for (auto& s : samples) {
+        float x = s;
+        y = alpha * (y + x - prev_x);
+        prev_x = x;
+        s = y;
+    }
+}
+
+void apply_flag_post_effects(std::vector<float>& samples,
+                             int sample_rate,
+                             double consonant_ms,
+                             const SynthParams& sp) {
+    if (samples.empty()) return;
+
+    if (sp.reverse_mode == 1) {
+        std::reverse(samples.begin(), samples.end());
+    }
+
+    apply_distortion(samples, sp.distortion);
+    apply_bitcrusher(samples, sp.bitcrusher);
+
+    if (sp.reverse_mode != 0 && sample_rate > 0) {
+        int fade_in_n = std::min(static_cast<int>(samples.size()), std::max(1, sample_rate / 500));  // ~2ms
+        int fade_out_n = std::min(static_cast<int>(samples.size()), std::max(1, sample_rate / 250)); // ~4ms
+        for (int i = 0; i < fade_in_n; ++i) {
+            samples[i] *= static_cast<float>(i) / static_cast<float>(fade_in_n);
+        }
+        int n = static_cast<int>(samples.size());
+        for (int i = 0; i < fade_out_n; ++i) {
+            samples[n - 1 - i] *= static_cast<float>(i) / static_cast<float>(fade_out_n);
+        }
+    }
+
+    // Fc는 의도적으로 최종 단계에 둔다.
+    if (sp.final_filter > 0) {
+        bool fry_active = (sp.fry_head > 0 || sp.fry_tail > 0);
+        float cutoff = fry_active ? 7600.0f : 5200.0f;
+        apply_one_pole_lowpass(samples, sample_rate, cutoff);
+        if (!fry_active) apply_one_pole_lowpass(samples, sample_rate, cutoff);
+    } else if (sp.final_filter < 0) {
+        apply_one_pole_highpass(samples, sample_rate, 180.0f);
+        apply_one_pole_highpass(samples, sample_rate, 180.0f);
     }
 }
 
