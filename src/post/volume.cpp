@@ -18,6 +18,36 @@ static float abs_percentile(const std::vector<float>& samples, float q) {
     return v[idx];
 }
 
+static float max_abs_sample(const std::vector<float>& samples) {
+    float peak = 0.0f;
+    for (float s : samples) peak = std::max(peak, std::fabs(s));
+    return peak;
+}
+
+static void apply_peak_guard(std::vector<float>& samples, float ceiling) {
+    if (samples.empty()) return;
+    ceiling = std::clamp(ceiling, 0.50f, 0.985f);
+    float peak = max_abs_sample(samples);
+    if (peak <= ceiling || peak <= 1.0e-8f) return;
+
+    float knee = ceiling * 0.82f;
+    float inv_range = 1.0f / std::max(1.0e-6f, peak - knee);
+    for (auto& s : samples) {
+        float a = std::fabs(s);
+        if (a <= knee) continue;
+        float sign = (s < 0.0f) ? -1.0f : 1.0f;
+        float x = std::clamp((a - knee) * inv_range, 0.0f, 1.0f);
+        float limited = knee + (ceiling - knee) * std::tanh(2.2f * x) / std::tanh(2.2f);
+        s = sign * limited;
+    }
+
+    peak = max_abs_sample(samples);
+    if (peak > ceiling && peak > 1.0e-8f) {
+        float g = ceiling / peak;
+        for (auto& s : samples) s *= g;
+    }
+}
+
 static float gated_rms(const std::vector<float>& samples, float gate_abs) {
     if (samples.empty()) return 0.0f;
     double sum2 = 0.0;
@@ -131,6 +161,7 @@ static void apply_distortion(std::vector<float>& samples, int amount) {
         float g = peak_target / peak;
         for (auto& s : samples) s *= g;
     }
+    apply_peak_guard(samples, 0.96f - 0.06f * a);
 }
 
 static void apply_bitcrusher(std::vector<float>& samples, int amount) {
@@ -209,6 +240,13 @@ void apply_flag_post_effects(std::vector<float>& samples,
     } else if (sp.final_filter < 0) {
         apply_one_pole_highpass(samples, sample_rate, 180.0f);
         apply_one_pole_highpass(samples, sample_rate, 180.0f);
+    }
+
+    if (sp.distortion > 0) {
+        float a = std::clamp(sp.distortion / 100.0f, 0.0f, 1.0f);
+        apply_peak_guard(samples, 0.96f - 0.06f * a);
+    } else {
+        apply_peak_guard(samples, 0.985f);
     }
 }
 

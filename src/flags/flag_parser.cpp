@@ -92,6 +92,8 @@ SynthParams parse_flags(const std::string& s) {
                             p.distortion = math::clamp(val, 0, 100);
         else if (lname == "bc" || lname == "bit")
                             p.bitcrusher = math::clamp(val, 0, 100);
+        else if (lname == "vz" || lname == "voc" || lname == "vocalizer")
+                            p.vocalizer = math::clamp(val, 0, 7);
         // 알 수 없는 플래그는 무시
     }
     return p;

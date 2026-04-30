@@ -143,7 +143,8 @@ int main(int argc, char** argv) {
                       << " Ft=" << sp.fry_tail
                       << " Tm=" << sp.tremolo
                       << " Ds=" << sp.distortion
-                      << " Bc=" << sp.bitcrusher << '\n';
+                      << " Bc=" << sp.bitcrusher
+                      << " Vz=" << sp.vocalizer << '\n';
         }
         append_debug_log("[FLAGS] Vtl=" + std::to_string(sp.tract_length) +
                          " Vtr=" + std::to_string(sp.tract_resonance) +
@@ -151,7 +152,8 @@ int main(int argc, char** argv) {
                          " Vc=" + std::to_string(sp.tract_constriction) +
                          " Nn=" + std::to_string(sp.nasal_coupling) +
                          " Mo=" + std::to_string(sp.mouth_open) +
-                         " Tn=" + std::to_string(sp.tension));
+                         " Tn=" + std::to_string(sp.tension) +
+                         " Vz=" + std::to_string(sp.vocalizer));
 
         // ── 6. WORLD 분석 (raw Harvest F0 + envelope/AP 추출) ─────────
         // 디스크 캐시를 사용해 반복 렌더 시 분석 비용을 절감.
