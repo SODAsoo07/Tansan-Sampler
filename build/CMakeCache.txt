@@ -148,7 +148,7 @@ CMAKE_PROJECT_DESCRIPTION:STATIC=
 CMAKE_PROJECT_HOMEPAGE_URL:STATIC=
 
 //Value Computed by CMake
-CMAKE_PROJECT_NAME:STATIC=Resamp
+CMAKE_PROJECT_NAME:STATIC=TansanSampler
 
 //Value Computed by CMake
 CMAKE_PROJECT_SPDX_LICENSE:STATIC=
@@ -259,6 +259,15 @@ Resamp_IS_TOP_LEVEL:STATIC=ON
 
 //Value Computed by CMake
 Resamp_SOURCE_DIR:STATIC=C:/Users/oyh57/SODAsoo1/Devs/Resamp
+
+//Value Computed by CMake
+TansanSampler_BINARY_DIR:STATIC=C:/Users/oyh57/SODAsoo1/Devs/Resamp/build
+
+//Value Computed by CMake
+TansanSampler_IS_TOP_LEVEL:STATIC=ON
+
+//Value Computed by CMake
+TansanSampler_SOURCE_DIR:STATIC=C:/Users/oyh57/SODAsoo1/Devs/Resamp
 
 //Copy built wavtool_probe.exe to OpenUtau Resamplers folder.
 WAVTOOL_AUTO_COPY_TO_OPENUTAU:BOOL=ON

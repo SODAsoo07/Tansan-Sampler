@@ -38,3 +38,6 @@ resamp_wavtool_calls*.jsonl
 .vscode/
 *.tmp
 *.temp
+/build
+/build
+/build

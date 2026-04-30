@@ -1,6 +1,6 @@
 # Resamp Flags Guide
 
-이 문서는 현재 코드(`src/flags/flag_parser.cpp`, `T_Sampler.yaml`) 기준 동작을 정리한 실사용 문서입니다.
+이 문서는 현재 코드(`src/flags/flag_parser.cpp`, `Tansan-Sampler.yaml`) 기준 동작을 정리한 실사용 문서입니다.
 일반 사용자용 빠른 가이드는 `FLAGS_USER_KR.md`를 참고하세요.
 
 ## 공통 규칙
@@ -49,6 +49,7 @@
 | `Ds` | 0..100 | 0 | 디스토션. 강한 tanh drive 후 loudness/peak 정규화 |
 | `Bc` | 0..100 | 0 | 비트크러셔. 비트 깊이/샘플 hold 감소 |
 | `Vz` | 0..7 | 0 | 보컬라이저 포먼트 필터. `0` off, `1` 아, `2` 에, `3` 이, `4` 오, `5` 우, `6` 어, `7` N |
+| `VzS` | 0..100 | 100 | 보컬라이저 강도. `Vz` 선택은 유지하고 필터 적용량만 조절 |
 
 ## 성도 시뮬레이터 파라미터 효과
 
@@ -96,7 +97,7 @@
 - OpenUtau 표시 약어 기준:
   - Consonant Stability는 `abbr: cstb`로 표기됩니다.
   - 실제 플래그 문자열은 `Cs`를 사용합니다.
-- OpenUtau `expression_filter: true` 사용 시 `T_Sampler.yaml`의 expression key와 `abbr`는 동일해야 안정적으로 전달됩니다.
+- OpenUtau `expression_filter: true` 사용 시 `Tansan-Sampler.yaml`의 expression key와 `abbr`는 동일해야 안정적으로 전달됩니다.
   - 현재 `bi / vcs / nn / cstb` 기준으로 정렬되어 있습니다.
 - 적용 확인 로그:
   - 렌더 로그에 `flags parsed: ... Mo=값 ...`과

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(Resamp VERSION 0.2.0 LANGUAGES CXX)
+project(TansanSampler VERSION 0.2.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -39,7 +39,14 @@ set(SOURCES
 add_executable(resamp ${SOURCES})
 target_include_directories(resamp PRIVATE src)
 target_link_libraries(resamp PRIVATE world)
-set_target_properties(resamp PROPERTIES OUTPUT_NAME "T_Sampler")
+set(RESAMPLER_BASENAME "Tansan-Sampler")
+set(RESAMPLER_PRESET_FILE "tansanSampler.txt")
+set_target_properties(resamp PROPERTIES OUTPUT_NAME "${RESAMPLER_BASENAME}")
+add_custom_command(TARGET resamp POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different
+          "${CMAKE_SOURCE_DIR}/${RESAMPLER_PRESET_FILE}"
+          "$<TARGET_FILE_DIR:resamp>/${RESAMPLER_PRESET_FILE}"
+  COMMENT "Copying ${RESAMPLER_PRESET_FILE} next to ${RESAMPLER_BASENAME}.exe")
 
 # ── Wavtool Probe (M0: 호출 인자 캡처 + 최소 누적 동작) ───────────────
 set(WAVTOOL_PROBE_SOURCES
@@ -82,11 +89,14 @@ if(WIN32 AND RESAMP_AUTO_COPY_TO_OPENUTAU)
     COMMAND ${CMAKE_COMMAND} -E make_directory "${OPENUTAU_RESAMPLERS_DIR}"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
             "$<TARGET_FILE:resamp>"
-            "${OPENUTAU_RESAMPLERS_DIR}/T_Sampler.exe"
+            "${OPENUTAU_RESAMPLERS_DIR}/${RESAMPLER_BASENAME}.exe"
     COMMAND ${CMAKE_COMMAND} -E copy
-            "${CMAKE_SOURCE_DIR}/T_Sampler.yaml"
-            "${OPENUTAU_RESAMPLERS_DIR}/T_Sampler.yaml"
-    COMMENT "Deploying T_Sampler.exe/T_Sampler.yaml to ${OPENUTAU_RESAMPLERS_DIR}")
+            "${CMAKE_SOURCE_DIR}/${RESAMPLER_BASENAME}.yaml"
+            "${OPENUTAU_RESAMPLERS_DIR}/${RESAMPLER_BASENAME}.yaml"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${CMAKE_SOURCE_DIR}/${RESAMPLER_PRESET_FILE}"
+            "${OPENUTAU_RESAMPLERS_DIR}/${RESAMPLER_PRESET_FILE}"
+    COMMENT "Deploying ${RESAMPLER_BASENAME}.exe/${RESAMPLER_BASENAME}.yaml/${RESAMPLER_PRESET_FILE} to ${OPENUTAU_RESAMPLERS_DIR}")
 endif()
 
 option(WAVTOOL_AUTO_COPY_TO_OPENUTAU "Copy built wavtool_probe.exe to OpenUtau Resamplers folder." ON)
@@ -122,3 +132,4 @@ if(WIN32)
 endif()
 
 install(TARGETS resamp wavtool_probe wavtool RUNTIME DESTINATION bin)
+install(FILES "${RESAMPLER_PRESET_FILE}" DESTINATION bin)

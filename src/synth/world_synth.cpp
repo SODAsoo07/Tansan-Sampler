@@ -129,13 +129,13 @@ struct VocalizerTarget {
 
 static VocalizerTarget vocalizer_target(int mode) {
     switch (mode) {
-    case 1: return {780.0, 1250.0, 2550.0, 3800.0, false}; // 아
-    case 2: return {530.0, 1850.0, 2650.0, 4100.0, false}; // 에
-    case 3: return {310.0, 2350.0, 3150.0, 4500.0, false}; // 이
-    case 4: return {500.0,  900.0, 2500.0, 3600.0, false}; // 오
-    case 5: return {350.0,  760.0, 2350.0, 3400.0, false}; // 우
-    case 6: return {620.0, 1200.0, 2550.0, 3800.0, false}; // 어
-    case 7: return {300.0, 1050.0, 2200.0, 3400.0, true};  // N
+    case 1: return {850.0, 1150.0, 2500.0, 3700.0, false}; // 아: open/back
+    case 2: return {520.0, 2050.0, 3000.0, 4300.0, false}; // 에: mid/front
+    case 3: return {280.0, 2650.0, 3450.0, 5000.0, false}; // 이: close/front
+    case 4: return {500.0,  820.0, 2350.0, 3350.0, false}; // 오: mid/round
+    case 5: return {310.0,  620.0, 2150.0, 3200.0, false}; // 우: close/round
+    case 6: return {640.0, 1350.0, 2450.0, 3650.0, false}; // 어: central
+    case 7: return {280.0,  950.0, 2050.0, 3200.0, true};  // N
     default: return {0.0, 0.0, 0.0, 0.0, false};
     }
 }
@@ -412,7 +412,7 @@ WorldAnalysis world_analyze_cached(
     if (const char* env_dir = std::getenv("RESAMP_CACHE_DIR"); env_dir && *env_dir) {
         cache_root = fs::path(env_dir);
     } else if (const char* local = std::getenv("LOCALAPPDATA"); local && *local) {
-        cache_root = fs::path(local) / "T_Sampler" / "analysis_cache";
+        cache_root = fs::path(local) / "Tansan-Sampler" / "analysis_cache";
     } else {
         cache_root = fs::path(".") / ".resamp_cache";
     }
@@ -980,9 +980,11 @@ std::vector<float> world_render(
     else                 frame_period = 0.65; // 일반 노트 절충
 
     double seam_ms = 0.0;
+    double long_loop_stress = std::clamp(stretch_overrun_ms / std::max(120.0, available_after_consonant_ms), 0.0, 1.0);
     if (has_vowel_loop) {
         // loop 경계 전후에서 end->start 파라미터를 부드럽게 잇는 크로스페이드 폭.
-        seam_ms = std::clamp(loop_len_ms * 0.18, 6.0, 24.0);
+        seam_ms = std::clamp(loop_len_ms * (0.18 + 0.08 * long_loop_stress), 6.0, 34.0);
+        if (auto_stretch_mirror_loop) seam_ms = std::max(seam_ms, 12.0);
     }
 
     // 안정화 모드:
@@ -993,6 +995,7 @@ std::vector<float> world_render(
     double anchor_mix_cap = flat_target_f0 ? 0.60 : (has_f0_mod ? 0.20 : (has_consonant_head ? 0.28 : 0.46));
     if (has_consonant_head) anchor_mix_cap *= 0.75;
     if (no_loop_needed) anchor_mix_cap *= 0.80;
+    if (auto_stretch_mirror_loop) anchor_mix_cap *= (1.0 + 0.18 * long_loop_stress);
     // Cs: 높을수록 연결 안정성 강화(과도한 변화 억제)
     double cs_local = std::clamp((sp.consonant_stability - 50) / 50.0, -1.0, 1.0);
     if (cs_local >= 0.0) anchor_mix_cap *= (1.0 + 0.42 * cs_local);
@@ -1147,7 +1150,38 @@ std::vector<float> world_render(
     double fry_head_amt = std::pow(std::clamp(sp.fry_head / 100.0, 0.0, 1.0), 0.72);
     double fry_tail_amt = std::pow(std::clamp(sp.fry_tail / 100.0, 0.0, 1.0), 0.72);
     int vocalizer_mode = std::clamp(sp.vocalizer, 0, 7);
-    bool vocalizer_enabled = vocalizer_mode > 0;
+    double vocalizer_strength = std::pow(std::clamp(sp.vocalizer_strength / 100.0, 0.0, 1.0), 0.72);
+    auto smoothstep01_global = [](double x) {
+        x = std::clamp(x, 0.0, 1.0);
+        return x * x * (3.0 - 2.0 * x);
+    };
+    double short_note_amt = smoothstep01_global((360.0 - out_total_ms) / 240.0);
+    double ultra_short_amt = smoothstep01_global((190.0 - out_total_ms) / 120.0);
+
+    double fry_load = std::max(fry_head_amt, fry_tail_amt);
+    double tract_load = std::max({std::fabs(vtl_eff), std::fabs(vtr_eff), std::fabs(vtw_eff),
+                                  vc_amt, nn_amt, std::fabs(mo_eff)});
+    double vocalizer_load = (vocalizer_mode > 0) ? vocalizer_strength : 0.0;
+    double post_fx_load = std::pow(std::clamp(sp.distortion / 100.0, 0.0, 1.0), 0.70) +
+                          0.36 * std::abs(sp.final_filter);
+    double conflict_load = 0.28 * tract_load + 0.26 * vocalizer_load + 0.20 * std::fabs(voicing_ctrl) +
+                           0.18 * growl_amt + 0.20 * voiced_growl_amt + 0.18 * fry_load +
+                           0.15 * end_breath_amt + 0.20 * post_fx_load;
+    double conflict_amt = smoothstep01_global((conflict_load - 0.64) / 0.86);
+    double global_artifact_guard = std::clamp(1.0 - 0.18 * conflict_amt - 0.12 * ultra_short_amt * conflict_amt,
+                                              0.70, 1.0);
+
+    // 강한 질감 플래그가 겹칠 때는 가장 artifact가 큰 성분부터 완만하게 줄인다.
+    tremolo_amt *= std::clamp(1.0 - 0.22 * short_note_amt * (fry_load + voiced_growl_amt), 0.74, 1.0);
+    voiced_growl_amt *= std::clamp(1.0 - 0.24 * fry_load - 0.18 * ultra_short_amt - 0.12 * post_fx_load, 0.62, 1.0);
+    growl_amt *= std::clamp(1.0 - 0.14 * fry_load - 0.10 * post_fx_load, 0.72, 1.0);
+    fry_head_amt *= std::clamp(1.0 - 0.18 * vocalizer_load - 0.22 * voiced_growl_amt - 0.18 * ultra_short_amt, 0.58, 1.0);
+    fry_tail_amt *= std::clamp(1.0 - 0.16 * vocalizer_load - 0.18 * voiced_growl_amt - 0.10 * short_note_amt, 0.64, 1.0);
+    vocalizer_strength *= std::clamp(1.0 - 0.18 * std::max(std::fabs(vtw_eff), vc_amt) - 0.10 * fry_load, 0.72, 1.0);
+    if (vocalizer_mode == 7) {
+        vocalizer_strength *= std::clamp(1.0 - 0.20 * nn_amt - 0.12 * breathiness_eff, 0.70, 1.0);
+    }
+    bool vocalizer_enabled = vocalizer_mode > 0 && vocalizer_strength > 0.001;
     bool tract_feature_requested =
         (std::fabs(vtl_eff) > 0.01 || std::fabs(vtr_eff) > 0.01 || std::fabs(vtw_eff) > 0.01 ||
          vc_amt > 0.01 || nn_amt > 0.01 || std::fabs(mo_eff) > 0.01 || tension_tract_strength > 0.02);
@@ -1456,9 +1490,10 @@ std::vector<float> world_render(
         // 원본 발음/캐릭터를 완전히 지우는 변환기는 아니고, 목표 포먼트 쪽으로 밀어주는 필터다.
         if (vocalizer_enabled) {
             VocalizerTarget vt = vocalizer_target(vocalizer_mode);
-            double region_gate = in_consonant ? 0.20 : (in_transition ? 0.56 : 1.0);
+            double region_gate = in_consonant ? 0.16 : (in_transition ? 0.64 : 1.0);
             double voiced_gate = std::clamp(0.18 + 0.82 * voiced_eff, 0.0, 1.0);
-            double mix = std::clamp((vt.nasal ? 0.82 : 0.74) * region_gate * voiced_gate, 0.0, 0.86);
+            double mix = std::clamp((vt.nasal ? 0.96 : 0.92) * vocalizer_strength *
+                                    region_gate * voiced_gate * global_artifact_guard, 0.0, 0.96);
             if (mix > 0.01) {
                 double e0 = 0.0;
                 double e1 = 0.0;
@@ -1470,63 +1505,81 @@ std::vector<float> world_render(
                 double t2 = std::clamp(vt.f2, t1 + 230.0, fs * 0.46);
                 double t3 = std::clamp(vt.f3, t2 + 360.0, fs * 0.46);
                 double t4 = std::clamp(vt.f4, t3 + 440.0, fs * 0.46);
-                double high_roll = (vocalizer_mode == 3) ? 0.7 : ((vocalizer_mode == 4 || vocalizer_mode == 5) ? -1.0 : 0.0);
+                double high_roll = (vocalizer_mode == 3) ? 1.15 :
+                                   ((vocalizer_mode == 2) ? 0.45 :
+                                   ((vocalizer_mode == 4 || vocalizer_mode == 5) ? -1.45 : -0.12));
                 for (int k = 0; k < spec_dim; ++k) {
                     double p0 = std::max(0.0, out_spec[i][k]);
                     e0 += p0;
                     double fn = fn_lut[k];
                     double hz = hz_lut[k];
-                    double st1 = log_freq_bell(hz, src_f1, 0.46);
-                    double st2 = log_freq_bell(hz, src_f2, 0.50);
-                    double st3 = log_freq_bell(hz, src_f3, 0.56);
-                    double st4 = log_freq_bell(hz, src_f4, 0.66);
-                    double tg1 = log_freq_bell(hz, t1, 0.42);
-                    double tg2 = log_freq_bell(hz, t2, 0.46);
-                    double tg3 = log_freq_bell(hz, t3, 0.54);
-                    double tg4 = log_freq_bell(hz, t4, 0.66);
-                    double valley12 = log_freq_bell(hz, std::sqrt(t1 * t2), 0.34);
-                    double valley23 = log_freq_bell(hz, std::sqrt(t2 * t3), 0.38);
+                    double st1 = log_freq_bell(hz, src_f1, 0.42);
+                    double st2 = log_freq_bell(hz, src_f2, 0.46);
+                    double st3 = log_freq_bell(hz, src_f3, 0.52);
+                    double st4 = log_freq_bell(hz, src_f4, 0.62);
+                    double tg1 = log_freq_bell(hz, t1, 0.34);
+                    double tg2 = log_freq_bell(hz, t2, 0.36);
+                    double tg3 = log_freq_bell(hz, t3, 0.42);
+                    double tg4 = log_freq_bell(hz, t4, 0.56);
+                    double valley12 = log_freq_bell(hz, std::sqrt(t1 * t2), 0.28);
+                    double valley23 = log_freq_bell(hz, std::sqrt(t2 * t3), 0.32);
+                    double low_band = hz_bell(hz, 430.0, 310.0);
+                    double low_mid = log_freq_bell(hz, 980.0, 0.42);
+                    double mid_front = log_freq_bell(hz, 2050.0, 0.42);
+                    double front_edge = log_freq_bell(hz, 3050.0, 0.44);
+                    double round_notch = log_freq_bell(hz, 1650.0, 0.46);
+                    double round_low = log_freq_bell(hz, 700.0, 0.34);
+                    double high_air = std::max(0.0, fn - 0.48);
 
                     double db = 0.0;
                     double ap_delta = 0.0;
                     if (vt.nasal) {
-                        double nasal_low = hz_bell(hz, 280.0, 145.0);
-                        double nasal_mid = log_freq_bell(hz, 0.78 * t2, 0.42);
-                        double nasal_hi = log_freq_bell(hz, 0.82 * t3, 0.46);
-                        double anti1 = log_freq_bell(hz, 720.0, 0.34);
-                        double anti2 = log_freq_bell(hz, 1750.0, 0.38);
-                        double anti3 = log_freq_bell(hz, 3300.0, 0.48);
-                        db = 12.2 * nasal_low + 8.8 * nasal_mid + 5.0 * nasal_hi
-                           - 11.0 * anti1 - 10.4 * anti2 - 5.8 * anti3
-                           - 2.6 * st2 - 1.8 * st3;
-                        ap_delta = 0.020 + 0.055 * nasal_hi + 0.028 * std::max(0.0, fn - 0.42)
-                                 - 0.030 * nasal_low;
+                        double nasal_low = hz_bell(hz, 250.0, 125.0);
+                        double nasal_mid = log_freq_bell(hz, 980.0, 0.34);
+                        double nasal_hi = log_freq_bell(hz, 2350.0, 0.38);
+                        double anti1 = log_freq_bell(hz, 650.0, 0.26);
+                        double anti2 = log_freq_bell(hz, 1650.0, 0.30);
+                        double anti3 = log_freq_bell(hz, 3450.0, 0.42);
+                        db = 18.5 * nasal_low + 11.2 * nasal_mid + 6.4 * nasal_hi
+                           - 17.0 * anti1 - 15.0 * anti2 - 8.5 * anti3
+                           - 5.4 * st2 - 4.2 * st3 - 2.0 * high_air;
+                        ap_delta = 0.030 + 0.082 * nasal_hi + 0.040 * high_air
+                                 - 0.042 * nasal_low;
                     } else {
-                        db = 8.6 * tg1 + 10.2 * tg2 + 7.0 * tg3 + 2.2 * tg4
-                           - 4.8 * st1 - 6.0 * st2 - 3.6 * st3 - 1.2 * st4
-                           - 3.2 * valley12 - 2.2 * valley23
-                           + high_roll * std::max(0.0, fn - 0.38) * 4.0;
+                        db = 11.8 * tg1 + 14.0 * tg2 + 9.2 * tg3 + 3.0 * tg4
+                           - 6.8 * st1 - 8.4 * st2 - 5.1 * st3 - 1.8 * st4
+                           - 4.8 * valley12 - 3.5 * valley23
+                           + high_roll * std::max(0.0, fn - 0.36) * 4.8;
                         if (vocalizer_mode == 1) {          // 아: 열린 F1과 낮은 F2를 더 분명히
-                            db += 3.6 * tg1 - 2.4 * log_freq_bell(hz, 2300.0, 0.42);
+                            db += 8.0 * tg1 + 3.4 * low_mid
+                                - 5.6 * mid_front - 4.2 * front_edge - 2.6 * high_air;
+                        } else if (vocalizer_mode == 2) {   // 에: 중고역 전방 모음
+                            db += 6.8 * tg2 + 4.0 * tg3 + 2.2 * front_edge
+                                - 4.4 * round_low - 2.6 * low_band;
                         } else if (vocalizer_mode == 3) {   // 이: F2/F3 전방성을 강조
-                            db += 4.4 * tg2 + 2.2 * tg3 - 3.4 * hz_bell(hz, 520.0, 260.0);
-                        } else if (vocalizer_mode == 4 || vocalizer_mode == 5) {
-                            db += 3.8 * tg1 + 2.6 * tg2 - 4.2 * log_freq_bell(hz, 1700.0, 0.50)
-                                - 2.0 * std::max(0.0, fn - 0.48);
+                            db += 9.6 * tg2 + 6.2 * tg3 + 3.0 * front_edge
+                                - 8.0 * low_band - 5.8 * round_low - 2.2 * low_mid;
+                        } else if (vocalizer_mode == 4) {   // 오: 둥글고 뒤쪽, 우보다 조금 열림
+                            db += 7.0 * tg1 + 5.0 * round_low
+                                - 8.0 * round_notch - 5.6 * mid_front - 3.8 * high_air;
+                        } else if (vocalizer_mode == 5) {   // 우: 가장 좁고 어두운 rounded 모음
+                            db += 5.6 * tg1 + 8.2 * round_low
+                                - 10.0 * round_notch - 7.4 * mid_front - 7.0 * front_edge - 6.0 * high_air;
                         } else if (vocalizer_mode == 6) {   // 어: 중립/중앙 모음 성향
-                            db += 2.0 * tg1 + 2.0 * tg2 - 2.2 * log_freq_bell(hz, 2300.0, 0.50);
+                            db += 5.8 * tg1 + 5.0 * tg2 + 1.8 * low_mid
+                                - 3.8 * front_edge - 3.2 * round_low - 2.4 * high_air;
                         }
-                        ap_delta = -0.020 * (tg1 + tg2 + 0.55 * tg3) + 0.006 * std::max(0.0, fn - 0.55);
+                        ap_delta = -0.030 * (tg1 + tg2 + 0.55 * tg3) + 0.006 * std::max(0.0, fn - 0.55);
                     }
-                    db = std::clamp(db * mix, -16.0, 16.0);
+                    db = std::clamp(db * mix, -22.0, 22.0);
                     out_spec[i][k] = p0 * std::pow(10.0, db / 10.0);
                     out_ap[i][k] = std::clamp(out_ap[i][k] + mix * ap_delta, 0.0, 1.0);
                     e1 += out_spec[i][k];
                 }
                 if (e0 > 1.0e-12 && e1 > 1.0e-12) {
-                    double norm = std::clamp(e0 / e1, 0.60, 1.70);
-                    norm = 1.0 + 0.62 * mix * (norm - 1.0);
-                    norm = std::clamp(norm, 0.68, 1.42);
+                    double norm = std::clamp(e0 / e1, 0.52, 1.95);
+                    norm = 1.0 + 0.76 * mix * (norm - 1.0);
+                    norm = std::clamp(norm, 0.62, 1.55);
                     for (int k = 0; k < spec_dim; ++k) out_spec[i][k] *= norm;
                 }
             }
@@ -1579,7 +1632,7 @@ std::vector<float> world_render(
 
         // 강제 유성화/무성화: F0는 극단 무성화에서만 끊고, 중간값은 AP 중심으로 처리.
         if (std::fabs(voicing_ctrl) > 0.01) {
-            double v_pos = std::max(0.0, voicing_ctrl);
+            double v_pos = std::max(0.0, voicing_ctrl) * global_artifact_guard;
             double v_neg = std::max(0.0, -voicing_ctrl);
             double f0_for_harmonics = out_f0[i];
             for (int k = 0; k < spec_dim; ++k) {
@@ -1780,6 +1833,8 @@ std::vector<float> world_render(
             vtw_drive = std::clamp(vtw_drive + 0.40 * tn_drive, 0.0, 1.0);
             vc_drive  = std::clamp(vc_drive  + 0.32 * tn_drive, 0.0, 1.0);
             nn_drive  = std::clamp(nn_drive  + 0.16 * tension_neg * tn_gate, 0.0, 1.0);
+            vtw_drive *= std::clamp(global_artifact_guard + 0.05, 0.74, 1.0);
+            vc_drive  *= std::clamp(global_artifact_guard + 0.08, 0.78, 1.0);
             double vtw_connect_gate = std::clamp((0.30 + 0.70 * voiced_eff) *
                                                  (in_consonant ? 0.18 : (in_transition ? 0.42 : 1.0)) *
                                                  (0.52 + 0.48 * time_gate),
@@ -2339,7 +2394,7 @@ std::vector<float> world_render(
         if (growl_amt > 0.01) {
             double growl_voicing = 0.30 + 0.70 * voiced_eff;
             double gr_lfo = 0.82 + 0.18 * std::sin(2.0 * math::PI * (0.0072 * i));
-            double g = growl_amt * growl_voicing * gr_lfo;
+            double g = growl_amt * growl_voicing * gr_lfo * global_artifact_guard;
             for (int k = 0; k < spec_dim; ++k) {
                 double fn = fn_lut[k];
                 double rasp1 = std::exp(-0.5 * std::pow((fn - 0.12) / 0.09, 2.0)); // ~1.4kHz
@@ -2355,7 +2410,8 @@ std::vector<float> world_render(
 
         // 6.3. Voiced Growl(Vg): 유성 구간 전용 저역 맥동 + throat rasp
         if (voiced_growl_amt > 0.01 && voiced_eff > 0.18) {
-            double vg_gate = voiced_growl_amt * std::clamp((voiced_eff - 0.18) / 0.82, 0.0, 1.0);
+            double vg_gate = voiced_growl_amt * std::clamp((voiced_eff - 0.18) / 0.82, 0.0, 1.0) *
+                             global_artifact_guard;
             double pulse = 0.62 + 0.38 * std::sin(2.0 * math::PI * (0.0180 * i + 0.26 * std::sin(0.0027 * i)));
             double vg = vg_gate * pulse;
             for (int k = 0; k < spec_dim; ++k) {
@@ -2410,6 +2466,7 @@ std::vector<float> world_render(
             double breath_curve = std::pow(breath_u, 1.45 - 0.70 * short_note_boost);
             double breath_gate = std::clamp((1.45 + 0.70 * short_note_boost) * end_breath_amt, 0.0, 1.0) *
                                  breath_curve;
+            breath_gate *= std::clamp(global_artifact_guard + 0.08, 0.78, 1.0);
 
             double fry_tail_ms = 65.0 + 230.0 * fry_tail_amt;
             double fry_tail_u = (fry_tail_ms > 1.0)
@@ -2425,6 +2482,8 @@ std::vector<float> world_render(
                 ? (1.0 - (head_u * head_u * (3.0 - 2.0 * head_u)))
                 : 0.0;
             double head_fry_gate = std::clamp(1.07 * fry_head_amt * head_shape, 0.0, 1.0);
+            tail_fry_gate *= global_artifact_guard;
+            head_fry_gate *= std::clamp(global_artifact_guard + 0.04, 0.74, 1.0);
             double fry_gate = std::max(head_fry_gate, tail_fry_gate);
             double high_tail = std::clamp((tail_fry_gate - 0.64) / 0.34, 0.0, 1.0);
             double high_head = std::clamp((head_fry_gate - 0.40) / 0.48, 0.0, 1.0);

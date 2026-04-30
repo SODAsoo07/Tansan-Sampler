@@ -108,7 +108,17 @@ int main(int argc, char** argv) {
         if (output_samples < 1) output_samples = 1;
 
         // ── 5. 플래그 파싱 ────────────────────────────────────────────
-        resamp::SynthParams sp = resamp::parse_flags(params.flags);
+        const std::string expanded_flags =
+            resamp::expand_flag_presets(params.flags, argc > 0 && argv[0] ? argv[0] : "");
+        if (expanded_flags != params.flags) {
+            append_debug_log("[FLAGS_EXPANDED] raw=\"" + params.flags +
+                             "\" expanded=\"" + expanded_flags + "\"");
+            if (verbose_log) {
+                std::cerr << "[Resamp] flags expanded: raw=" << params.flags
+                          << " expanded=" << expanded_flags << '\n';
+            }
+        }
+        resamp::SynthParams sp = resamp::parse_flags(expanded_flags);
         if (verbose_log) {
             std::cerr << "[Resamp] flags parsed:"
                       << " g=" << sp.gender
@@ -144,7 +154,8 @@ int main(int argc, char** argv) {
                       << " Tm=" << sp.tremolo
                       << " Ds=" << sp.distortion
                       << " Bc=" << sp.bitcrusher
-                      << " Vz=" << sp.vocalizer << '\n';
+                      << " Vz=" << sp.vocalizer
+                      << " VzS=" << sp.vocalizer_strength << '\n';
         }
         append_debug_log("[FLAGS] Vtl=" + std::to_string(sp.tract_length) +
                          " Vtr=" + std::to_string(sp.tract_resonance) +
@@ -153,7 +164,8 @@ int main(int argc, char** argv) {
                          " Nn=" + std::to_string(sp.nasal_coupling) +
                          " Mo=" + std::to_string(sp.mouth_open) +
                          " Tn=" + std::to_string(sp.tension) +
-                         " Vz=" + std::to_string(sp.vocalizer));
+                         " Vz=" + std::to_string(sp.vocalizer) +
+                         " VzS=" + std::to_string(sp.vocalizer_strength));
 
         // ── 6. WORLD 분석 (raw Harvest F0 + envelope/AP 추출) ─────────
         // 디스크 캐시를 사용해 반복 렌더 시 분석 비용을 절감.

@@ -1,0 +1,40 @@
+# Tansan-Sampler custom flag presets.
+# Usage: write @preset_name in OpenUtAU flags. Directly typed flags always override preset values.
+# Format: name = flags
+
+soft = Tn-18Bh18Bi42Ln10
+gentle = Tn-28Mo-10Bi40Bh12Ln-8
+clear = Bi68Tn18Hr82Cs70Cw12Vw8
+power = Tn38Bi62Hr88Cs76Cw22Vw18Ln25
+warm = Bi38Hu-18Vtl8Vtr-8Hr76Ln12
+bright = Bi76Tn22Hr88Vtr10Vtw8
+open = Mo38Bi58Vw18
+close = Mo-32Bi42Vw-8
+stable = Cs85At-12Ln35Cw10
+air = Bh42Ns22Bi60Ln8
+dry = Bh-28N-28Ns-18Ln12
+nasal = Nn22Vtr8Vtw-6
+twang = Vc18Vtr14Vtw12Tn16
+male = g22Vtl10Bi46Hr78
+female = g-24Vtl-12Bi62Hr82
+growl = Vg38Tn24Hr86
+rasp = Gr34N18Hr84Tn18
+head_fry = Fh58Tn-8
+tail_fry = Ft62Tn-6
+end_breath = Eb45Bh20
+trem = Tm24
+lofi = Ds18Bc14P92
+dist = Ds38P94Ln8
+vocal_a = Vz1VzS70
+vocal_e = Vz2VzS70
+vocal_i = Vz3VzS70
+vocal_o = Vz4VzS70
+vocal_u = Vz5VzS70
+vocal_eo = Vz6VzS70
+vocal_n = Vz7VzS70
+
+# Combination presets can include other presets. Local values in the same line override included presets.
+soft_air = @soft Bh34Eb30
+clear_power = @clear Tn32Cw20Vw16
+growl_power = @power Vg34Hr88
+fry_end = @tail_fry Eb22
