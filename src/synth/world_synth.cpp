@@ -1033,22 +1033,31 @@ std::vector<float> world_render(
     bool has_vowel_loop  = loop_len_ms > (2.0 * anal_period);
     double transition_src_len_ms = std::max(0.0, loop_start_ms - consonant_src_ms);
 
+    // [버그 수정: VCV 연속음 및 느슨한 컷오프 방어]
+    // oto.ini의 컷오프가 다음 음절까지 포함하도록 멀리 설정된 경우(VCV에서 흔함),
+    // 루프 가능 구간이 매우 길어져(예: 2초) "루프 없이 1:1로 재생해도 되겠다"고 착각하게 됩니다.
+    // 그 결과 긴 노트를 재생할 때 다음 음절(뒷부분 음성)이 그대로 노출되는 치명적 오류가 발생했습니다.
+    // 이를 방지하기 위해 루프 가용 길이를 절대적으로 제한하여(최대 480ms), 
+    // 노트가 길어지면 항상 루프/미러링이 발동되도록 강제합니다.
+    if (has_vowel_loop && loop_len_ms > 1.0) {
+        double floor_ms = std::max(loop_len_ms * 0.25, 40.0);
+        double stable_loop_ms = std::clamp(loop_len_ms * 0.54, floor_ms, 480.0);
+        if (loop_len_ms > stable_loop_ms + anal_period) {
+            loop_len_ms = stable_loop_ms;
+            loop_end_ms = loop_start_ms + loop_len_ms;
+            loop_end_fi = std::clamp(static_cast<int>(std::round(loop_end_ms / anal_period)),
+                                     loop_start_fi + 1, n_frames - 1);
+            loop_end_ms = loop_end_fi * anal_period;
+            loop_len_ms = std::max(anal_period, loop_end_ms - loop_start_ms);
+        }
+    }
+
     // ── 유성 끝 보존 ────────────────────────────────────────────────────
-    // [핵심 수정] loop_end_fi(마지막 유성 프레임)를 기준으로 한 ms를 미리 저장.
-    // 이후 루프 모드 전환/no_loop_needed 블록이 loop_end_ms를 덮어써도
-    // src_voiced_end_ms는 항상 "실제 유성 소스 끝"을 가리킨다.
-    //
-    // 기존 버그: available_after_consonant_ms = src_total_ms - consonant_src_ms
-    //   → 소스에 데케이/릴리즈가 길면 no_loop_needed = true 판정
-    //   → 루프 비활성화 + one-pass 모드로 소스 전체 재생
-    //   → "녹음본 뒷부분 재생" 현상 발생
-    //
-    // 수정: 유성 끝(src_voiced_end_ms)을 기준으로 available을 계산하고
-    //       map_out_time_to_src에도 이 값을 전달해 one-pass가 데케이에 침범 못하게 함.
-    double src_voiced_end_ms = loop_end_ms; // has_vowel_loop=false면 src_total_ms로 이미 설정됨
+    // 위에서 안전하게 제한된 loop_end_ms를 src_voiced_end_ms로 저장합니다.
+    // 이 값이 map_out_time_to_src의 한계선이 되므로, 절대 다음 음절로 넘어가지 않습니다.
+    double src_voiced_end_ms = loop_end_ms; // has_vowel_loop=false면 아래에서 src_total_ms로 폴백
 
     // 루프가 유효하지 않으면 one-pass tail로 강제.
-    // (짧은/불안정 루프의 반복이 VC/자음 포함 노트에서 툭툭 끊김을 유발)
     if (!has_vowel_loop) {
         loop_start_ms = std::clamp(consonant_src_ms, 0.0, src_total_ms);
         loop_end_ms   = src_total_ms;
@@ -1061,7 +1070,6 @@ std::vector<float> world_render(
     }
 
     // 출력 길이가 소스의 자음 이후 유성 길이보다 짧거나 같으면 루프가 필요 없다.
-    // [수정] src_total_ms 대신 src_voiced_end_ms 사용 — 데케이/릴리즈를 가용 구간에서 제외.
     double required_after_consonant_ms = std::max(0.0, out_total_ms - consonant_tgt_ms);
     double available_after_consonant_ms = std::max(0.0, src_voiced_end_ms - consonant_src_ms);
     bool no_loop_needed = (required_after_consonant_ms <= (available_after_consonant_ms + 1.0));
@@ -1069,33 +1077,9 @@ std::vector<float> world_render(
     double auto_loop_margin_ms = std::clamp(available_after_consonant_ms * 0.18, 28.0, 180.0);
     bool auto_stretch_mirror_loop =
         (sp.loop_mode == 0 && has_vowel_loop && stretch_overrun_ms > auto_loop_margin_ms);
-    bool extreme_length_loop =
-        has_vowel_loop && stretch_overrun_ms > auto_loop_margin_ms;
-    if (extreme_length_loop && loop_len_ms > 1.0) {
-        // 아주 긴 노트에서 fixed consonant 이후 전체 녹음 구간이 한 번씩 드러나면
-        // alias의 원래 발음 흐름/꼬리까지 들린다. 루프 가능 구간의 앞쪽 안정 창만
-        // 사용해 길이 보강은 하되 전체 발음 재생은 피한다.
-        //
-        // [버그 수정]
-        // 결함 1: 기존 130ms 절대 바닥값은 소스가 짧을 때(loop_len_ms < 241ms)
-        //         stable_loop_ms >= loop_len_ms 가 되어 실질적으로 클립 없음.
-        //         → 바닥값을 loop_len_ms 비율 기반(25%)과 절대 최소(40ms)의
-        //           최댓값으로 교체해 소스 길이에 무관하게 항상 클립이 발동하게 함.
-        // 결함 2: 위 결함 때문에 클립 조건(loop_len_ms > stable_loop_ms + anal_period)이
-        //         항상 false였음. 수정된 바닥값으로 조건이 올바르게 평가됨.
-        double floor_ms = std::max(loop_len_ms * 0.25, 40.0);
-        double stable_loop_ms = std::clamp(loop_len_ms * 0.54, floor_ms, 480.0);
-        // stable_loop_ms는 loop_len_ms 미만이어야 클립 조건이 발동할 수 있음.
-        // min() 캡은 의도적으로 제거: stable_loop_ms <= loop_len_ms * 0.54 이 이미 보장됨.
-        if (loop_len_ms > stable_loop_ms + anal_period) {
-            loop_len_ms = stable_loop_ms;
-            loop_end_ms = loop_start_ms + loop_len_ms;
-            loop_end_fi = std::clamp(static_cast<int>(std::round(loop_end_ms / anal_period)),
-                                     loop_start_fi + 1, n_frames - 1);
-            loop_end_ms = loop_end_fi * anal_period;
-            loop_len_ms = std::max(anal_period, loop_end_ms - loop_start_ms);
-        }
-    }
+    
+    // extreme_length_loop 로직은 위로 이동되어 통합됨
+
     if (no_loop_needed) {
         has_vowel_loop = false;
         loop_len_ms = 0.0;

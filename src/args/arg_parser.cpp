@@ -99,16 +99,17 @@ RenderParams parse_args(int argc, char** argv) {
     if (argc > 5) {
         std::string a5 = trim_copy(get_str(5));
         bool flags_present = false;
-        if (a5 == "_") {
+        if (a5.empty()) {
+            flags_present = true; // 빈 플래그 문자열 ("")도 플래그가 전달된 것으로 간주 (UTAU 기본 동작)
+        } else if (a5 == "_") {
             flags_present = true; // placeholder로 전달된 경우
         } else if (has_alpha(a5)) {
             flags_present = true; // 정상 플래그 문자열
         } else if (looks_number(a5)) {
-            flags_present = false; // flags 생략 + optional 당겨짐
+            flags_present = false; // flags 생략 + optional 당겨짐 (오래된 UTAU 배치 스크립트 등)
         } else {
-            // 공백/기타 특수 문자열은 flags로 간주하지 않고
-            // optional 인자 시작점으로 처리해 쉬프트 오판을 줄인다.
-            flags_present = false;
+            // 그 외 특수문자로만 이루어진 플래그 (예: "B", "g" 없이 기호만 있는 경우)
+            flags_present = true;
         }
 
         if (flags_present) {
