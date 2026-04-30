@@ -1026,6 +1026,23 @@ std::vector<float> world_render(
     double auto_loop_margin_ms = std::clamp(available_after_consonant_ms * 0.18, 45.0, 180.0);
     bool auto_stretch_mirror_loop =
         (sp.loop_mode == 0 && has_vowel_loop && stretch_overrun_ms > auto_loop_margin_ms);
+    bool extreme_length_loop =
+        has_vowel_loop && stretch_overrun_ms > auto_loop_margin_ms;
+    if (extreme_length_loop && loop_len_ms > 1.0) {
+        // 아주 긴 노트에서 fixed consonant 이후 전체 녹음 구간이 한 번씩 드러나면
+        // alias의 원래 발음 흐름/꼬리까지 들린다. 루프 가능 구간의 앞쪽 안정 창만
+        // 사용해 길이 보강은 하되 전체 발음 재생은 피한다.
+        double stable_loop_ms = std::clamp(loop_len_ms * 0.58, 140.0, 560.0);
+        stable_loop_ms = std::min(stable_loop_ms, loop_len_ms);
+        if (loop_len_ms > stable_loop_ms + anal_period) {
+            loop_len_ms = stable_loop_ms;
+            loop_end_ms = loop_start_ms + loop_len_ms;
+            loop_end_fi = std::clamp(static_cast<int>(std::round(loop_end_ms / anal_period)),
+                                     loop_start_fi + 1, n_frames - 1);
+            loop_end_ms = loop_end_fi * anal_period;
+            loop_len_ms = std::max(anal_period, loop_end_ms - loop_start_ms);
+        }
+    }
     if (no_loop_needed) {
         has_vowel_loop = false;
         loop_len_ms = 0.0;
@@ -3048,6 +3065,7 @@ std::vector<float> world_render(
                   << " con_tgt=" << consonant_tgt_ms
                   << " short=" << timing_short_note_amt
                   << " loop_mode_eff=" << effective_loop_mode
+                  << " loop_len=" << loop_len_ms
                   << " loop_stress=" << long_loop_stress
                   << " formant_conf_avg=" << formant_conf_avg
                   << " formant_conf_min=" << formant_conf_lo
