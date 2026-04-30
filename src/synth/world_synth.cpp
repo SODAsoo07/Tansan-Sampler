@@ -998,7 +998,34 @@ std::vector<float> world_render(
     }
 
     int loop_start_fi = std::clamp(start_fi, 0, n_frames - 2);
-    int loop_end_fi   = n_frames - 1;
+
+    // ── 루프 끝 결정: 마지막 유성 프레임까지만 ─────────────────────────
+    // [근본 원인 수정]
+    // 기존: loop_end_fi = n_frames - 1 → 소스 전체(데케이/릴리즈 포함)가 루프됨.
+    //
+    // oto.ini의 고정영역 끝(loop_start_fi) 이후에서
+    // 마지막으로 유성(F0 ≥ 55Hz)인 프레임을 역방향으로 탐색해
+    // 루프 끝을 해당 프레임으로 제한한다.
+    // 이 프레임 이후는 모음 데케이/릴리즈(무성 테일)로 간주하며 루프에서 제외한다.
+    //
+    // 예외: 소스가 완전 무성(마찰음 단독 등)이면 폴백으로 n_frames-1 사용.
+    int loop_end_fi;
+    {
+        int last_voiced = -1;
+        for (int fi = n_frames - 1; fi > loop_start_fi; --fi) {
+            if (src_voicing[fi] >= 0.5) {
+                last_voiced = fi;
+                break;
+            }
+        }
+        if (last_voiced > loop_start_fi) {
+            loop_end_fi = last_voiced;
+        } else {
+            // 고정영역 이후에 유성 구간이 없는 경우 (마찰음 등) → 전체 범위 폴백
+            loop_end_fi = n_frames - 1;
+        }
+        loop_end_fi = std::clamp(loop_end_fi, loop_start_fi + 1, n_frames - 1);
+    }
 
     double loop_start_ms = loop_start_fi * anal_period;
     double loop_end_ms   = loop_end_fi * anal_period;
@@ -1006,34 +1033,15 @@ std::vector<float> world_render(
     bool has_vowel_loop  = loop_len_ms > (2.0 * anal_period);
     double transition_src_len_ms = std::max(0.0, loop_start_ms - consonant_src_ms);
 
-    // 루프가 유효하지 않으면 one-pass tail로 강제.
-    // (짧은/불안정 루프의 반복이 VC/자음 포함 노트에서 툭툭 끊김을 유발)
-    if (!has_vowel_loop) {
-        loop_start_ms = std::clamp(consonant_src_ms, 0.0, src_total_ms);
-        loop_end_ms   = src_total_ms;
-        loop_len_ms   = 0.0;
-        transition_src_len_ms = 0.0;
-        loop_start_fi = std::clamp(static_cast<int>(std::round(loop_start_ms / anal_period)), 0, n_frames - 1);
-        loop_end_fi   = loop_start_fi;
-    }
-
-    // 출력 길이가 소스의 자음 이후 길이보다 짧거나 같으면 루프가 필요 없다.
-    // 이 경우 루프 경로를 완전히 끄고 one-pass로만 진행해 끊김 가능성 최소화.
-    double required_after_consonant_ms = std::max(0.0, out_total_ms - consonant_tgt_ms);
-    double available_after_consonant_ms = std::max(0.0, src_total_ms - consonant_src_ms);
-    bool no_loop_needed = (required_after_consonant_ms <= (available_after_consonant_ms + 1.0));
-    double stretch_overrun_ms = required_after_consonant_ms - available_after_consonant_ms;
-    double auto_loop_margin_ms = std::clamp(available_after_consonant_ms * 0.18, 45.0, 180.0);
-    bool auto_stretch_mirror_loop =
-        (sp.loop_mode == 0 && has_vowel_loop && stretch_overrun_ms > auto_loop_margin_ms);
-    bool extreme_length_loop =
-        has_vowel_loop && stretch_overrun_ms > auto_loop_margin_ms;
-    if (extreme_length_loop && loop_len_ms > 1.0) {
-        // 아주 긴 노트에서 fixed consonant 이후 전체 녹음 구간이 한 번씩 드러나면
-        // alias의 원래 발음 흐름/꼬리까지 들린다. 루프 가능 구간의 앞쪽 안정 창만
-        // 사용해 길이 보강은 하되 전체 발음 재생은 피한다.
-        double stable_loop_ms = std::clamp(loop_len_ms * 0.58, 140.0, 560.0);
-        stable_loop_ms = std::min(stable_loop_ms, loop_len_ms);
+    // [버그 수정: VCV 연속음 및 느슨한 컷오프 방어]
+    // oto.ini의 컷오프가 다음 음절까지 포함하도록 멀리 설정된 경우(VCV에서 흔함),
+    // 루프 가능 구간이 매우 길어져(예: 2초) "루프 없이 1:1로 재생해도 되겠다"고 착각하게 됩니다.
+    // 그 결과 긴 노트를 재생할 때 다음 음절(뒷부분 음성)이 그대로 노출되는 치명적 오류가 발생했습니다.
+    // 이를 방지하기 위해 루프 가용 길이를 절대적으로 제한하여(최대 480ms), 
+    // 노트가 길어지면 항상 루프/미러링이 발동되도록 강제합니다.
+    if (has_vowel_loop && loop_len_ms > 1.0) {
+        double floor_ms = std::max(loop_len_ms * 0.25, 40.0);
+        double stable_loop_ms = std::clamp(loop_len_ms * 0.54, floor_ms, 480.0);
         if (loop_len_ms > stable_loop_ms + anal_period) {
             loop_len_ms = stable_loop_ms;
             loop_end_ms = loop_start_ms + loop_len_ms;
@@ -1043,6 +1051,35 @@ std::vector<float> world_render(
             loop_len_ms = std::max(anal_period, loop_end_ms - loop_start_ms);
         }
     }
+
+    // ── 유성 끝 보존 ────────────────────────────────────────────────────
+    // 위에서 안전하게 제한된 loop_end_ms를 src_voiced_end_ms로 저장합니다.
+    // 이 값이 map_out_time_to_src의 한계선이 되므로, 절대 다음 음절로 넘어가지 않습니다.
+    double src_voiced_end_ms = loop_end_ms; // has_vowel_loop=false면 아래에서 src_total_ms로 폴백
+
+    // 루프가 유효하지 않으면 one-pass tail로 강제.
+    if (!has_vowel_loop) {
+        loop_start_ms = std::clamp(consonant_src_ms, 0.0, src_total_ms);
+        loop_end_ms   = src_total_ms;
+        loop_len_ms   = 0.0;
+        transition_src_len_ms = 0.0;
+        loop_start_fi = std::clamp(static_cast<int>(std::round(loop_start_ms / anal_period)), 0, n_frames - 1);
+        loop_end_fi   = loop_start_fi;
+        // 완전 무성 소스(마찰음 등)는 src_total_ms 전체를 허용
+        src_voiced_end_ms = src_total_ms;
+    }
+
+    // 출력 길이가 소스의 자음 이후 유성 길이보다 짧거나 같으면 루프가 필요 없다.
+    double required_after_consonant_ms = std::max(0.0, out_total_ms - consonant_tgt_ms);
+    double available_after_consonant_ms = std::max(0.0, src_voiced_end_ms - consonant_src_ms);
+    bool no_loop_needed = (required_after_consonant_ms <= (available_after_consonant_ms + 1.0));
+    double stretch_overrun_ms = required_after_consonant_ms - available_after_consonant_ms;
+    double auto_loop_margin_ms = std::clamp(available_after_consonant_ms * 0.18, 28.0, 180.0);
+    bool auto_stretch_mirror_loop =
+        (sp.loop_mode == 0 && has_vowel_loop && stretch_overrun_ms > auto_loop_margin_ms);
+    
+    // extreme_length_loop 로직은 위로 이동되어 통합됨
+
     if (no_loop_needed) {
         has_vowel_loop = false;
         loop_len_ms = 0.0;
@@ -1209,9 +1246,9 @@ std::vector<float> world_render(
     double bi_eff = (bi_raw >= 0.0) ? std::pow(bi_abs, 0.82) : -std::pow(bi_abs, 0.82);
     bi_eff *= (1.0 + 0.55 * bi_knee * bi_knee);
     double brightness_tilt_db = bi_eff * 22.0;
-    // Hu 방향 반전:
-    // +Hu = brighter, -Hu = husky
-    double hu = std::clamp(-sp.husky_tone / 100.0, -1.0, 1.0);
+    // Hu: +값 = husky(저중역 질감↑), -값 = brighter(상부 명료도↑) — synth_params 스펙과 일치
+    // [버그 수정] 기존에 -sp.husky_tone으로 부호를 반전시켜 방향이 완전히 반대였음. 수정.
+    double hu = std::clamp(sp.husky_tone / 100.0, -1.0, 1.0);
     double hu_eff = (hu >= 0.0) ? std::pow(hu, 0.78) : -std::pow(-hu, 0.78);
     double mo = std::clamp(sp.mouth_open / 100.0, -1.0, 1.0);
     double mo_eff = (mo >= 0.0) ? std::pow(mo, 0.78) : -std::pow(-mo, 0.78);
@@ -1252,7 +1289,7 @@ std::vector<float> world_render(
     double nn_amt = std::max(nn_pos_eff, nn_neg_eff);
     // 기본 톤 캘리브레이션: 고역/잔향 과강조 완화
     double global_hi_tilt_db = -2.7;
-    double global_hi_ap_trim = 0.060;
+    double global_hi_ap_trim = 0.090;
 
     // ── Tension: 발성 강도/이완 근사 (체감 강화) ───────────────────────
     // +값: 더 pressed/firm (주기성↑, 존재감↑, breathiness↓)
@@ -1394,6 +1431,8 @@ std::vector<float> world_render(
         // 1. 시간 매핑 → 소스 분석 프레임 인덱스 (보간용 fractional)
         double src_time_ms = 0.0;
         bool in_vowel_loop = false;
+        // [수정] src_total_ms 대신 src_voiced_end_ms 전달:
+        // one-pass 경로가 데케이/릴리즈 테일까지 진행하지 않도록 한다.
         map_out_time_to_src(out_time_ms,
                             consonant_scale,
                             consonant_src_ms,
@@ -1402,7 +1441,7 @@ std::vector<float> world_render(
                             transition_tgt_len_ms,
                             loop_start_ms,
                             loop_len_ms,
-                            src_total_ms,
+                            src_voiced_end_ms,
                             effective_loop_mode,
                             src_time_ms,
                             in_vowel_loop);
@@ -1441,13 +1480,15 @@ std::vector<float> world_render(
             ++formant_conf_count;
         }
         const std::array<double, 4> formant_fallback = {720.0, 1580.0, 2820.0, 4100.0};
-        double formant_center_mix = 0.35 + 0.65 * formant_conf;
+        // [포먼트 필터 강도 강화]
+        // formant_center_mix 기저를 올려 신뢰도가 낮아도 필터가 더 분명히 작동하도록 함.
+        double formant_center_mix = 0.48 + 0.52 * formant_conf;
         for (int j = 0; j < 4; ++j) {
             frame_formants[j] = frame_formants[j] * formant_center_mix +
                                 formant_fallback[j] * (1.0 - formant_center_mix);
         }
-        double formant_effect_gate = std::clamp(0.30 + 0.70 * formant_conf, 0.30, 1.0);
-        double formant_filter_gate = std::clamp(0.52 + 0.48 * formant_conf, 0.52, 1.0);
+        double formant_effect_gate = std::clamp(0.42 + 0.58 * formant_conf, 0.42, 1.0);
+        double formant_filter_gate = std::clamp(0.64 + 0.36 * formant_conf, 0.64, 1.0);
         double pf1 = frame_formants[0];
         double pf2 = frame_formants[1];
         double pf3 = frame_formants[2];
@@ -1611,9 +1652,11 @@ std::vector<float> world_render(
             double uv_boost = 0.0;
             if (in_consonant || in_transition) {
                 double unvoiced = 1.0 - voiced_eff;
-                double base_boost = in_consonant ? 0.15 : 0.06;
+                double base_boost = in_consonant ? 0.12 : 0.06;
                 uv_boost = base_boost * (0.20 + 0.80 * unvoiced * unvoiced);
-                if (transition_voiced_ratio < 0.40 && in_transition) uv_boost += 0.03;
+                // C+V 단음절(자음 구간 매우 짧음)에서 과도한 AP 부스트 억제
+                if (transition_voiced_ratio < 0.40 && in_transition && consonant_src_ms >= 6.0)
+                    uv_boost += 0.03;
                 uv_boost *= std::clamp(1.0 - 0.78 * cs_pos + 0.52 * cs_neg, 0.28, 1.85);
                 if (std::fabs(vtw_eff) > 0.01 && (in_consonant || in_transition)) {
                     double vtw_air_guard = std::pow(std::clamp(std::fabs(vtw_eff), 0.0, 1.0), 0.55);
@@ -1622,7 +1665,7 @@ std::vector<float> world_render(
                 // Tn-일 때 연결부 과도한 무성 부스트를 줄여 "툭툭" 임펄스 억제.
                 uv_boost *= (1.0 - 0.38 * tension_relax_click_guard);
             }
-            uv_boost = std::clamp(uv_boost, 0.0, 0.14);
+            uv_boost = std::clamp(uv_boost, 0.0, 0.11);
             if (uv_boost > 0.01) {
                 for (int k = 0; k < spec_dim; ++k) {
                     double fn = fn_lut[k];
@@ -1662,9 +1705,11 @@ std::vector<float> world_render(
             VocalizerTarget vt = vocalizer_target(vocalizer_mode);
             double region_gate = in_consonant ? 0.16 : (in_transition ? 0.64 : 1.0);
             double voiced_gate = std::clamp(0.18 + 0.82 * voiced_eff, 0.0, 1.0);
+            // 보컬라이저는 목표 포먼트 형태를 직접 부여하므로 formant_conf 의존을 낮게 설정
+            double vocalizer_gate = std::clamp(0.72 + 0.28 * formant_conf, 0.72, 1.0);
             double mix = std::clamp((vt.nasal ? 0.96 : 0.92) * vocalizer_strength *
                                     region_gate * voiced_gate * global_artifact_guard *
-                                    formant_filter_gate, 0.0, 0.96);
+                                    vocalizer_gate, 0.0, 0.96);
             if (mix > 0.01) {
                 double e0 = 0.0;
                 double e1 = 0.0;
@@ -2030,11 +2075,12 @@ std::vector<float> world_render(
 
             // 독립 강도 스케일:
             // 공통 게이트 대신 파라미터별 강도를 따로 적용해 캐릭터 분리를 확보.
-            constexpr double k_vtr = 6.30;
-            constexpr double k_vtw = 5.75;
-            constexpr double k_vc  = 5.05;
-            constexpr double k_nn  = 3.95;
-            constexpr double k_mo  = 1.36;
+            // [포먼트 필터 강도 강화] 각 모듈 스케일 ~20% 상향.
+            constexpr double k_vtr = 7.60;
+            constexpr double k_vtw = 6.90;
+            constexpr double k_vc  = 6.10;
+            constexpr double k_nn  = 4.75;
+            constexpr double k_mo  = 1.64;
 
             double mix_vtr = ((std::fabs(vtr_eff) > 0.01) ? 0.18 : 0.0) + 0.92 * vtr_drive;
             double mix_vtw = ((std::fabs(vtw_eff) > 0.01) ? 0.17 : 0.0) + 0.96 * vtw_drive;
@@ -2328,7 +2374,7 @@ std::vector<float> world_render(
                 double vc_twang = std::exp(-0.5 * std::pow((hz - std::clamp(0.62 * c3 + 420.0, 2200.0, 5200.0)) /
                                                   std::clamp(0.20 * c3, 520.0, 1200.0), 2.0));
                 double vc_shape = 2.05 * vc_core + 1.28 * vc_twang + 0.92 * constr_hi + 0.72 * vc_edge + 0.36 * constr_top
-                                - 1.56 * vc_anti - 0.78 * constr_mid - 0.58 * constr_low - 0.58 * vc_box - 0.64 * vc_sizzle_guard;
+                                - 1.56 * vc_anti - 0.78 * constr_mid - 0.58 * constr_low - 0.58 * vc_box - 0.80 * vc_sizzle_guard;
                 double harmonic_gate = std::clamp(0.52 + 0.48 * (1.0 - out_ap[i][k]), 0.40, 1.0);
                 double db_vc = k_vc * boost_vc * vc_drive * harmonic_gate * (15.8 * vc_shape);
                 db_vc = sat_db(db_vc, 25.0);
@@ -2835,11 +2881,11 @@ std::vector<float> world_render(
         }
 
         // 8.9. Husky Tone(Hu): 파워/AP 유지형 톤 이동
-        // +Hu: brighter(상부 명료도↑, 저중역 질감↓)
-        // -Hu: husky(저중역 질감↑, 상부 밝기↓)
+        // +Hu: husky(저중역 질감↑, 상부 밝기↓)
+        // -Hu: brighter(상부 명료도↑, 저중역 질감↓)
         if (std::fabs(hu_eff) > 0.01) {
-            double hu_husky = std::max(0.0, hu_eff);   // 사용자가 Hu 음수로 준 경우
-            double hu_bright = std::max(0.0, -hu_eff);
+            double hu_husky = std::max(0.0, hu_eff);   // Hu > 0: husky
+            double hu_bright = std::max(0.0, -hu_eff); // Hu < 0: brighter
             if (hu_husky > 0.01 && !hu_warp_buf.empty()) {
                 double hu_ratio = std::clamp(std::exp(-0.052 * hu_husky), 0.94, 1.0);
                 double hu_blend = std::clamp(0.10 + 0.24 * hu_husky, 0.0, 0.34);
@@ -2938,7 +2984,10 @@ std::vector<float> world_render(
         if (i > 0) {
             double join_smooth = 0.0;
             if (in_consonant || in_transition) {
-                join_smooth = 0.12 + 0.24 * cs_pos + 0.09 * cs_neg;
+                join_smooth = 0.16 + 0.24 * cs_pos + 0.09 * cs_neg;
+                // C+V 단음절 무성→유성 전환: AP 클릭 억제를 위해 스무딩 강화
+                if (in_transition && consonant_src_ms < 6.0 && transition_voiced_ratio < 0.40)
+                    join_smooth = std::max(join_smooth, 0.22);
             } else if (in_vowel_loop && long_loop_stress > 0.12) {
                 // 극단 길이 루프에서는 반복부 프레임 차이가 누적되어 거칠게 들리기 쉬우므로
                 // 안정 모음 구간만 아주 약하게 시간 방향으로 붙인다.
@@ -2978,7 +3027,7 @@ std::vector<float> world_render(
 
             double join_gate = (in_consonant || in_transition) ? 1.0
                             : (out_time_ms <= 10.0 ? 0.70 : 0.22);
-            double jump_thr = 0.30 - 0.06 * cs_neg + 0.06 * cs_pos;
+            double jump_thr = 0.24 - 0.06 * cs_neg + 0.06 * cs_pos;
             jump_thr -= 0.05 * tension_relax_click_guard;
             jump_thr = std::clamp(jump_thr, 0.22, 0.36);
             double declick = std::clamp((jump_score - jump_thr)
@@ -2994,19 +3043,34 @@ std::vector<float> world_render(
                 }
             }
         }
+
+        // 고음 AP 프레임 간 안정화 (F0 > 500Hz 비자음 구간)
+        // 배음 밀도 저하로 인한 AP per-frame 분산을 시간 방향 블렌드로 완화.
+        if (i > 0 && flat_f0_hz > 500.0 && !in_consonant) {
+            double hp_blend = std::clamp((flat_f0_hz - 500.0) / 400.0, 0.0, 1.0) * 0.12;
+            for (int k = 0; k < spec_dim; ++k) {
+                out_ap[i][k] = out_ap[i][k] * (1.0 - hp_blend) + out_ap[i - 1][k] * hp_blend;
+            }
+        }
     }
 
     // 최종 F0 프레임 jitter 미세 억제 (zero-phase FIR).
     // flat note에서는 더 강하게, 변조 노트에서는 약하게.
-    if (flat_target_f0) {
-        smooth_out_f0_log_zero_phase(out_f0, 4);
-    } else if (has_f0_mod) {
-        smooth_out_f0_log_zero_phase(out_f0, 2);
+    // 고음(F0>500Hz)에서는 배음 밀도가 낮아 per-frame 분산이 청취됨 → radius +1.
+    {
+        int hi_bonus = (flat_f0_hz > 500.0) ? 1 : 0;
+        if (flat_target_f0) {
+            smooth_out_f0_log_zero_phase(out_f0, 4 + hi_bonus);
+        } else if (has_f0_mod) {
+            smooth_out_f0_log_zero_phase(out_f0, 2 + hi_bonus);
+        } else if (hi_bonus > 0) {
+            smooth_out_f0_log_zero_phase(out_f0, 1);
+        }
     }
     // slew limiter 강도:
     // - flat note: 강하게(잔떨림 억제)
     // - bend/mod note: 약하게(음정 추종성 확보)
-    double slew_cents_per_ms = flat_target_f0 ? 2.0 : (has_f0_mod ? 18.0 : 6.0);
+    double slew_cents_per_ms = flat_target_f0 ? 2.0 : (has_f0_mod ? 80.0 : 6.0);
     stabilize_out_f0(out_f0, frame_period, slew_cents_per_ms);
 
     // ── WORLD Synthesis ───────────────────────────────────────────────
