@@ -1,0 +1,41 @@
+# Build directories
+/build/
+/out/
+/dist/
+
+# CMake / Ninja / MSBuild
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+*.vcxproj.user
+*.sln.docstates
+*.idb
+*.pdb
+*.ilk
+*.obj
+*.lib
+*.exp
+*.tlog
+*.lastbuildstate
+
+# Binaries
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Audio/render artifacts
+*.wav
+*.frq
+*.jsonl
+resamp_wavtool_calls*.log
+resamp_wavtool_calls*.jsonl
+
+# IDE / temp
+.vs/
+.vscode/
+*.tmp
+*.temp
+/external
