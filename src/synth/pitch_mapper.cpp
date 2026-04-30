@@ -84,7 +84,7 @@ std::vector<double> make_f0_contour(const RenderParams& params,
 
     // cents contour zero-phase smoothing (IIR 없이 미세 jitter 제거)
     if (has_effective_bend) {
-        int radius = std::max(1, static_cast<int>(std::round(sample_rate * 0.0012))); // 1.2ms
+        int radius = std::max(1, static_cast<int>(std::round(sample_rate * 0.0008))); // 0.8ms
         smooth_cents_zero_phase(cents_contour, radius);
     }
 

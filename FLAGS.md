@@ -11,6 +11,34 @@
 - 알 수 없는 플래그는 무시
 - 값을 생략하면 `0`으로 파싱됨 (권장하지 않음)
 
+## Custom Preset Flags
+
+`tansanSampler.txt` can define moresampler-style meta flag presets. Preset expansion happens before normal flag parsing.
+
+```text
+soft = Tn-18Bh18Bi42Ln10
+clear_power = @clear Tn32Cw20Vw16
+my_preset = Tn20Bi65Hr85
+```
+
+OpenUtAU flag examples:
+
+| Input | Result |
+|---|---|
+| `soft` | Expands the `soft` preset |
+| `soft100` | Expands `soft`; the numeric UI value is ignored |
+| `@soft` | Explicit preset call, same as `soft` |
+| `softBi80` | Expands `soft`, then direct `Bi80` overrides preset `Bi` |
+| `soft100Bi80` | Expands `soft`, ignores `100`, then applies `Bi80` |
+
+Preset lookup order:
+
+1. `RESAMP_PRESET_FILE`
+2. `tansanSampler.txt` next to `Tansan-Sampler.exe`
+3. `tansanSampler.txt` in the current working directory
+
+Avoid preset names that collide with real flags such as `Bi`, `Tn`, `Mo`, `Vtl`, or `Vz`.
+
 ## 플래그 목록
 
 | Flag | 범위 | 기본값 | 의미 / 체감 |

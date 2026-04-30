@@ -1,6 +1,18 @@
 # Tansan-Sampler custom flag presets.
-# Usage: write @preset_name in OpenUtAU flags. Directly typed flags always override preset values.
-# Format: name = flags
+#
+# Usage in OpenUtAU:
+#   soft
+#   soft100
+#   @soft
+#   softBi80
+#
+# Registered preset names work like moresampler-style meta flags. A numeric UI value
+# after the preset name is ignored, so soft100 still expands to the soft preset.
+# Directly typed flags always override preset values, so softBi80 uses Bi80 instead
+# of the Bi value inside soft.
+#
+# Format:
+#   name = flags
 
 soft = Tn-18Bh18Bi42Ln10
 gentle = Tn-28Mo-10Bi40Bh12Ln-8

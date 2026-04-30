@@ -107,6 +107,38 @@ std::string expand_preset(const std::string& name,
     return expanded;
 }
 
+size_t longest_preset_match(const std::string& fragment,
+                            size_t pos,
+                            const std::unordered_map<std::string, std::string>& presets) {
+    size_t end = pos;
+    while (end < fragment.size() && is_preset_name_char(fragment[end])) {
+        ++end;
+    }
+    size_t max_len = end - pos;
+    for (size_t len = max_len; len > 0; --len) {
+        const std::string candidate = lowercase_copy(fragment.substr(pos, len));
+        if (presets.count(candidate) > 0) return len;
+    }
+    return 0;
+}
+
+size_t skip_optional_preset_value(const std::string& fragment, size_t pos) {
+    size_t i = pos;
+    if (i < fragment.size() && (fragment[i] == '+' || fragment[i] == '-')) {
+        size_t sign_pos = i++;
+        bool has_digit = false;
+        while (i < fragment.size() && std::isdigit(static_cast<unsigned char>(fragment[i]))) {
+            has_digit = true;
+            ++i;
+        }
+        return has_digit ? i : sign_pos;
+    }
+    while (i < fragment.size() && std::isdigit(static_cast<unsigned char>(fragment[i]))) {
+        ++i;
+    }
+    return i;
+}
+
 std::string expand_fragment(const std::string& fragment,
                             const std::unordered_map<std::string, std::string>& presets,
                             std::unordered_set<std::string>& stack) {
@@ -115,59 +147,63 @@ std::string expand_fragment(const std::string& fragment,
 
     size_t i = 0;
     while (i < fragment.size()) {
-        if (fragment[i] != '@') {
-            literal_flags += fragment[i++];
+        if (fragment[i] == '@') {
+            size_t name_begin = i + 1;
+            size_t match_len = longest_preset_match(fragment, name_begin, presets);
+            if (match_len == 0) {
+                ++i;
+                continue;
+            }
+
+            const std::string name = fragment.substr(name_begin, match_len);
+            const std::string expanded = expand_preset(name, presets, stack);
+            if (!expanded.empty()) {
+                preset_flags += expanded;
+                preset_flags += ' ';
+            }
+            i = skip_optional_preset_value(fragment, name_begin + match_len);
             continue;
         }
 
-        size_t name_begin = i + 1;
-        size_t name_end = name_begin;
-        while (name_end < fragment.size() && is_preset_name_char(fragment[name_end])) {
-            ++name_end;
-        }
-
-        if (name_end == name_begin) {
-            ++i;
-            continue;
-        }
-
-        size_t match_len = 0;
-        for (size_t len = name_end - name_begin; len > 0; --len) {
-            const std::string candidate = lowercase_copy(fragment.substr(name_begin, len));
-            if (presets.count(candidate) > 0) {
-                match_len = len;
-                break;
+        if (std::isalpha(static_cast<unsigned char>(fragment[i]))) {
+            size_t match_len = longest_preset_match(fragment, i, presets);
+            if (match_len > 0) {
+                const std::string name = fragment.substr(i, match_len);
+                const std::string expanded = expand_preset(name, presets, stack);
+                if (!expanded.empty()) {
+                    preset_flags += expanded;
+                    preset_flags += ' ';
+                }
+                i = skip_optional_preset_value(fragment, i + match_len);
+                continue;
             }
         }
 
-        if (match_len == 0) {
-            ++i;
-            continue;
-        }
-
-        const std::string name = fragment.substr(name_begin, match_len);
-        const std::string expanded = expand_preset(name, presets, stack);
-        if (!expanded.empty()) {
-            preset_flags += expanded;
-            preset_flags += ' ';
-        }
-        i = name_begin + match_len;
+        literal_flags += fragment[i++];
     }
 
     return preset_flags + literal_flags;
+}
+
+bool may_contain_preset(const std::string& flag_str) {
+    for (unsigned char ch : flag_str) {
+        if (ch == '@' || std::isalpha(ch)) return true;
+    }
+    return false;
 }
 
 } // namespace
 
 std::string expand_flag_presets(const std::string& flag_str,
                                 const std::string& executable_path) {
-    if (flag_str.find('@') == std::string::npos) return flag_str;
+    if (!may_contain_preset(flag_str)) return flag_str;
 
     const auto presets = load_presets(executable_path);
     if (presets.empty()) return flag_str;
 
     std::unordered_set<std::string> stack;
-    return expand_fragment(flag_str, presets, stack);
+    std::string expanded = expand_fragment(flag_str, presets, stack);
+    return expanded.empty() ? flag_str : expanded;
 }
 
 SynthParams parse_flags(const std::string& s) {

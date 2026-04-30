@@ -4,7 +4,8 @@
 
 namespace resamp {
 
-// @preset 토큰을 tansanSampler.txt 설정 파일의 플래그 묶음으로 확장한다.
+// tansanSampler.txt 설정 파일의 프리셋 묶음을 파싱 전 확장한다.
+// @preset 형식과 preset/preset100 형식을 모두 지원한다.
 // 프리셋에서 나온 플래그를 먼저 배치하고, 사용자가 직접 적은 플래그는 마지막에
 // 유지해 직접 입력값이 프리셋 값보다 우선 적용되게 한다.
 std::string expand_flag_presets(const std::string& flag_str,

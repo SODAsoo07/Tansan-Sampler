@@ -68,6 +68,48 @@
 | `Tm` | `5 .. 30` |
 | `Ds/Bc` | `5 .. 30` |
 
+## 커스텀 프리셋 플래그 사용법
+
+커스텀 프리셋은 `tansanSampler.txt`에 적힌 이름을 OpenUtAU 플래그로 호출하는 방식입니다. moresampler의 meta flag처럼, 프리셋 이름 자체가 하나의 플래그처럼 동작합니다.
+
+| 사용 예 | 동작 |
+|---|---|
+| `soft` | `soft = Tn-18Bh18Bi42Ln10` 프리셋 적용 |
+| `soft100` | OpenUtAU 수치형 UI 값 `100`은 무시하고 `soft` 프리셋 적용 |
+| `@soft` | 명시형 호출. `soft`와 동일 |
+| `softBi80` | `soft` 적용 후 사용자가 직접 쓴 `Bi80`이 우선 |
+| `soft100Bi80` | `soft` 적용, UI 값 `100` 무시, `Bi80` 우선 |
+| `soft_air` | 다른 프리셋을 포함한 조합 프리셋 적용 |
+
+프리셋 파일 위치:
+
+```text
+OpenUtAU/Resamplers/tansanSampler.txt
+```
+
+프리셋 작성 형식:
+
+```text
+soft = Tn-18Bh18Bi42Ln10
+clear_power = @clear Tn32Cw20Vw16
+my_preset = Tn20Bi65Hr85
+```
+
+OpenUtAU UI에 직접 등록할 때는 커스텀 Expression/Flag 이름을 프리셋 이름과 같게 등록하면 됩니다.
+
+| UI에 등록할 이름 | 실제 적용 |
+|---|---|
+| `soft` | `tansanSampler.txt`의 `soft` |
+| `clear` | `tansanSampler.txt`의 `clear` |
+| `growl_power` | `tansanSampler.txt`의 `growl_power` |
+| `vocal_i` | `tansanSampler.txt`의 `vocal_i` |
+
+주의할 점:
+
+- `Bi`, `Tn`, `Mo`, `Vtl` 같은 실제 플래그 이름과 같은 프리셋 이름은 만들지 않는 편이 안전합니다.
+- 프리셋 안의 플래그보다 노트에 직접 적은 플래그가 우선합니다.
+- 프리셋 파일을 수정한 뒤에는 다음 렌더부터 반영됩니다.
+
 ## 실사용 프리셋 예시
 
 | 목적 | 플래그 예시 | 실청음 결과 |

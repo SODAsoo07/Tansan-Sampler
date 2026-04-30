@@ -6,7 +6,8 @@
       "Bash(cmake .. -DCMAKE_BUILD_TYPE=Release)",
       "Bash(cmake --build . --config Release)",
       "Bash(/c/Users/oyh57/SODAsoo1/Devs/Resamp/build/Release/resamp.exe)",
-      "Bash(echo \"exit: $?\")"
+      "Bash(echo \"exit: $?\")",
+      "Bash(cmake --build . --config Release --target resamp)"
     ]
   }
 }
