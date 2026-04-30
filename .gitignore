@@ -41,3 +41,5 @@ resamp_wavtool_calls*.jsonl
 /build
 /build
 /build
+/build
+/external
