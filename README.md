@@ -1,5 +1,5 @@
 ## 탄산 샘플러 Tansan-Sampler
-성도 시뮬레이션 요소가 첨가된 (Open)UTAU용 리샘플러 TanSan-Sampler(탄산샘플러, 약자 TSampler)의 저장소입니다.
+물리 성도 시뮬레이션의 일부 요소를 차용해 스펙트럼 포락과 비주기성 조정으로 성도 시뮬레이션을 흉내내는, WORLD-Based (Open)UTAU용 리샘플러 TanSan-Sampler(탄산샘플러, 약자 TSampler)의 저장소입니다.
 >**모든 코드는 AI로 작성되었으며, 인간이 검토 및 수정을 마쳤습니다.**
 
 ----
