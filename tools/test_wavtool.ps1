@@ -53,6 +53,17 @@ function Get-WavInfo {
     }
 }
 
+function Complete-WavtoolOutput {
+    param([Parameter(Mandatory = $true)][string]$Path)
+
+    if ((Test-Path -LiteralPath "$Path.whd") -and
+        (Test-Path -LiteralPath "$Path.dat")) {
+        $bytes = [System.IO.File]::ReadAllBytes("$Path.whd") +
+            [System.IO.File]::ReadAllBytes("$Path.dat")
+        [System.IO.File]::WriteAllBytes($Path, $bytes)
+    }
+}
+
 if (!(Test-Path -LiteralPath $WavtoolPath)) {
     throw "Wavtool executable not found: $WavtoolPath"
 }
@@ -68,6 +79,9 @@ if (Test-Path -LiteralPath "$OutPath.whd") {
 }
 if (Test-Path -LiteralPath "$OutPath.dat") {
     Remove-Item -LiteralPath "$OutPath.dat" -Force
+}
+if (Test-Path -LiteralPath "$OutPath.wtstate") {
+    Remove-Item -LiteralPath "$OutPath.wtstate" -Force
 }
 if (Test-Path -LiteralPath $DebugLog) {
     Remove-Item -LiteralPath $DebugLog -Force
@@ -86,21 +100,29 @@ if ($LASTEXITCODE -ne 0) {
     throw "Second wavtool call failed with exit code $LASTEXITCODE"
 }
 
-if (!(Test-Path -LiteralPath $OutPath) -and
-    (Test-Path -LiteralPath "$OutPath.whd") -and
-    (Test-Path -LiteralPath "$OutPath.dat")) {
-    $bytes = [System.IO.File]::ReadAllBytes("$OutPath.whd") +
-        [System.IO.File]::ReadAllBytes("$OutPath.dat")
-    [System.IO.File]::WriteAllBytes($OutPath, $bytes)
-}
+Complete-WavtoolOutput -Path $OutPath
 
 $info = Get-WavInfo -Path $OutPath
 if ($info.Samples -le 0 -or $info.SampleRate -le 0) {
     throw "Invalid wav output: $OutPath"
 }
 
+$twoCallSamples = $info.Samples
+
+& $WavtoolPath $OutPath $InputWav "0" "480@120+0" @envArgs
+if ($LASTEXITCODE -ne 0) {
+    throw "Stale-session wavtool call failed with exit code $LASTEXITCODE"
+}
+
+Complete-WavtoolOutput -Path $OutPath
+$resetInfo = Get-WavInfo -Path $OutPath
+if ($resetInfo.Samples -ge $twoCallSamples) {
+    throw ("Stale session was not reset: before={0}, after={1}" -f `
+        $twoCallSamples, $resetInfo.Samples)
+}
+
 Write-Host ("OK wavtool output: {0} Hz, {1} ch, {2} bit, {3} samples" -f `
-    $info.SampleRate, $info.Channels, $info.Bits, $info.Samples)
+    $resetInfo.SampleRate, $resetInfo.Channels, $resetInfo.Bits, $resetInfo.Samples)
 if (Test-Path -LiteralPath $DebugLog) {
     Write-Host "Debug log: $DebugLog"
 }

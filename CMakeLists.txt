@@ -109,14 +109,10 @@ if(WIN32 AND WAVTOOL_AUTO_COPY_TO_OPENUTAU)
     COMMENT "Deploying wavtool_probe.exe to ${OPENUTAU_RESAMPLERS_DIR}")
   add_custom_command(TARGET wavtool POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E make_directory "${OPENUTAU_WAVTOOLS_DIR}"
-    COMMAND ${CMAKE_COMMAND} -E make_directory "${OPENUTAU_RESAMPLERS_DIR}"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
             "$<TARGET_FILE:wavtool>"
             "${OPENUTAU_WAVTOOLS_DIR}/V_wavtool.exe"
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "$<TARGET_FILE:wavtool>"
-            "${OPENUTAU_RESAMPLERS_DIR}/V_wavtool.exe"
-    COMMENT "Deploying V_wavtool.exe to ${OPENUTAU_WAVTOOLS_DIR} and ${OPENUTAU_RESAMPLERS_DIR}")
+    COMMENT "Deploying V_wavtool.exe to ${OPENUTAU_WAVTOOLS_DIR}")
 endif()
 
 if(WIN32)

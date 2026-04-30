@@ -929,6 +929,91 @@ bool logging_enabled() {
     return env_truthy("WT_LOG") || env_truthy("WT_DEBUG");
 }
 
+bool file_time_newer_or_equal(const fs::path& newer, const fs::path& older) {
+    std::error_code ec_newer;
+    std::error_code ec_older;
+    const auto newer_time = fs::last_write_time(newer, ec_newer);
+    const auto older_time = fs::last_write_time(older, ec_older);
+    if (ec_newer || ec_older) return false;
+    return newer_time >= older_time;
+}
+
+void remove_file_if_exists(const fs::path& path) {
+    std::error_code ec;
+    if (fs::exists(path, ec)) {
+        fs::remove(path, ec);
+    }
+}
+
+void log_session_reset(const std::string& output_path,
+                       const std::string& reason,
+                       uint32_t old_data_size) {
+    if (!logging_enabled()) return;
+    std::ostringstream ss;
+    ss << "{\"event\":\"session_reset\""
+       << ",\"output\":\"" << json_escape(output_path) << "\""
+       << ",\"reason\":\"" << json_escape(reason) << "\""
+       << ",\"old_data_size\":" << old_data_size
+       << "}";
+    debug_log(ss.str());
+}
+
+void write_session_state(const std::string& output_path,
+                         uint32_t sample_rate,
+                         int final_samples) {
+    try {
+        const fs::path state_path = fs::path(output_path + ".wtstate");
+        if (state_path.has_parent_path()) fs::create_directories(state_path.parent_path());
+        std::ofstream state(state_path, std::ios::binary | std::ios::trunc);
+        if (!state) return;
+        state << "format=TansanSamplerWavtoolState1\n";
+        state << "sample_rate=" << sample_rate << "\n";
+        state << "final_samples=" << final_samples << "\n";
+        state << "pcm=16bit_mono\n";
+    } catch (...) {
+    }
+}
+
+void prepare_output_session(const std::string& output_path, uint32_t sample_rate) {
+    const fs::path out_path(output_path);
+    const fs::path whd_path = fs::path(output_path + ".whd");
+    const fs::path dat_path = fs::path(output_path + ".dat");
+    const fs::path state_path = fs::path(output_path + ".wtstate");
+
+    std::error_code ec;
+    if (!fs::exists(dat_path, ec)) return;
+
+    const uint32_t old_data_size = static_cast<uint32_t>(fs::file_size(dat_path, ec));
+    if (ec) return;
+
+    std::string reset_reason;
+    if ((old_data_size % 2u) != 0u) {
+        reset_reason = "odd_dat_size";
+    } else if (fs::exists(out_path, ec) && file_time_newer_or_equal(out_path, dat_path)) {
+        reset_reason = "final_output_is_newer";
+    } else if (!fs::exists(whd_path, ec)) {
+        reset_reason = "missing_whd";
+    } else {
+        WavDataInfo whd_info{};
+        if (!probe_wav_data(whd_path.string(), whd_info)) {
+            reset_reason = "invalid_whd";
+        } else if (whd_info.sample_rate != sample_rate) {
+            reset_reason = "sample_rate_changed";
+        } else if (whd_info.channels != 1 || whd_info.bits_per_sample != 16) {
+            reset_reason = "unsupported_whd_format";
+        } else if (whd_info.data_size != old_data_size) {
+            reset_reason = "whd_dat_size_mismatch";
+        }
+    }
+
+    if (reset_reason.empty()) return;
+
+    remove_file_if_exists(dat_path);
+    remove_file_if_exists(whd_path);
+    remove_file_if_exists(state_path);
+    log_session_reset(output_path, reset_reason, old_data_size);
+}
+
 void log_render_fast(int argc,
                      char** argv,
                      const std::string& mode,
@@ -1017,6 +1102,7 @@ void write_whd_dat_positioned(const std::string& output_path,
                               const JoinOptions& options = {}) {
     fs::path out_path(output_path);
     if (out_path.has_parent_path()) fs::create_directories(out_path.parent_path());
+    prepare_output_session(output_path, sample_rate);
     const fs::path whd_path = fs::path(output_path + ".whd");
     const fs::path dat_path = fs::path(output_path + ".dat");
 
@@ -1115,6 +1201,7 @@ void write_whd_dat_positioned(const std::string& output_path,
         std::error_code resize_error;
         fs::resize_file(dat_path, final_data_size, resize_error);
     }
+    write_session_state(output_path, sample_rate, final_samples);
 }
 
 int write_output_wav_positioned(const std::string& output_path,

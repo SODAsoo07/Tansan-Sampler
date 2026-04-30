@@ -25,7 +25,8 @@ struct WorldAnalysis {
 // 분석 F0는 Harvest raw per-frame F0를 그대로 사용.
 WorldAnalysis world_analyze(
     const std::vector<float>& signal,
-    int                       sample_rate);
+    int                       sample_rate,
+    bool                      track_formants = true);
 
 // 디스크 캐시를 사용한 WORLD 분석.
 // cache key: source_wav_path + source file mtime/size + trim range + sample_rate
@@ -34,7 +35,8 @@ WorldAnalysis world_analyze_cached(
     int                       sample_rate,
     const std::string&        source_wav_path,
     int                       src_start_sample,
-    int                       src_end_sample);
+    int                       src_end_sample,
+    bool                      track_formants = true);
 
 // 시간 매핑 + 피치/포먼트 변환 + WORLD 합성
 //   src: 분석 결과 (트리밍된 소스 신호 기준)

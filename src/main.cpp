@@ -169,8 +169,20 @@ int main(int argc, char** argv) {
 
         // ── 6. WORLD 분석 (raw Harvest F0 + envelope/AP 추출) ─────────
         // 디스크 캐시를 사용해 반복 렌더 시 분석 비용을 절감.
+        const bool track_formants =
+            std::abs(sp.mouth_open) > 0 ||
+            std::abs(sp.tract_length) > 0 ||
+            std::abs(sp.tract_resonance) > 0 ||
+            std::abs(sp.tract_focus) > 0 ||
+            (sp.vocalizer > 0 && sp.vocalizer_strength > 0);
+        append_debug_log(std::string("[ANALYSIS] formants=") +
+                         (track_formants ? "tracked" : "default"));
+        if (verbose_log) {
+            std::cerr << "[Resamp] analysis formants="
+                      << (track_formants ? "tracked" : "default") << '\n';
+        }
         auto wa = resamp::synth::world_analyze_cached(
-            trimmed, sample_rate, params.input_wav, src_start, src_end);
+            trimmed, sample_rate, params.input_wav, src_start, src_end, track_formants);
 
         // ── 7. 타겟 F0 컨투어 ─────────────────────────────────────────
         auto f0_contour = resamp::synth::make_f0_contour(
