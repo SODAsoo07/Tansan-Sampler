@@ -160,6 +160,70 @@ static double formant_peak_prominence_score(
     return std::clamp((prominence - 0.08) / 0.56, 0.0, 1.0);
 }
 
+static double frame_log_spectral_energy(
+    const std::vector<double>& spec,
+    double                     lo_frac = 0.015,
+    double                     hi_frac = 0.82)
+{
+    int spec_dim = static_cast<int>(spec.size());
+    if (spec_dim <= 2) return -80.0;
+    int k0 = std::clamp(static_cast<int>(std::round(lo_frac * (spec_dim - 1))), 1, spec_dim - 1);
+    int k1 = std::clamp(static_cast<int>(std::round(hi_frac * (spec_dim - 1))), k0, spec_dim - 1);
+    double sum = 0.0;
+    int count = 0;
+    for (int k = k0; k <= k1; ++k) {
+        sum += std::max(1.0e-12, spec[k]);
+        ++count;
+    }
+    double mean = sum / static_cast<double>(std::max(1, count));
+    return 10.0 * std::log10(std::max(1.0e-12, mean));
+}
+
+static int find_last_energetic_frame(
+    const WorldAnalysis& src,
+    int                  first_frame,
+    int                  fallback_frame)
+{
+    int n_frames = src.n_frames;
+    if (n_frames <= 0 || src.spectrogram.empty()) return fallback_frame;
+    first_frame = std::clamp(first_frame, 0, n_frames - 1);
+
+    std::vector<double> energies(n_frames, -80.0);
+    double ref = 0.0;
+    int ref_count = 0;
+    int ref_end = std::clamp(first_frame + 28, first_frame, n_frames - 1);
+    for (int fi = first_frame; fi <= ref_end; ++fi) {
+        energies[fi] = frame_log_spectral_energy(src.spectrogram[fi]);
+        ref += energies[fi];
+        ++ref_count;
+    }
+    ref = (ref_count > 0) ? (ref / static_cast<double>(ref_count)) : -80.0;
+
+    double max_energy = ref;
+    for (int fi = ref_end + 1; fi < n_frames; ++fi) {
+        energies[fi] = frame_log_spectral_energy(src.spectrogram[fi]);
+        max_energy = std::max(max_energy, energies[fi]);
+    }
+    ref = std::max(ref, max_energy - 10.0);
+    double threshold = ref - 24.0;
+
+    int last = fallback_frame;
+    int run = 0;
+    for (int fi = n_frames - 1; fi >= first_frame; --fi) {
+        double e = energies[fi];
+        if (e > threshold) {
+            ++run;
+            if (run >= 2) {
+                last = std::min(n_frames - 1, fi + 1);
+                break;
+            }
+        } else {
+            run = 0;
+        }
+    }
+    return std::clamp(last, first_frame, n_frames - 1);
+}
+
 struct VocalizerTarget {
     double f1;
     double f2;
@@ -1023,6 +1087,19 @@ std::vector<float> world_render(
         } else {
             // 고정영역 이후에 유성 구간이 없는 경우 (마찰음 등) → 전체 범위 폴백
             loop_end_fi = n_frames - 1;
+        }
+
+        // Whisper/숨 섞인 단독 모음은 DIO/StoneMask가 후반부 F0를 무성으로
+        // 잘못 끊는 경우가 있다. 고정자음이 사실상 없는 alias에서는 F0 끝점만
+        // 믿지 말고 스펙트럼 에너지로 아직 유지되는 모음 구간을 보조 판정한다.
+        bool vowel_like_alias = consonant_src_ms <= 12.0;
+        double voiced_span_ms = std::max(0.0, (loop_end_fi - loop_start_fi) * anal_period);
+        bool suspicious_short_voicing =
+            vowel_like_alias && src_total_ms >= 180.0 &&
+            voiced_span_ms < std::min(220.0, src_total_ms * 0.42);
+        if (suspicious_short_voicing) {
+            int energy_end = find_last_energetic_frame(src, loop_start_fi, loop_end_fi);
+            if (energy_end > loop_end_fi) loop_end_fi = energy_end;
         }
         loop_end_fi = std::clamp(loop_end_fi, loop_start_fi + 1, n_frames - 1);
     }
@@ -3139,4 +3216,3 @@ std::vector<float> world_render(
 }
 
 } // namespace resamp::synth
-
