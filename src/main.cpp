@@ -20,33 +20,150 @@
 #include <stdexcept>
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <fstream>
 #include <cstdlib>
+#include <limits>
+
+namespace {
+
+bool env_enabled(const char* name, bool default_value) {
+    const char* v = std::getenv(name);
+    if (v == nullptr || *v == '\0') return default_value;
+    std::string s(v);
+    std::transform(s.begin(), s.end(), s.begin(),
+                   [](unsigned char ch) { return static_cast<char>(std::tolower(ch)); });
+    if (s == "0" || s == "false" || s == "off" || s == "no") return false;
+    if (s == "1" || s == "true" || s == "on" || s == "yes") return true;
+    return default_value;
+}
+
+double env_double_clamped(const char* name, double default_value, double lo, double hi) {
+    const char* v = std::getenv(name);
+    if (v == nullptr || *v == '\0') return default_value;
+    try {
+        double parsed = std::stod(v);
+        if (!std::isfinite(parsed)) return default_value;
+        return std::clamp(parsed, lo, hi);
+    } catch (...) {
+        return default_value;
+    }
+}
+
+void append_debug_log(const std::string& line) {
+    const char* path = std::getenv("RESAMP_DEBUG_LOG");
+    if (path == nullptr || *path == '\0') return;
+    std::ofstream ofs(path, std::ios::out | std::ios::app);
+    if (!ofs) return;
+    ofs << line << '\n';
+}
+
+void write_u16(std::ofstream& f, uint16_t v) {
+    uint8_t b[2] = { static_cast<uint8_t>(v & 0xFF),
+                     static_cast<uint8_t>((v >> 8) & 0xFF) };
+    f.write(reinterpret_cast<char*>(b), 2);
+}
+
+void write_u32(std::ofstream& f, uint32_t v) {
+    uint8_t b[4] = { static_cast<uint8_t>(v & 0xFF),
+                     static_cast<uint8_t>((v >> 8)  & 0xFF),
+                     static_cast<uint8_t>((v >> 16) & 0xFF),
+                     static_cast<uint8_t>((v >> 24) & 0xFF) };
+    f.write(reinterpret_cast<char*>(b), 4);
+}
+
+bool write_silence_wav_streamed(const std::string& path, int64_t requested_samples, uint32_t sample_rate) {
+    if (path.empty()) return false;
+    int64_t max_samples = (static_cast<int64_t>(std::numeric_limits<uint32_t>::max()) - 36) / 2;
+    int64_t num_samples_i64 = std::clamp<int64_t>(requested_samples, 1, max_samples);
+    uint32_t num_samples = static_cast<uint32_t>(num_samples_i64);
+    uint16_t num_channels = 1;
+    uint16_t bits_per_sample = 16;
+    uint32_t byte_rate = sample_rate * num_channels * bits_per_sample / 8;
+    uint16_t block_align = static_cast<uint16_t>(num_channels * bits_per_sample / 8);
+    uint32_t data_size = num_samples * block_align;
+
+    std::ofstream f(path, std::ios::binary | std::ios::trunc);
+    if (!f) return false;
+    f.write("RIFF", 4);
+    write_u32(f, 36 + data_size);
+    f.write("WAVE", 4);
+    f.write("fmt ", 4);
+    write_u32(f, 16);
+    write_u16(f, 1);
+    write_u16(f, num_channels);
+    write_u32(f, sample_rate);
+    write_u32(f, byte_rate);
+    write_u16(f, block_align);
+    write_u16(f, bits_per_sample);
+    f.write("data", 4);
+    write_u32(f, data_size);
+
+    char zeros[8192] = {};
+    uint32_t remaining = data_size;
+    while (remaining > 0) {
+        uint32_t chunk = std::min<uint32_t>(remaining, static_cast<uint32_t>(sizeof(zeros)));
+        f.write(zeros, chunk);
+        remaining -= chunk;
+    }
+    return f.good();
+}
+
+int fail_with_silence(const resamp::RenderParams& params,
+                      int64_t output_samples,
+                      uint32_t sample_rate,
+                      const std::string& reason) {
+    std::cerr << "[Resamp] " << reason << '\n';
+    append_debug_log("[FALLBACK_SILENCE] " + reason);
+    if (write_silence_wav_streamed(params.output_wav, output_samples, sample_rate)) {
+        return 0;
+    }
+    std::cerr << "[Resamp] Failed to write fallback silence WAV\n";
+    return 1;
+}
+
+bool render_memory_budget_exceeded(int output_samples,
+                                   int sample_rate,
+                                   int analysis_frames,
+                                   int fft_size,
+                                   double max_mb,
+                                   std::string& reason) {
+    if (output_samples < 1 || sample_rate <= 0 || analysis_frames < 1 || fft_size <= 0) return false;
+    int64_t spec_dim = static_cast<int64_t>(fft_size / 2 + 1);
+    double worst_frame_period_ms = 0.5; // 품질 저하는 하지 않고, 최악 경로 기준으로만 예산 산정.
+    int64_t out_frames = static_cast<int64_t>(
+        std::ceil(static_cast<double>(output_samples) * 1000.0 /
+                  (worst_frame_period_ms * static_cast<double>(sample_rate)))) + 2;
+    long double analysis_bytes = 2.0L * analysis_frames * spec_dim * sizeof(double);
+    long double render_bytes = 2.0L * out_frames * spec_dim * sizeof(double);
+    long double output_bytes = static_cast<long double>(output_samples) * (sizeof(double) + sizeof(float));
+    long double scratch_bytes = static_cast<long double>(spec_dim) * sizeof(double) * 24.0L;
+    long double total_mb = (analysis_bytes + render_bytes + output_bytes + scratch_bytes) / (1024.0L * 1024.0L);
+    if (total_mb > max_mb) {
+        reason = "OOM guard: estimated render memory " + std::to_string(static_cast<int>(total_mb)) +
+                 " MB exceeds limit " + std::to_string(static_cast<int>(max_mb)) + " MB";
+        return true;
+    }
+    return false;
+}
+
+} // namespace
 
 int main(int argc, char** argv) {
+    resamp::RenderParams params;
+    int sample_rate = 44100;
+    int64_t requested_output_samples = 1;
     try {
-        auto env_enabled = [](const char* name, bool default_value) {
-            const char* v = std::getenv(name);
-            if (v == nullptr || *v == '\0') return default_value;
-            std::string s(v);
-            std::transform(s.begin(), s.end(), s.begin(),
-                           [](unsigned char ch) { return static_cast<char>(std::tolower(ch)); });
-            if (s == "0" || s == "false" || s == "off" || s == "no") return false;
-            if (s == "1" || s == "true" || s == "on" || s == "yes") return true;
-            return default_value;
-        };
         const bool verbose_log = env_enabled("RESAMP_VERBOSE", false);
-        auto append_debug_log = [&](const std::string& line) {
-            const char* path = std::getenv("RESAMP_DEBUG_LOG");
-            if (path == nullptr || *path == '\0') return;
-            std::ofstream ofs(path, std::ios::out | std::ios::app);
-            if (!ofs) return;
-            ofs << line << '\n';
-        };
 
         // ── 1. CLI 파싱 ────────────────────────────────────────────────
-        resamp::RenderParams params = resamp::parse_args(argc, argv);
-        int sample_rate = 44100;
+        params = resamp::parse_args(argc, argv);
+        if (!std::isfinite(params.length_ms) || params.length_ms <= 0.0 ||
+            !std::isfinite(params.offset_ms) || !std::isfinite(params.consonant_ms) ||
+            !std::isfinite(params.cutoff_ms)) {
+            return fail_with_silence(params, requested_output_samples, static_cast<uint32_t>(sample_rate),
+                                     "Invalid timing parameter; wrote fallback silence");
+        }
 
         {
             std::string argv_joined;
@@ -84,6 +201,20 @@ int main(int argc, char** argv) {
                       << " samples=" << wav_info.num_samples << '\n';
         }
 
+        double max_note_seconds = env_double_clamped("RESAMP_MAX_NOTE_SECONDS", 45.0, 1.0, 600.0);
+        if (params.length_ms > max_note_seconds * 1000.0) {
+            requested_output_samples = static_cast<int64_t>(
+                std::ceil(max_note_seconds * static_cast<double>(sample_rate)));
+            return fail_with_silence(params, requested_output_samples, static_cast<uint32_t>(sample_rate),
+                                     "Render length guard: note length exceeds RESAMP_MAX_NOTE_SECONDS");
+        }
+        requested_output_samples = static_cast<int64_t>(
+            std::ceil(params.length_ms * static_cast<double>(sample_rate) / 1000.0));
+        if (requested_output_samples > static_cast<int64_t>(std::numeric_limits<int>::max())) {
+            return fail_with_silence(params, static_cast<int64_t>(sample_rate), static_cast<uint32_t>(sample_rate),
+                                     "Render length guard: output sample count exceeds int range");
+        }
+
         // ── 3. 소스 트리밍 (offset_ms, cutoff_ms) ─────────────────────
         int src_start = static_cast<int>(params.offset_ms * sample_rate / 1000.0);
         src_start = std::max(0, std::min(src_start, static_cast<int>(signal.size())));
@@ -99,12 +230,19 @@ int main(int argc, char** argv) {
         }
         src_end = std::max(src_start + 1, std::min(src_end, static_cast<int>(signal.size())));
 
+        double max_source_seconds = env_double_clamped("RESAMP_MAX_SOURCE_SECONDS", 30.0, 1.0, 600.0);
+        int64_t source_range_samples = static_cast<int64_t>(src_end) - static_cast<int64_t>(src_start);
+        if (source_range_samples > static_cast<int64_t>(max_source_seconds * sample_rate)) {
+            return fail_with_silence(params, requested_output_samples, static_cast<uint32_t>(sample_rate),
+                                     "Source length guard: trimmed source exceeds RESAMP_MAX_SOURCE_SECONDS");
+        }
+
         std::vector<float> trimmed(signal.begin() + src_start,
                                    signal.begin() + src_end);
         if (trimmed.size() < 32) trimmed.resize(32, 0.0f);
 
         // ── 4. 출력 길이 ──────────────────────────────────────────────
-        int output_samples = static_cast<int>(params.length_ms * sample_rate / 1000.0);
+        int output_samples = static_cast<int>(requested_output_samples);
         if (output_samples < 1) output_samples = 1;
 
         // ── 5. 플래그 파싱 ────────────────────────────────────────────
@@ -184,6 +322,13 @@ int main(int argc, char** argv) {
         auto wa = resamp::synth::world_analyze_cached(
             trimmed, sample_rate, params.input_wav, src_start, src_end, track_formants);
 
+        std::string budget_reason;
+        double max_render_mb = env_double_clamped("RESAMP_MAX_RENDER_MB", 768.0, 64.0, 8192.0);
+        if (render_memory_budget_exceeded(output_samples, sample_rate, wa.n_frames, wa.fft_size,
+                                          max_render_mb, budget_reason)) {
+            return fail_with_silence(params, output_samples, static_cast<uint32_t>(sample_rate), budget_reason);
+        }
+
         // ── 7. 타겟 F0 컨투어 ─────────────────────────────────────────
         auto f0_contour = resamp::synth::make_f0_contour(
             params, sp, output_samples, sample_rate);
@@ -214,6 +359,12 @@ int main(int argc, char** argv) {
                              static_cast<uint32_t>(sample_rate));
         return 0;
 
+    } catch (const std::bad_alloc&) {
+        return fail_with_silence(params, requested_output_samples, static_cast<uint32_t>(std::max(1, sample_rate)),
+                                 "Out of memory; wrote fallback silence");
+    } catch (const std::length_error& e) {
+        return fail_with_silence(params, requested_output_samples, static_cast<uint32_t>(std::max(1, sample_rate)),
+                                 std::string("Allocation size error: ") + e.what() + "; wrote fallback silence");
     } catch (const std::exception& e) {
         std::cerr << "[Resamp] Error: " << e.what() << '\n';
         return 1;
