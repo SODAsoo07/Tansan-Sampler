@@ -42,6 +42,7 @@ struct SynthParams {
     int distortion = 0;         // Ds: 0~100 디스토션
     int bitcrusher = 0;         // Bc: 0~100 비트크러셔
     int vocalizer = 0;          // Vz: 0=off, 1=아, 2=에, 3=이, 4=오, 5=우, 6=어, 7=N
+    int vocalizer_strength = 100; // VzS: 0~100 보컬라이저 필터 강도
 
     static SynthParams defaults() { return {}; }
 };

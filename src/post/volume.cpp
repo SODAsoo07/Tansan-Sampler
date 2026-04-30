@@ -65,6 +65,72 @@ static float gated_rms(const std::vector<float>& samples, float gate_abs) {
     return static_cast<float>(std::sqrt(sum2 / std::max(1, cnt)));
 }
 
+struct LevelStats {
+    float p90 = 0.0f;
+    float p95 = 0.0f;
+    float p995 = 0.0f;
+    float peak = 0.0f;
+    float rms = 0.0f;
+};
+
+static LevelStats measure_level(const std::vector<float>& samples) {
+    LevelStats st;
+    if (samples.empty()) return st;
+    st.p90 = abs_percentile(samples, 0.90f);
+    st.p95 = abs_percentile(samples, 0.95f);
+    st.p995 = abs_percentile(samples, 0.995f);
+    st.peak = max_abs_sample(samples);
+    float gate_abs = std::max(0.0018f, std::min(st.p90 * 0.16f, st.p95 * 0.10f));
+    st.rms = gated_rms(samples, gate_abs);
+    return st;
+}
+
+static void apply_makeup_level(std::vector<float>& samples, int sample_rate, const SynthParams& sp) {
+    if (samples.empty()) return;
+
+    LevelStats st = measure_level(samples);
+    if (st.rms <= 1.0e-8f || st.peak <= 1.0e-8f) return;
+
+    float ln = std::clamp(sp.loud_norm / 100.0f, -1.0f, 1.0f);
+    float ln_pos = std::max(0.0f, ln);
+    float ln_neg = std::max(0.0f, -ln);
+    float fx_load = std::clamp(0.55f * (sp.distortion / 100.0f) +
+                               0.35f * (sp.bitcrusher / 100.0f) +
+                               0.22f * (std::abs(sp.final_filter)), 0.0f, 1.0f);
+    float duration_ms = (sample_rate > 0)
+        ? (static_cast<float>(samples.size()) * 1000.0f / static_cast<float>(sample_rate))
+        : 1000.0f;
+    float short_note = std::clamp((360.0f - duration_ms) / 240.0f, 0.0f, 1.0f);
+    short_note = short_note * short_note * (3.0f - 2.0f * short_note);
+
+    float target_rms = 0.110f + 0.018f * ln_pos - 0.018f * ln_neg;
+    float target_p95 = 0.46f + 0.045f * ln_pos - 0.055f * ln_neg;
+    float target_p995 = 0.88f - 0.055f * fx_load + 0.020f * ln_pos - 0.030f * ln_neg;
+    float ceiling = 0.982f - 0.055f * fx_load;
+
+    float gain = 1.0f;
+    if (st.rms < target_rms * 0.82f) {
+        float g_rms = target_rms / st.rms;
+        float g_p95 = (st.p95 > 1.0e-8f) ? (target_p95 / st.p95) : g_rms;
+        float g_peak = (st.p995 > 1.0e-8f) ? (target_p995 / st.p995) : g_rms;
+        float headroom_gain = std::min(g_p95 * 1.10f, g_peak);
+        float wanted = std::min(g_rms, headroom_gain);
+        wanted = std::clamp(wanted, 1.0f, 2.15f + 2.35f * short_note - 0.45f * fx_load);
+        float makeup_blend = std::clamp(0.48f + 0.30f * short_note + 0.32f * ln_pos - 0.30f * ln_neg,
+                                        0.18f, 0.92f);
+        gain = 1.0f + makeup_blend * (wanted - 1.0f);
+    } else if (st.rms > target_rms * 1.45f || st.p995 > target_p995 * 1.05f) {
+        float g_rms = (target_rms * 1.18f) / st.rms;
+        float g_peak = (st.p995 > 1.0e-8f) ? (target_p995 / st.p995) : 1.0f;
+        gain = std::clamp(std::min(g_rms, g_peak), 0.62f, 1.0f);
+    }
+
+    if (std::fabs(gain - 1.0f) > 0.003f) {
+        for (auto& s : samples) s *= gain;
+    }
+    apply_peak_guard(samples, ceiling);
+}
+
 void apply_volume(std::vector<float>& samples,
                   int volume_param,
                   const SynthParams& sp) {
@@ -79,26 +145,27 @@ void apply_volume(std::vector<float>& samples,
 
     // 적응형 loudness 정규화:
     // 다양한 음색/발성에서도 출력 음량을 최대한 일정하게 유지.
-    float cur_p95 = abs_percentile(samples, 0.95f);
-    float cur_p995 = abs_percentile(samples, 0.995f);
-    float gate_abs = std::max(0.0025f, cur_p95 * 0.09f);
-    float cur_rms = gated_rms(samples, gate_abs);
+    LevelStats st = measure_level(samples);
+    float cur_p95 = st.p95;
+    float cur_p995 = st.p995;
+    float cur_rms = st.rms;
+    float gate_abs = std::max(0.0018f, std::min(st.p90 * 0.16f, st.p95 * 0.10f));
 
     float ln = std::clamp(sp.loud_norm / 100.0f, -1.0f, 1.0f);
     float ln_pos = std::max(0.0f, ln);
     float ln_neg = std::max(0.0f, -ln);
-    float target_rms = 0.105f + 0.012f * ln_pos - 0.010f * ln_neg;
-    float target_p95 = 0.70f  + 0.020f * ln_pos - 0.050f * ln_neg;
-    float target_p995 = 0.92f + 0.010f * ln_pos - 0.030f * ln_neg;
+    float target_rms = 0.110f + 0.018f * ln_pos - 0.018f * ln_neg;
+    float target_p95 = 0.52f  + 0.035f * ln_pos - 0.060f * ln_neg;
+    float target_p995 = 0.90f + 0.010f * ln_pos - 0.035f * ln_neg;
 
     float gain_rms = (cur_rms > 1e-9f) ? (target_rms / cur_rms) : 1.0f;
     float gain_p95 = (cur_p95 > 1e-9f) ? (target_p95 / cur_p95) : 1.0f;
     float gain_p995 = (cur_p995 > 1e-9f) ? (target_p995 / cur_p995) : 1.0f;
     float norm_gain = std::min({gain_rms, gain_p95, gain_p995});
-    norm_gain = std::clamp(norm_gain, 0.35f, 3.20f);
+    norm_gain = std::clamp(norm_gain, 0.38f, 2.75f);
     // 과도한 보정으로 잔향/히스가 전면으로 나오지 않도록 기본은 완화,
     // Ln으로 정규화 개입 강도를 조절한다.
-    float norm_blend = std::clamp(0.80f + 0.75f * ln_pos - 0.65f * ln_neg, 0.10f, 1.55f);
+    float norm_blend = std::clamp(0.72f + 0.60f * ln_pos - 0.58f * ln_neg, 0.10f, 1.35f);
     norm_gain = 1.0f + norm_blend * (norm_gain - 1.0f);
 
     for (auto& s : samples) {
@@ -242,12 +309,7 @@ void apply_flag_post_effects(std::vector<float>& samples,
         apply_one_pole_highpass(samples, sample_rate, 180.0f);
     }
 
-    if (sp.distortion > 0) {
-        float a = std::clamp(sp.distortion / 100.0f, 0.0f, 1.0f);
-        apply_peak_guard(samples, 0.96f - 0.06f * a);
-    } else {
-        apply_peak_guard(samples, 0.985f);
-    }
+    apply_makeup_level(samples, sample_rate, sp);
 }
 
 void normalize_rms(std::vector<float>& samples, float target_rms) {

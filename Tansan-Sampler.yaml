@@ -1,5 +1,5 @@
-# T_Sampler — OpenUTAU Resampler Manifest
-# 이 파일을 T_Sampler.exe 와 같은 폴더(Resamplers/)에 함께 배치하세요.
+# Tansan-Sampler — OpenUTAU Resampler Manifest
+# 이 파일을 Tansan-Sampler.exe 와 같은 폴더(Resamplers/)에 함께 배치하세요.
 # expression_filter: true 를 활성화하면 여기 없는 기본 표현은 자동으로 비활성화됩니다.
 
 expression_filter: true
@@ -188,12 +188,15 @@ expressions:
   loop:
     name: Stretch/Loop Mode
     abbr: loop
-    type: Numerical
+    type: Options
     min: 0
     max: 2
     default_value: 1
     is_flag: true
-    flag: Lp
+    options:
+    - Lp0
+    - Lp1
+    - Lp2
   cpow:
     name: Consonant Power
     abbr: cpow
@@ -215,12 +218,14 @@ expressions:
   rev:
     name: Reverse Mode
     abbr: rev
-    type: Numerical
+    type: Options
     min: 0
     max: 1
     default_value: 0
     is_flag: true
-    flag: Rv
+    options:
+    - ''
+    - Rv1
   voi:
     name: Force Voicing
     abbr: voi
@@ -233,12 +238,15 @@ expressions:
   fcut:
     name: Final Cut Filter
     abbr: fcut
-    type: Numerical
-    min: -1
-    max: 1
+    type: Options
+    min: 0
+    max: 2
     default_value: 0
     is_flag: true
-    flag: Fc
+    options:
+    - ''
+    - Fc1
+    - Fc-1
   ebr:
     name: End Breath
     abbr: ebr
@@ -296,9 +304,26 @@ expressions:
   voc:
     name: Vocalizer Filter
     abbr: voc
-    type: Numerical
+    type: Options
     min: 0
     max: 7
     default_value: 0
     is_flag: true
-    flag: Vz
+    options:
+    - ''
+    - Vz1
+    - Vz2
+    - Vz3
+    - Vz4
+    - Vz5
+    - Vz6
+    - Vz7
+  vocstr:
+    name: Vocalizer Strength
+    abbr: vstr
+    type: Numerical
+    min: 0
+    max: 100
+    default_value: 100
+    is_flag: true
+    flag: VzS

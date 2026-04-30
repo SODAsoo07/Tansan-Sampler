@@ -18,6 +18,7 @@ struct WorldAnalysis {
     std::vector<std::vector<double>> spectrogram;      // [n_frames][fft_size/2+1]
     std::vector<std::vector<double>> aperiodicity;     // [n_frames][fft_size/2+1]
     std::vector<std::array<double, 4>> formant_peaks;  // [n_frames] F1..F4 peak Hz
+    std::vector<double> formant_confidence;            // [n_frames] 0..1 peak tracking reliability
 };
 
 // 입력 신호를 WORLD로 분석 (F0 + spectral envelope + aperiodicity).
