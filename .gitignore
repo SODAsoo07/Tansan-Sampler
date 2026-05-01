@@ -39,3 +39,4 @@ resamp_wavtool_calls*.jsonl
 *.tmp
 *.temp
 /external
+/src/wavtool
