@@ -61,25 +61,25 @@
     <_ProjectFileVersion>10.0.20506.1</_ProjectFileVersion>
     <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">C:\Users\oyh57\SODAsoo1\Devs\Resamp\build\Debug\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">resamp.dir\Debug\</IntDir>
-    <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">T_Sampler</TargetName>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Tansan-Sampler</TargetName>
     <TargetExt Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.exe</TargetExt>
     <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</LinkIncremental>
     <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</GenerateManifest>
     <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">C:\Users\oyh57\SODAsoo1\Devs\Resamp\build\Release\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">resamp.dir\Release\</IntDir>
-    <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">T_Sampler</TargetName>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Tansan-Sampler</TargetName>
     <TargetExt Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.exe</TargetExt>
     <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkIncremental>
     <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</GenerateManifest>
     <OutDir Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">C:\Users\oyh57\SODAsoo1\Devs\Resamp\build\MinSizeRel\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">resamp.dir\MinSizeRel\</IntDir>
-    <TargetName Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">T_Sampler</TargetName>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">Tansan-Sampler</TargetName>
     <TargetExt Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">.exe</TargetExt>
     <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">false</LinkIncremental>
     <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">true</GenerateManifest>
     <OutDir Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">C:\Users\oyh57\SODAsoo1\Devs\Resamp\build\RelWithDebInfo\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">resamp.dir\RelWithDebInfo\</IntDir>
-    <TargetName Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">T_Sampler</TargetName>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">Tansan-Sampler</TargetName>
     <TargetExt Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">.exe</TargetExt>
     <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">true</LinkIncremental>
     <GenerateManifest Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">true</GenerateManifest>
@@ -126,13 +126,24 @@
       <ProxyFileName>%(Filename)_p.c</ProxyFileName>
     </Midl>
     <PostBuildEvent>
-      <Message>Deploying T_Sampler.exe/T_Sampler.yaml to C:/Users/oyh57/SODAsoo1/VocalSynth/OpenUtauV-win-x64/Resamplers</Message>
+      <Message>Copying tansanSampler.txt next to Tansan-Sampler.exe	Deploying Tansan-Sampler.exe/Tansan-Sampler.yaml/tansanSampler.txt to C:/Users/oyh57/SODAsoo1/VocalSynth/OpenUtauV-win-x64/Resamplers</Message>
       <Command>setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -E copy_if_different C:/Users/oyh57/SODAsoo1/Devs/Resamp/tansanSampler.txt C:/Users/oyh57/SODAsoo1/Devs/Resamp/build/Debug/tansanSampler.txt
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
 "C:\Program Files\CMake\bin\cmake.exe" -E make_directory C:/Users/oyh57/SODAsoo1/VocalSynth/OpenUtauV-win-x64/Resamplers
 if %errorlevel% neq 0 goto :cmEnd
-"C:\Program Files\CMake\bin\cmake.exe" -E copy_if_different C:/Users/oyh57/SODAsoo1/Devs/Resamp/build/Debug/T_Sampler.exe C:/Users/oyh57/SODAsoo1/VocalSynth/OpenUtauV-win-x64/Resamplers/T_Sampler.exe
+"C:\Program Files\CMake\bin\cmake.exe" -E copy_if_different C:/Users/oyh57/SODAsoo1/Devs/Resamp/build/Debug/Tansan-Sampler.exe C:/Users/oyh57/SODAsoo1/VocalSynth/OpenUtauV-win-x64/Resamplers/Tansan-Sampler.exe
 if %errorlevel% neq 0 goto :cmEnd
-"C:\Program Files\CMake\bin\cmake.exe" -E copy C:/Users/oyh57/SODAsoo1/Devs/Resamp/T_Sampler.yaml C:/Users/oyh57/SODAsoo1/VocalSynth/OpenUtauV-win-x64/Resamplers/T_Sampler.yaml
+"C:\Program Files\CMake\bin\cmake.exe" -E copy C:/Users/oyh57/SODAsoo1/Devs/Resamp/Tansan-Sampler.yaml C:/Users/oyh57/SODAsoo1/VocalSynth/OpenUtauV-win-x64/Resamplers/Tansan-Sampler.yaml
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E copy_if_different C:/Users/oyh57/SODAsoo1/Devs/Resamp/tansanSampler.txt C:/Users/oyh57/SODAsoo1/VocalSynth/OpenUtauV-win-x64/Resamplers/tansanSampler.txt
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -149,9 +160,9 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
       <ImageHasSafeExceptionHandlers></ImageHasSafeExceptionHandlers>
-      <ImportLibrary>C:/Users/oyh57/SODAsoo1/Devs/Resamp/build/Debug/T_Sampler.lib</ImportLibrary>
+      <ImportLibrary>C:/Users/oyh57/SODAsoo1/Devs/Resamp/build/Debug/Tansan-Sampler.lib</ImportLibrary>
       <LinkErrorReporting></LinkErrorReporting>
-      <ProgramDataBaseFile>C:/Users/oyh57/SODAsoo1/Devs/Resamp/build/Debug/T_Sampler.pdb</ProgramDataBaseFile>
+      <ProgramDataBaseFile>C:/Users/oyh57/SODAsoo1/Devs/Resamp/build/Debug/Tansan-Sampler.pdb</ProgramDataBaseFile>
       <RandomizedBaseAddress></RandomizedBaseAddress>
       <SubSystem>Console</SubSystem>
     </Link>
@@ -202,13 +213,24 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
       <ProxyFileName>%(Filename)_p.c</ProxyFileName>
     </Midl>
     <PostBuildEvent>
-      <Message>Deploying T_Sampler.exe/T_Sampler.yaml to C:/Users/oyh57/SODAsoo1/VocalSynth/OpenUtauV-win-x64/Resamplers</Message>
+      <Message>Copying tansanSampler.txt next to Tansan-Sampler.exe	Deploying Tansan-Sampler.exe/Tansan-Sampler.yaml/tansanSampler.txt to C:/Users/oyh57/SODAsoo1/VocalSynth/OpenUtauV-win-x64/Resamplers</Message>
       <Command>setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -E copy_if_different C:/Users/oyh57/SODAsoo1/Devs/Resamp/tansanSampler.txt C:/Users/oyh57/SODAsoo1/Devs/Resamp/build/Release/tansanSampler.txt
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
 "C:\Program Files\CMake\bin\cmake.exe" -E make_directory C:/Users/oyh57/SODAsoo1/VocalSynth/OpenUtauV-win-x64/Resamplers
 if %errorlevel% neq 0 goto :cmEnd
-"C:\Program Files\CMake\bin\cmake.exe" -E copy_if_different C:/Users/oyh57/SODAsoo1/Devs/Resamp/build/Release/T_Sampler.exe C:/Users/oyh57/SODAsoo1/VocalSynth/OpenUtauV-win-x64/Resamplers/T_Sampler.exe
+"C:\Program Files\CMake\bin\cmake.exe" -E copy_if_different C:/Users/oyh57/SODAsoo1/Devs/Resamp/build/Release/Tansan-Sampler.exe C:/Users/oyh57/SODAsoo1/VocalSynth/OpenUtauV-win-x64/Resamplers/Tansan-Sampler.exe
 if %errorlevel% neq 0 goto :cmEnd
-"C:\Program Files\CMake\bin\cmake.exe" -E copy C:/Users/oyh57/SODAsoo1/Devs/Resamp/T_Sampler.yaml C:/Users/oyh57/SODAsoo1/VocalSynth/OpenUtauV-win-x64/Resamplers/T_Sampler.yaml
+"C:\Program Files\CMake\bin\cmake.exe" -E copy C:/Users/oyh57/SODAsoo1/Devs/Resamp/Tansan-Sampler.yaml C:/Users/oyh57/SODAsoo1/VocalSynth/OpenUtauV-win-x64/Resamplers/Tansan-Sampler.yaml
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E copy_if_different C:/Users/oyh57/SODAsoo1/Devs/Resamp/tansanSampler.txt C:/Users/oyh57/SODAsoo1/VocalSynth/OpenUtauV-win-x64/Resamplers/tansanSampler.txt
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -225,9 +247,9 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
       <GenerateDebugInformation>false</GenerateDebugInformation>
       <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
       <ImageHasSafeExceptionHandlers></ImageHasSafeExceptionHandlers>
-      <ImportLibrary>C:/Users/oyh57/SODAsoo1/Devs/Resamp/build/Release/T_Sampler.lib</ImportLibrary>
+      <ImportLibrary>C:/Users/oyh57/SODAsoo1/Devs/Resamp/build/Release/Tansan-Sampler.lib</ImportLibrary>
       <LinkErrorReporting></LinkErrorReporting>
-      <ProgramDataBaseFile>C:/Users/oyh57/SODAsoo1/Devs/Resamp/build/Release/T_Sampler.pdb</ProgramDataBaseFile>
+      <ProgramDataBaseFile>C:/Users/oyh57/SODAsoo1/Devs/Resamp/build/Release/Tansan-Sampler.pdb</ProgramDataBaseFile>
       <RandomizedBaseAddress></RandomizedBaseAddress>
       <SubSystem>Console</SubSystem>
     </Link>
@@ -278,13 +300,24 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
       <ProxyFileName>%(Filename)_p.c</ProxyFileName>
     </Midl>
     <PostBuildEvent>
-      <Message>Deploying T_Sampler.exe/T_Sampler.yaml to C:/Users/oyh57/SODAsoo1/VocalSynth/OpenUtauV-win-x64/Resamplers</Message>
+      <Message>Copying tansanSampler.txt next to Tansan-Sampler.exe	Deploying Tansan-Sampler.exe/Tansan-Sampler.yaml/tansanSampler.txt to C:/Users/oyh57/SODAsoo1/VocalSynth/OpenUtauV-win-x64/Resamplers</Message>
       <Command>setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -E copy_if_different C:/Users/oyh57/SODAsoo1/Devs/Resamp/tansanSampler.txt C:/Users/oyh57/SODAsoo1/Devs/Resamp/build/MinSizeRel/tansanSampler.txt
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
 "C:\Program Files\CMake\bin\cmake.exe" -E make_directory C:/Users/oyh57/SODAsoo1/VocalSynth/OpenUtauV-win-x64/Resamplers
 if %errorlevel% neq 0 goto :cmEnd
-"C:\Program Files\CMake\bin\cmake.exe" -E copy_if_different C:/Users/oyh57/SODAsoo1/Devs/Resamp/build/MinSizeRel/T_Sampler.exe C:/Users/oyh57/SODAsoo1/VocalSynth/OpenUtauV-win-x64/Resamplers/T_Sampler.exe
+"C:\Program Files\CMake\bin\cmake.exe" -E copy_if_different C:/Users/oyh57/SODAsoo1/Devs/Resamp/build/MinSizeRel/Tansan-Sampler.exe C:/Users/oyh57/SODAsoo1/VocalSynth/OpenUtauV-win-x64/Resamplers/Tansan-Sampler.exe
 if %errorlevel% neq 0 goto :cmEnd
-"C:\Program Files\CMake\bin\cmake.exe" -E copy C:/Users/oyh57/SODAsoo1/Devs/Resamp/T_Sampler.yaml C:/Users/oyh57/SODAsoo1/VocalSynth/OpenUtauV-win-x64/Resamplers/T_Sampler.yaml
+"C:\Program Files\CMake\bin\cmake.exe" -E copy C:/Users/oyh57/SODAsoo1/Devs/Resamp/Tansan-Sampler.yaml C:/Users/oyh57/SODAsoo1/VocalSynth/OpenUtauV-win-x64/Resamplers/Tansan-Sampler.yaml
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E copy_if_different C:/Users/oyh57/SODAsoo1/Devs/Resamp/tansanSampler.txt C:/Users/oyh57/SODAsoo1/VocalSynth/OpenUtauV-win-x64/Resamplers/tansanSampler.txt
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -301,9 +334,9 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
       <GenerateDebugInformation>false</GenerateDebugInformation>
       <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
       <ImageHasSafeExceptionHandlers></ImageHasSafeExceptionHandlers>
-      <ImportLibrary>C:/Users/oyh57/SODAsoo1/Devs/Resamp/build/MinSizeRel/T_Sampler.lib</ImportLibrary>
+      <ImportLibrary>C:/Users/oyh57/SODAsoo1/Devs/Resamp/build/MinSizeRel/Tansan-Sampler.lib</ImportLibrary>
       <LinkErrorReporting></LinkErrorReporting>
-      <ProgramDataBaseFile>C:/Users/oyh57/SODAsoo1/Devs/Resamp/build/MinSizeRel/T_Sampler.pdb</ProgramDataBaseFile>
+      <ProgramDataBaseFile>C:/Users/oyh57/SODAsoo1/Devs/Resamp/build/MinSizeRel/Tansan-Sampler.pdb</ProgramDataBaseFile>
       <RandomizedBaseAddress></RandomizedBaseAddress>
       <SubSystem>Console</SubSystem>
     </Link>
@@ -353,13 +386,24 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
       <ProxyFileName>%(Filename)_p.c</ProxyFileName>
     </Midl>
     <PostBuildEvent>
-      <Message>Deploying T_Sampler.exe/T_Sampler.yaml to C:/Users/oyh57/SODAsoo1/VocalSynth/OpenUtauV-win-x64/Resamplers</Message>
+      <Message>Copying tansanSampler.txt next to Tansan-Sampler.exe	Deploying Tansan-Sampler.exe/Tansan-Sampler.yaml/tansanSampler.txt to C:/Users/oyh57/SODAsoo1/VocalSynth/OpenUtauV-win-x64/Resamplers</Message>
       <Command>setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -E copy_if_different C:/Users/oyh57/SODAsoo1/Devs/Resamp/tansanSampler.txt C:/Users/oyh57/SODAsoo1/Devs/Resamp/build/RelWithDebInfo/tansanSampler.txt
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
 "C:\Program Files\CMake\bin\cmake.exe" -E make_directory C:/Users/oyh57/SODAsoo1/VocalSynth/OpenUtauV-win-x64/Resamplers
 if %errorlevel% neq 0 goto :cmEnd
-"C:\Program Files\CMake\bin\cmake.exe" -E copy_if_different C:/Users/oyh57/SODAsoo1/Devs/Resamp/build/RelWithDebInfo/T_Sampler.exe C:/Users/oyh57/SODAsoo1/VocalSynth/OpenUtauV-win-x64/Resamplers/T_Sampler.exe
+"C:\Program Files\CMake\bin\cmake.exe" -E copy_if_different C:/Users/oyh57/SODAsoo1/Devs/Resamp/build/RelWithDebInfo/Tansan-Sampler.exe C:/Users/oyh57/SODAsoo1/VocalSynth/OpenUtauV-win-x64/Resamplers/Tansan-Sampler.exe
 if %errorlevel% neq 0 goto :cmEnd
-"C:\Program Files\CMake\bin\cmake.exe" -E copy C:/Users/oyh57/SODAsoo1/Devs/Resamp/T_Sampler.yaml C:/Users/oyh57/SODAsoo1/VocalSynth/OpenUtauV-win-x64/Resamplers/T_Sampler.yaml
+"C:\Program Files\CMake\bin\cmake.exe" -E copy C:/Users/oyh57/SODAsoo1/Devs/Resamp/Tansan-Sampler.yaml C:/Users/oyh57/SODAsoo1/VocalSynth/OpenUtauV-win-x64/Resamplers/Tansan-Sampler.yaml
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E copy_if_different C:/Users/oyh57/SODAsoo1/Devs/Resamp/tansanSampler.txt C:/Users/oyh57/SODAsoo1/VocalSynth/OpenUtauV-win-x64/Resamplers/tansanSampler.txt
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -376,9 +420,9 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
       <ImageHasSafeExceptionHandlers></ImageHasSafeExceptionHandlers>
-      <ImportLibrary>C:/Users/oyh57/SODAsoo1/Devs/Resamp/build/RelWithDebInfo/T_Sampler.lib</ImportLibrary>
+      <ImportLibrary>C:/Users/oyh57/SODAsoo1/Devs/Resamp/build/RelWithDebInfo/Tansan-Sampler.lib</ImportLibrary>
       <LinkErrorReporting></LinkErrorReporting>
-      <ProgramDataBaseFile>C:/Users/oyh57/SODAsoo1/Devs/Resamp/build/RelWithDebInfo/T_Sampler.pdb</ProgramDataBaseFile>
+      <ProgramDataBaseFile>C:/Users/oyh57/SODAsoo1/Devs/Resamp/build/RelWithDebInfo/Tansan-Sampler.pdb</ProgramDataBaseFile>
       <RandomizedBaseAddress></RandomizedBaseAddress>
       <SubSystem>Console</SubSystem>
     </Link>

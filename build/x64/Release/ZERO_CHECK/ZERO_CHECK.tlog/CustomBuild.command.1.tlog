@@ -1,6 +1,6 @@
 ^C:\USERS\OYH57\SODASOO1\DEVS\RESAMP\BUILD\CMAKEFILES\C53BDA334991C1D78030C5566B6BFDC1\GENERATE.STAMP.RULE
 setlocal
-"C:\Program Files\CMake\bin\cmake.exe" -SC:/Users/oyh57/SODAsoo1/Devs/Resamp -BC:/Users/oyh57/SODAsoo1/Devs/Resamp/build --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file C:/Users/oyh57/SODAsoo1/Devs/Resamp/build/Resamp.sln
+"C:\Program Files\CMake\bin\cmake.exe" -SC:/Users/oyh57/SODAsoo1/Devs/Resamp -BC:/Users/oyh57/SODAsoo1/Devs/Resamp/build --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file C:/Users/oyh57/SODAsoo1/Devs/Resamp/build/TansanSampler.sln
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone

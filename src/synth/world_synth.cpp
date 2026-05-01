@@ -17,9 +17,84 @@
 #include <fstream>
 #include <iostream>
 #include <string>
+#include <vector>
 
 namespace resamp::synth {
 namespace fs = std::filesystem;
+
+struct FrameMatrix {
+    FrameMatrix(int rows, int cols)
+        : cols(cols),
+          data(static_cast<size_t>(std::max(0, rows)) * static_cast<size_t>(std::max(0, cols)), 0.0) {}
+
+    double* operator[](int row) {
+        return data.data() + static_cast<size_t>(row) * static_cast<size_t>(cols);
+    }
+
+    const double* operator[](int row) const {
+        return data.data() + static_cast<size_t>(row) * static_cast<size_t>(cols);
+    }
+
+    int cols = 0;
+    std::vector<double> data;
+};
+
+struct SpectralCurveLut {
+    explicit SpectralCurveLut(const std::vector<double>& fn_lut,
+                              const std::vector<double>& hz_lut)
+        : presence_2800(fn_lut.size()),
+          mid_1300(fn_lut.size()),
+          body_900(fn_lut.size()),
+          low_650(fn_lut.size()),
+          low_mid_018(fn_lut.size()),
+          hi_42(fn_lut.size()),
+          air_55(fn_lut.size()),
+          top_68(fn_lut.size()),
+          global_hi_34(fn_lut.size()),
+          global_hiss_48(fn_lut.size()),
+          puff_90(fn_lut.size()),
+          guard_hi_52(fn_lut.size()),
+          low_puff_110(fn_lut.size())
+    {
+        for (size_t k = 0; k < fn_lut.size(); ++k) {
+            double fn = fn_lut[k];
+            double hz = hz_lut[k];
+
+            double x_pres = std::log2((hz + 120.0) / 2800.0);
+            presence_2800[k] = std::exp(-0.5 * (x_pres * x_pres) / (0.72 * 0.72));
+            double x_mid = std::log2((hz + 120.0) / 1300.0);
+            mid_1300[k] = std::exp(-0.5 * (x_mid * x_mid) / (0.85 * 0.85));
+            double x_body = std::log2((hz + 120.0) / 900.0);
+            body_900[k] = std::exp(-0.5 * (x_body * x_body) / (0.92 * 0.92));
+            double x_low = std::log2((hz + 120.0) / 650.0);
+            low_650[k] = std::exp(-0.5 * (x_low * x_low) / (0.95 * 0.95));
+            low_mid_018[k] = std::exp(-0.5 * std::pow((fn - 0.18) / 0.20, 2.0));
+
+            hi_42[k] = std::clamp((fn - 0.42) / 0.58, 0.0, 1.0);
+            air_55[k] = std::clamp((fn - 0.55) / 0.45, 0.0, 1.0);
+            top_68[k] = std::pow(std::clamp((fn - 0.68) / 0.32, 0.0, 1.0), 1.25);
+            global_hi_34[k] = std::clamp((fn - 0.34) / 0.66, 0.0, 1.0);
+            global_hiss_48[k] = std::pow(std::clamp((fn - 0.48) / 0.52, 0.0, 1.0), 1.15);
+            puff_90[k] = std::exp(-0.5 * std::pow((hz - 90.0) / 85.0, 2.0));
+            guard_hi_52[k] = std::clamp((fn - 0.52) / 0.48, 0.0, 1.0);
+            low_puff_110[k] = std::exp(-0.5 * std::pow((hz - 110.0) / 95.0, 2.0));
+        }
+    }
+
+    std::vector<double> presence_2800;
+    std::vector<double> mid_1300;
+    std::vector<double> body_900;
+    std::vector<double> low_650;
+    std::vector<double> low_mid_018;
+    std::vector<double> hi_42;
+    std::vector<double> air_55;
+    std::vector<double> top_68;
+    std::vector<double> global_hi_34;
+    std::vector<double> global_hiss_48;
+    std::vector<double> puff_90;
+    std::vector<double> guard_hi_52;
+    std::vector<double> low_puff_110;
+};
 
 static bool env_flag_enabled(const char* name, bool default_value) {
     const char* v = std::getenv(name);
@@ -1007,6 +1082,7 @@ std::vector<float> world_render(
             hz_lut[k] = fn * nyquist;
         }
     }
+    SpectralCurveLut curve_lut(fn_lut, hz_lut);
     double src_total_ms = src.n_frames * anal_period;
     // UTAU velocity 관례:
     // 값이 클수록 자음이 더 빠르게(짧게) 지나가야 하므로 역비율 사용.
@@ -1488,8 +1564,8 @@ std::vector<float> world_render(
 
     // 출력 프레임별 F0/envelope/AP 구성
     std::vector<double> out_f0(out_n_frames, 0.0);
-    std::vector<std::vector<double>> out_spec(out_n_frames, std::vector<double>(spec_dim, 0.0));
-    std::vector<std::vector<double>> out_ap  (out_n_frames, std::vector<double>(spec_dim, 0.0));
+    FrameMatrix out_spec(out_n_frames, spec_dim);
+    FrameMatrix out_ap(out_n_frames, spec_dim);
     double formant_conf_sum = 0.0;
     double formant_conf_min = 1.0;
     int formant_conf_count = 0;
@@ -2667,25 +2743,19 @@ std::vector<float> world_render(
             double e0 = 0.0;
             double e1 = 0.0;
             for (int k = 0; k < spec_dim; ++k) {
-                double fn = fn_lut[k]; // 0..1
-                double hz = hz_lut[k];
                 double p0 = std::max(0.0, out_spec[i][k]);
                 e0 += p0;
 
                 // spectral effort:
                 // - pressed(T+): 2~5k 존재감 + 상부 선명도 보강, 저중역 과중 억제
                 // - relaxed(T-): 기존과 유사하게 존재감/긴장도 완화
-                double x_pres = std::log2((hz + 120.0) / 2800.0);
-                double presence = std::exp(-0.5 * (x_pres * x_pres) / (0.72 * 0.72));
-                double x_mid = std::log2((hz + 120.0) / 1300.0);
-                double mid = std::exp(-0.5 * (x_mid * x_mid) / (0.85 * 0.85));
-                double x_body = std::log2((hz + 120.0) / 900.0);
-                double body = std::exp(-0.5 * (x_body * x_body) / (0.92 * 0.92));
-                double x_low = std::log2((hz + 120.0) / 650.0);
-                double low = std::exp(-0.5 * (x_low * x_low) / (0.95 * 0.95));
-                double hi = std::clamp((fn - 0.42) / 0.58, 0.0, 1.0);
-                double air = std::clamp((fn - 0.55) / 0.45, 0.0, 1.0);
-                double top = std::pow(std::clamp((fn - 0.68) / 0.32, 0.0, 1.0), 1.25);
+                double presence = curve_lut.presence_2800[k];
+                double mid = curve_lut.mid_1300[k];
+                double body = curve_lut.body_900[k];
+                double low = curve_lut.low_650[k];
+                double hi = curve_lut.hi_42[k];
+                double air = curve_lut.air_55[k];
+                double top = curve_lut.top_68[k];
 
                 // Tn-: "힘 빠짐"은 유지하되 과도한 먹먹함을 막기 위해
                 // 존재감 감쇠를 완화하고, 바디를 일부 되돌려 발음 중심을 보존한다.
@@ -2706,7 +2776,7 @@ std::vector<float> world_render(
                 // aperiodicity effort:
                 // - pressed(T+): 저/중역 AP 감소는 유지하되, 상부 AP를 약간 살려 먹먹함 방지
                 // - relaxed(T-): 전대역 AP 증가
-                double low_mid = std::exp(-0.5 * std::pow((fn - 0.18) / 0.20, 2.0));
+                double low_mid = curve_lut.low_mid_018[k];
                 double ap_delta = 0.0;
                 ap_delta -= t_pos * (0.105 * low_mid + 0.030 * (1.0 - hi));
                 ap_delta += t_pos * (0.010 * hi - 0.040 * top);
@@ -3057,16 +3127,14 @@ std::vector<float> world_render(
         // 9. Global tone calibration: 고역/잔향 과강조 완화
         {
             for (int k = 0; k < spec_dim; ++k) {
-                double fn = fn_lut[k];
-                double hz = hz_lut[k];
-                double hi = std::clamp((fn - 0.34) / 0.66, 0.0, 1.0);
+                double hi = curve_lut.global_hi_34[k];
                 double db = global_hi_tilt_db * hi;
-                double puff = std::exp(-0.5 * std::pow((hz - 90.0) / 85.0, 2.0));
+                double puff = curve_lut.puff_90[k];
                 double puff_gate = (in_consonant ? 1.0 : (in_transition ? 0.65 : 0.28));
                 db -= puff_gate * 1.65 * puff;
                 out_spec[i][k] *= std::pow(10.0, db / 10.0);
 
-                double hiss_guard = std::pow(std::clamp((fn - 0.48) / 0.52, 0.0, 1.0), 1.15);
+                double hiss_guard = curve_lut.global_hiss_48[k];
                 double ap_cut = global_hi_ap_trim * hi * hi
                               + 0.018 * hiss_guard
                               + (0.010 + 0.024 * puff_gate) * puff;
@@ -3080,10 +3148,8 @@ std::vector<float> world_render(
             double guard_base = 0.018 + (in_consonant ? 0.030 : (in_transition ? 0.020 : 0.0));
             guard_base += 0.020 * tension_relax_click_guard;
             for (int k = 0; k < spec_dim; ++k) {
-                double fn = fn_lut[k];
-                double hz = hz_lut[k];
-                double hi = std::clamp((fn - 0.52) / 0.48, 0.0, 1.0);
-                double low_puff = std::exp(-0.5 * std::pow((hz - 110.0) / 95.0, 2.0));
+                double hi = curve_lut.guard_hi_52[k];
+                double low_puff = curve_lut.low_puff_110[k];
                 double w_ap = std::clamp(guard_base + 0.030 * hi
                                        + (0.024 + 0.018 * tension_relax_click_guard) * low_puff, 0.0, 0.115);
                 out_ap[i][k] = out_ap[i][k] * (1.0 - w_ap) + out_ap[i - 1][k] * w_ap;
@@ -3194,8 +3260,8 @@ std::vector<float> world_render(
     std::vector<double*> spec_ptrs(out_n_frames);
     std::vector<double*> ap_ptrs  (out_n_frames);
     for (int i = 0; i < out_n_frames; ++i) {
-        spec_ptrs[i] = out_spec[i].data();
-        ap_ptrs[i]   = out_ap[i].data();
+        spec_ptrs[i] = out_spec[i];
+        ap_ptrs[i]   = out_ap[i];
     }
 
     Synthesis(out_f0.data(), out_n_frames,
