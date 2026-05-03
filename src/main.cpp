@@ -216,19 +216,37 @@ int main(int argc, char** argv) {
         }
 
         // ── 3. 소스 트리밍 (offset_ms, cutoff_ms) ─────────────────────
-        int src_start = static_cast<int>(params.offset_ms * sample_rate / 1000.0);
-        src_start = std::max(0, std::min(src_start, static_cast<int>(signal.size())));
+        // UTAU식 offset..cutoff 전체가 너무 길면 VCV/CVVC 녹음의 다음 발음까지
+        // WORLD 분석에 들어간다. 실제 합성 안정 구간만 분석하도록 하드캡하되,
+        // CheapTrick/D4C 경계 안정성을 위해 offset 앞과 cap 뒤에 작은 분석 여유를 둔다.
+        int playback_start = static_cast<int>(params.offset_ms * sample_rate / 1000.0);
+        playback_start = std::max(0, std::min(playback_start, static_cast<int>(signal.size())));
 
-        int src_end;
+        int playback_end;
         if (params.cutoff_ms < 0.0) {
-            src_end = static_cast<int>(signal.size())
+            playback_end = static_cast<int>(signal.size())
                     + static_cast<int>(params.cutoff_ms * sample_rate / 1000.0);
         } else if (params.cutoff_ms > 0.0) {
-            src_end = src_start + static_cast<int>(params.cutoff_ms * sample_rate / 1000.0);
+            playback_end = playback_start + static_cast<int>(params.cutoff_ms * sample_rate / 1000.0);
         } else {
-            src_end = static_cast<int>(signal.size());
+            playback_end = static_cast<int>(signal.size());
         }
-        src_end = std::max(src_start + 1, std::min(src_end, static_cast<int>(signal.size())));
+        playback_end = std::max(playback_start + 1, std::min(playback_end, static_cast<int>(signal.size())));
+
+        double analysis_preroll_ms = env_double_clamped("RESAMP_ANALYSIS_PREROLL_MS", 5.0, 0.0, 30.0);
+        double analysis_tail_cap_ms = env_double_clamped("RESAMP_ANALYSIS_TAIL_CAP_MS", 360.0, 80.0, 800.0);
+        double analysis_postroll_ms = env_double_clamped("RESAMP_ANALYSIS_POSTROLL_MS", 24.0, 0.0, 90.0);
+
+        double fixed_end_ms = std::max(0.0, params.offset_ms) + std::max(0.0, params.consonant_ms);
+        double hard_end_ms = fixed_end_ms + analysis_tail_cap_ms + analysis_postroll_ms;
+        int hard_end = static_cast<int>(std::ceil(hard_end_ms * sample_rate / 1000.0));
+        int src_end = std::min(playback_end, std::max(playback_start + 32, hard_end));
+        src_end = std::max(playback_start + 1, std::min(src_end, static_cast<int>(signal.size())));
+
+        int preroll = static_cast<int>(std::round(analysis_preroll_ms * sample_rate / 1000.0));
+        int src_start = std::max(0, playback_start - preroll);
+        params.source_origin_ms =
+            (playback_start - src_start) * 1000.0 / static_cast<double>(std::max(1, sample_rate));
 
         double max_source_seconds = env_double_clamped("RESAMP_MAX_SOURCE_SECONDS", 30.0, 1.0, 600.0);
         int64_t source_range_samples = static_cast<int64_t>(src_end) - static_cast<int64_t>(src_start);
@@ -240,6 +258,17 @@ int main(int argc, char** argv) {
         std::vector<float> trimmed(signal.begin() + src_start,
                                    signal.begin() + src_end);
         if (trimmed.size() < 32) trimmed.resize(32, 0.0f);
+        append_debug_log("[TRIM] playback_start=" + std::to_string(playback_start) +
+                         " playback_end=" + std::to_string(playback_end) +
+                         " analysis_start=" + std::to_string(src_start) +
+                         " analysis_end=" + std::to_string(src_end) +
+                         " origin_ms=" + std::to_string(params.source_origin_ms) +
+                         " hard_tail_cap_ms=" + std::to_string(analysis_tail_cap_ms));
+        if (verbose_log) {
+            std::cerr << "[Resamp] trim playback=[" << playback_start << "," << playback_end
+                      << ") analysis=[" << src_start << "," << src_end
+                      << ") origin_ms=" << params.source_origin_ms << '\n';
+        }
 
         // ── 4. 출력 길이 ──────────────────────────────────────────────
         int output_samples = static_cast<int>(requested_output_samples);

@@ -26,6 +26,7 @@ struct RenderParams {
 
     // ── 파생 값 ───────────────────────────────────────
     double target_hz = 440.0; // pitch_str에서 변환된 Hz
+    double source_origin_ms = 0.0; // 분석용 trim 시작점 기준 실제 offset 위치
 };
 
 // argc/argv에서 파싱

@@ -257,16 +257,22 @@ static double frame_log_spectral_energy(
 static int find_last_energetic_frame(
     const WorldAnalysis& src,
     int                  first_frame,
-    int                  fallback_frame)
+    int                  fallback_frame,
+    int                  max_frame = -1)
 {
     int n_frames = src.n_frames;
     if (n_frames <= 0 || src.spectrogram.empty()) return fallback_frame;
     first_frame = std::clamp(first_frame, 0, n_frames - 1);
+    fallback_frame = std::clamp(fallback_frame, first_frame, n_frames - 1);
+    int last_frame = (max_frame >= 0)
+        ? std::clamp(max_frame, first_frame, n_frames - 1)
+        : (n_frames - 1);
+    fallback_frame = std::min(fallback_frame, last_frame);
 
-    std::vector<double> energies(n_frames, -80.0);
+    std::vector<double> energies(last_frame + 1, -80.0);
     double ref = 0.0;
     int ref_count = 0;
-    int ref_end = std::clamp(first_frame + 28, first_frame, n_frames - 1);
+    int ref_end = std::clamp(first_frame + 28, first_frame, last_frame);
     for (int fi = first_frame; fi <= ref_end; ++fi) {
         energies[fi] = frame_log_spectral_energy(src.spectrogram[fi]);
         ref += energies[fi];
@@ -275,7 +281,7 @@ static int find_last_energetic_frame(
     ref = (ref_count > 0) ? (ref / static_cast<double>(ref_count)) : -80.0;
 
     double max_energy = ref;
-    for (int fi = ref_end + 1; fi < n_frames; ++fi) {
+    for (int fi = ref_end + 1; fi <= last_frame; ++fi) {
         energies[fi] = frame_log_spectral_energy(src.spectrogram[fi]);
         max_energy = std::max(max_energy, energies[fi]);
     }
@@ -284,19 +290,19 @@ static int find_last_energetic_frame(
 
     int last = fallback_frame;
     int run = 0;
-    for (int fi = n_frames - 1; fi >= first_frame; --fi) {
+    for (int fi = last_frame; fi >= first_frame; --fi) {
         double e = energies[fi];
         if (e > threshold) {
             ++run;
             if (run >= 2) {
-                last = std::min(n_frames - 1, fi + 1);
+                last = std::min(last_frame, fi + 1);
                 break;
             }
         } else {
             run = 0;
         }
     }
-    return std::clamp(last, first_frame, n_frames - 1);
+    return std::clamp(last, first_frame, last_frame);
 }
 
 struct VocalizerTarget {
@@ -702,6 +708,7 @@ WorldAnalysis world_analyze_cached(
 //   - 안정 모음 구간: 루프
 static void map_out_time_to_src(
     double out_time_ms,
+    double source_origin_ms,
     double consonant_scale,
     double consonant_src_ms,
     double consonant_tgt_ms,
@@ -715,7 +722,7 @@ static void map_out_time_to_src(
     bool&   in_vowel_loop)
 {
     if (out_time_ms <= consonant_tgt_ms) {
-        src_time_ms = out_time_ms / consonant_scale;
+        src_time_ms = source_origin_ms + out_time_ms / consonant_scale;
         in_vowel_loop = false;
     } else {
         double vowel_time = out_time_ms - consonant_tgt_ms;
@@ -1084,14 +1091,17 @@ std::vector<float> world_render(
     }
     SpectralCurveLut curve_lut(fn_lut, hz_lut);
     double src_total_ms = src.n_frames * anal_period;
+    double source_origin_ms = std::clamp(params.source_origin_ms, 0.0, std::max(0.0, src_total_ms - anal_period));
     // UTAU velocity 관례:
     // 값이 클수록 자음이 더 빠르게(짧게) 지나가야 하므로 역비율 사용.
     // v=100 -> 1.0, v=200 -> 0.5, v=50 -> 2.0
     double vel = static_cast<double>(std::max(1, params.velocity));
     double consonant_scale = std::clamp(100.0 / vel, 0.25, 4.0);
-    double consonant_src_ms = std::clamp(params.consonant_ms, 0.0, src_total_ms);
-    double consonant_tgt_ms = consonant_src_ms * consonant_scale;
-    if (consonant_src_ms > 1.0 && timing_short_note_amt > 0.001) {
+    double consonant_src_dur_ms = std::clamp(params.consonant_ms, 0.0,
+                                             std::max(0.0, src_total_ms - source_origin_ms));
+    double consonant_src_ms = std::clamp(source_origin_ms + consonant_src_dur_ms, 0.0, src_total_ms);
+    double consonant_tgt_ms = consonant_src_dur_ms * consonant_scale;
+    if (consonant_src_dur_ms > 1.0 && timing_short_note_amt > 0.001) {
         // 짧은 노트에서 fixed consonant가 출력 전체를 차지하면 tail/fry/breath와
         // 안정 모음부가 사라진다. 소스 fixed consonant 끝까지는 도달하되,
         // 타겟 시간만 압축해 최소 모음 공간을 확보한다.
@@ -1101,7 +1111,7 @@ std::vector<float> world_render(
         double max_consonant_tgt_ms = std::max(4.0, out_total_ms - min_vowel_room_ms);
         if (consonant_tgt_ms > max_consonant_tgt_ms) {
             consonant_tgt_ms = max_consonant_tgt_ms;
-            consonant_scale = std::clamp(consonant_tgt_ms / consonant_src_ms, 0.08, 4.0);
+            consonant_scale = std::clamp(consonant_tgt_ms / consonant_src_dur_ms, 0.08, 4.0);
         }
     }
 
@@ -1191,7 +1201,14 @@ std::vector<float> world_render(
             vowel_like_alias && src_total_ms >= 180.0 &&
             voiced_span_ms < std::min(220.0, src_total_ms * 0.42);
         if (suspicious_short_voicing) {
-            int energy_end = find_last_energetic_frame(src, loop_start_fi, loop_end_fi);
+            // Energy fallback must not scan the whole loose VCV tail. Otherwise a later
+            // syllable inside offset..cutoff can be mistaken for the same sustained vowel.
+            int energy_horizon = std::clamp(
+                loop_start_fi + static_cast<int>(std::ceil(320.0 / anal_period)),
+                loop_start_fi + 1,
+                n_frames - 1);
+            int energy_end = find_last_energetic_frame(src, loop_start_fi,
+                                                       loop_end_fi, energy_horizon);
             if (energy_end > loop_end_fi) loop_end_fi = energy_end;
         }
         loop_end_fi = std::clamp(loop_end_fi, loop_start_fi + 1, n_frames - 1);
@@ -1207,11 +1224,13 @@ std::vector<float> world_render(
     // oto.ini의 컷오프가 다음 음절까지 포함하도록 멀리 설정된 경우(VCV에서 흔함),
     // 루프 가능 구간이 매우 길어져(예: 2초) "루프 없이 1:1로 재생해도 되겠다"고 착각하게 됩니다.
     // 그 결과 긴 노트를 재생할 때 다음 음절(뒷부분 음성)이 그대로 노출되는 치명적 오류가 발생했습니다.
-    // 이를 방지하기 위해 루프 가용 길이를 절대적으로 제한하여(최대 480ms), 
+    // 이를 방지하기 위해 루프 가용 길이를 절대적으로 제한하여,
     // 노트가 길어지면 항상 루프/미러링이 발동되도록 강제합니다.
     if (has_vowel_loop && loop_len_ms > 1.0) {
+        constexpr double stable_loop_cap_ms = 320.0;
         double floor_ms = std::max(loop_len_ms * 0.25, 40.0);
-        double stable_loop_ms = std::clamp(loop_len_ms * 0.54, floor_ms, 480.0);
+        floor_ms = std::min(floor_ms, stable_loop_cap_ms);
+        double stable_loop_ms = std::clamp(loop_len_ms * 0.44, floor_ms, stable_loop_cap_ms);
         if (loop_len_ms > stable_loop_ms + anal_period) {
             loop_len_ms = stable_loop_ms;
             loop_end_ms = loop_start_ms + loop_len_ms;
@@ -1620,6 +1639,7 @@ std::vector<float> world_render(
         // [수정] src_total_ms 대신 src_voiced_end_ms 전달:
         // one-pass 경로가 데케이/릴리즈 테일까지 진행하지 않도록 한다.
         map_out_time_to_src(out_time_ms,
+                            source_origin_ms,
                             consonant_scale,
                             consonant_src_ms,
                             consonant_tgt_ms,
