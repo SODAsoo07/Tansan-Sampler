@@ -32,6 +32,7 @@ compile_commands.json
 *.jsonl
 resamp_wavtool_calls*.log
 resamp_wavtool_calls*.jsonl
+/build/test_artifacts/
 
 # IDE / temp
 .vs/
@@ -45,3 +46,4 @@ resamp_wavtool_calls*.jsonl
 /external
 *.tlog
 /build
+*.tlog

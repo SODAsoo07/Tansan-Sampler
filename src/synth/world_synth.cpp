@@ -1319,6 +1319,12 @@ std::vector<float> world_render(
             transition_tgt_len_ms = std::min(transition_tgt_len_ms, short_cap_ms);
         }
     }
+    double articulation_ratio = (out_total_ms > 1.0)
+        ? std::clamp((consonant_tgt_ms + transition_tgt_len_ms) / out_total_ms, 0.0, 1.0)
+        : 1.0;
+    double dense_articulation_amt = std::max(
+        timing_short_note_amt,
+        smoothstep01_time((articulation_ratio - 0.36) / 0.34));
     // 타겟 F0가 거의 평탄한 노트면 강제 평탄화 (비브라토 없는 음정 떨림 억제).
     double voiced_min = 1.0e18;
     double voiced_max = 0.0;
@@ -1369,12 +1375,13 @@ std::vector<float> world_render(
         seam_ms = std::clamp(loop_len_ms * (0.18 + 0.08 * long_loop_stress), 6.0, 34.0);
         seam_ms = std::min(seam_ms, std::max(0.0, loop_len_ms * 0.42));
         if (auto_stretch_mirror_loop) seam_ms = std::max(seam_ms, 12.0);
+        seam_ms *= std::clamp(1.0 - 0.38 * dense_articulation_amt, 0.52, 1.0);
     }
 
     // 안정화 모드:
     // 음색이 노트마다 랜덤하게 꺼지는 현상을 막기 위해
     // transition voiced ratio 의존을 줄이고 보수적 상수 혼합으로 고정.
-    bool use_stable_vowel_env = has_vowel_loop || flat_target_f0;
+    bool use_stable_vowel_env = has_vowel_loop || (flat_target_f0 && dense_articulation_amt < 0.64);
     bool has_consonant_head = (consonant_src_ms >= 1.0);
     double anchor_mix_cap = flat_target_f0 ? 0.60 : (has_f0_mod ? 0.20 : (has_consonant_head ? 0.28 : 0.46));
     if (has_consonant_head) anchor_mix_cap *= 0.75;
@@ -1385,6 +1392,7 @@ std::vector<float> world_render(
     double cs_local = std::clamp((sp.consonant_stability - 50) / 50.0, -1.0, 1.0);
     if (cs_local >= 0.0) anchor_mix_cap *= (1.0 + 0.42 * cs_local);
     else                 anchor_mix_cap *= (1.0 + 0.24 * cs_local);
+    anchor_mix_cap *= std::clamp(1.0 - 0.56 * dense_articulation_amt, 0.30, 1.0);
     if (anchor_mix_cap < 0.05) use_stable_vowel_env = false;
     std::vector<double> vowel_spec_anchor(spec_dim, 0.0);
     std::vector<double> vowel_ap_anchor(spec_dim, 0.0);
@@ -3198,6 +3206,7 @@ std::vector<float> world_render(
                 // 어두 무자음 진입의 미세 경계 완화
                 join_smooth = 0.08;
             }
+            join_smooth *= std::clamp(1.0 - 0.52 * dense_articulation_amt, 0.36, 1.0);
             join_smooth = std::clamp(join_smooth, 0.0, 0.42);
             if (join_smooth > 1.0e-4) {
                 for (int k = 0; k < spec_dim; ++k) {
@@ -3235,6 +3244,7 @@ std::vector<float> world_render(
             double declick = std::clamp((jump_score - jump_thr)
                                         * (0.44 + 0.56 * join_gate + 0.22 * tension_relax_click_guard),
                                         0.0, 0.30);
+            declick *= std::clamp(1.0 - 0.42 * dense_articulation_amt, 0.44, 1.0);
             if (declick > 1.0e-4) {
                 for (int k = 0; k < spec_dim; ++k) {
                     double fn = fn_lut[k];
@@ -3264,7 +3274,7 @@ std::vector<float> world_render(
         if (flat_target_f0) {
             smooth_out_f0_log_zero_phase(out_f0, 4 + hi_bonus);
         } else if (has_f0_mod) {
-            smooth_out_f0_log_zero_phase(out_f0, 2 + hi_bonus);
+            smooth_out_f0_log_zero_phase(out_f0, 4 + hi_bonus);
         } else if (hi_bonus > 0) {
             smooth_out_f0_log_zero_phase(out_f0, 1);
         }
@@ -3272,7 +3282,7 @@ std::vector<float> world_render(
     // slew limiter 강도:
     // - flat note: 강하게(잔떨림 억제)
     // - bend/mod note: 약하게(음정 추종성 확보)
-    double slew_cents_per_ms = flat_target_f0 ? 2.0 : (has_f0_mod ? 80.0 : 6.0);
+    double slew_cents_per_ms = flat_target_f0 ? 2.0 : (has_f0_mod ? 34.0 : 6.0);
     stabilize_out_f0(out_f0, frame_period, slew_cents_per_ms);
 
     // ── WORLD Synthesis ───────────────────────────────────────────────

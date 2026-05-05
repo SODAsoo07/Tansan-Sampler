@@ -24,6 +24,38 @@ static void smooth_cents_zero_phase(std::vector<double>& cents, int radius) {
     }
 }
 
+// 급격한 pitch-bend 코너만 선택적으로 둥글게 만든다.
+// 일반 비브라토 주기(대략 5~8Hz)는 유지하고, 짧은 시간의 꺾임/계단만 완화한다.
+static void soften_pitch_kinks(std::vector<double>& cents, int sample_rate) {
+    if (cents.empty() || sample_rate <= 0) return;
+    int n = static_cast<int>(cents.size());
+    int radius = std::max(1, static_cast<int>(std::round(sample_rate * 0.0060))); // 6ms 후보
+    int hop = std::max(1, static_cast<int>(std::round(sample_rate * 0.0030)));    // 3ms 곡률 측정
+
+    std::vector<double> smoothed = cents;
+    smooth_cents_zero_phase(smoothed, radius);
+
+    std::vector<double> out = cents;
+    for (int i = 0; i < n; ++i) {
+        int a = std::max(0, i - hop);
+        int b = std::min(n - 1, i + hop);
+        double left = cents[i] - cents[a];
+        double right = cents[b] - cents[i];
+        double curvature = std::fabs(right - left);
+        double local_slope_c_per_ms =
+            std::max(std::fabs(left), std::fabs(right)) /
+            std::max(1.0, static_cast<double>(hop) * 1000.0 / sample_rate);
+
+        double kink = std::clamp((curvature - 3.0) / 18.0, 0.0, 1.0);
+        double fast_slope = std::clamp((local_slope_c_per_ms - 7.0) / 20.0, 0.0, 1.0);
+        double blend = std::clamp(0.10 * fast_slope + 0.68 * kink, 0.0, 0.72);
+        if (blend > 1.0e-4) {
+            out[i] = cents[i] * (1.0 - blend) + smoothed[i] * blend;
+        }
+    }
+    cents.swap(out);
+}
+
 std::vector<double> make_f0_contour(const RenderParams& params,
                                     const SynthParams& sp,
                                     int output_samples,
@@ -84,8 +116,9 @@ std::vector<double> make_f0_contour(const RenderParams& params,
 
     // cents contour zero-phase smoothing (IIR 없이 미세 jitter 제거)
     if (has_effective_bend) {
-        int radius = std::max(1, static_cast<int>(std::round(sample_rate * 0.0008))); // 0.8ms
+        int radius = std::max(1, static_cast<int>(std::round(sample_rate * 0.0014))); // 1.4ms
         smooth_cents_zero_phase(cents_contour, radius);
+        soften_pitch_kinks(cents_contour, sample_rate);
     }
 
     // contour 적용

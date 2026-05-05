@@ -1,8 +1,8 @@
 param(
     [string]$WavtoolPath = "build\Release\V_wavtool.exe",
     [string]$InputWav = "external\World\test\vaiueo2d.wav",
-    [string]$OutPath = "build\wavtool_test.wav",
-    [string]$DebugLog = "build\wavtool_debug.jsonl"
+    [string]$OutPath = "build\test_artifacts\wavtool_test.wav",
+    [string]$DebugLog = "build\test_artifacts\wavtool_debug.jsonl"
 )
 
 function Get-WavInfo {
@@ -69,6 +69,16 @@ if (!(Test-Path -LiteralPath $WavtoolPath)) {
 }
 if (!(Test-Path -LiteralPath $InputWav)) {
     throw "Input WAV not found: $InputWav"
+}
+
+$outDir = Split-Path -Parent $OutPath
+if ($outDir -and !(Test-Path -LiteralPath $outDir)) {
+    New-Item -ItemType Directory -Path $outDir -Force | Out-Null
+}
+
+$logDir = Split-Path -Parent $DebugLog
+if ($logDir -and !(Test-Path -LiteralPath $logDir)) {
+    New-Item -ItemType Directory -Path $logDir -Force | Out-Null
 }
 
 if (Test-Path -LiteralPath $OutPath) {

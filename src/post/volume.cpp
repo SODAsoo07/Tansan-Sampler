@@ -103,9 +103,9 @@ static void apply_makeup_level(std::vector<float>& samples, int sample_rate, con
     float short_note = std::clamp((360.0f - duration_ms) / 240.0f, 0.0f, 1.0f);
     short_note = short_note * short_note * (3.0f - 2.0f * short_note);
 
-    float target_rms = 0.110f + 0.018f * ln_pos - 0.018f * ln_neg;
-    float target_p95 = 0.46f + 0.045f * ln_pos - 0.055f * ln_neg;
-    float target_p995 = 0.88f - 0.055f * fx_load + 0.020f * ln_pos - 0.030f * ln_neg;
+    float target_rms = 0.118f + 0.020f * ln_pos - 0.018f * ln_neg;
+    float target_p95 = 0.50f + 0.048f * ln_pos - 0.055f * ln_neg;
+    float target_p995 = 0.91f - 0.055f * fx_load + 0.018f * ln_pos - 0.030f * ln_neg;
     float ceiling = 0.982f - 0.055f * fx_load;
 
     float gain = 1.0f;
@@ -154,9 +154,9 @@ void apply_volume(std::vector<float>& samples,
     float ln = std::clamp(sp.loud_norm / 100.0f, -1.0f, 1.0f);
     float ln_pos = std::max(0.0f, ln);
     float ln_neg = std::max(0.0f, -ln);
-    float target_rms = 0.110f + 0.018f * ln_pos - 0.018f * ln_neg;
-    float target_p95 = 0.52f  + 0.035f * ln_pos - 0.060f * ln_neg;
-    float target_p995 = 0.90f + 0.010f * ln_pos - 0.035f * ln_neg;
+    float target_rms = 0.118f + 0.020f * ln_pos - 0.018f * ln_neg;
+    float target_p95 = 0.56f  + 0.035f * ln_pos - 0.060f * ln_neg;
+    float target_p995 = 0.93f + 0.008f * ln_pos - 0.035f * ln_neg;
 
     float gain_rms = (cur_rms > 1e-9f) ? (target_rms / cur_rms) : 1.0f;
     float gain_p95 = (cur_p95 > 1e-9f) ? (target_p95 / cur_p95) : 1.0f;
