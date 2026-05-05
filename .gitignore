@@ -40,3 +40,6 @@ resamp_wavtool_calls*.jsonl
 *.temp
 /external
 /src/wavtool
+FLAGS.md
+FLAGS_USER_KR.md
+플래그 설명서.md
