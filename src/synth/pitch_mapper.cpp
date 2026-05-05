@@ -56,6 +56,24 @@ static void soften_pitch_kinks(std::vector<double>& cents, int sample_rate) {
     cents.swap(out);
 }
 
+static double bounded_catmull_rom(double p0,
+                                  double p1,
+                                  double p2,
+                                  double p3,
+                                  double t) {
+    t = std::clamp(t, 0.0, 1.0);
+    double t2 = t * t;
+    double t3 = t2 * t;
+    double v = 0.5 * ((2.0 * p1) +
+                      (-p0 + p2) * t +
+                      (2.0 * p0 - 5.0 * p1 + 4.0 * p2 - p3) * t2 +
+                      (-p0 + 3.0 * p1 - 3.0 * p2 + p3) * t3);
+    double lo = std::min(p1, p2);
+    double hi = std::max(p1, p2);
+    double pad = std::max(1.5, 0.18 * std::max(1.0, std::fabs(p2 - p1)));
+    return std::clamp(v, lo - pad, hi + pad);
+}
+
 std::vector<double> make_f0_contour(const RenderParams& params,
                                     const SynthParams& sp,
                                     int output_samples,
@@ -73,7 +91,7 @@ std::vector<double> make_f0_contour(const RenderParams& params,
     // ── pitch_bend 적용 ──────────────────────────────────────────────────
     // 내부 pitch_bend 단위는 cent.
     // (UTAU/OpenUtau 12bit 포맷은 그대로 cent, legacy int8은 10cent→cent 변환됨)
-    // 안정성 우선: 선형 보간 + deadband(아주 미세 요동만 무시).
+    // 안정성 우선: 제한 cubic 보간 + deadband(아주 미세 요동만 무시).
     std::vector<double> cents_contour(output_samples, 0.0);
     bool has_effective_bend = false;
     if (!params.pitch_bend.empty()) {
@@ -108,7 +126,13 @@ std::vector<double> make_f0_contour(const RenderParams& params,
                 int ix1      = std::min(ix0 + 1, bend_size - 1);
                 double t      = x - ix0;
                 t = std::clamp(t, 0.0, 1.0);
-                double cents  = bend_cents[ix0] * (1.0 - t) + bend_cents[ix1] * t;
+                int ixm1 = std::max(0, ix0 - 1);
+                int ix2  = std::min(ix0 + 2, bend_size - 1);
+                double cents = bounded_catmull_rom(bend_cents[ixm1],
+                                                   bend_cents[ix0],
+                                                   bend_cents[ix1],
+                                                   bend_cents[ix2],
+                                                   t);
                 cents_contour[i] = cents;
             }
         }
@@ -116,7 +140,7 @@ std::vector<double> make_f0_contour(const RenderParams& params,
 
     // cents contour zero-phase smoothing (IIR 없이 미세 jitter 제거)
     if (has_effective_bend) {
-        int radius = std::max(1, static_cast<int>(std::round(sample_rate * 0.0014))); // 1.4ms
+        int radius = std::max(1, static_cast<int>(std::round(sample_rate * 0.0018))); // 1.8ms
         smooth_cents_zero_phase(cents_contour, radius);
         soften_pitch_kinks(cents_contour, sample_rate);
     }
@@ -130,7 +154,6 @@ std::vector<double> make_f0_contour(const RenderParams& params,
 
     // UTAU modulation은 "원본 피치 성분 혼합량" 계열 의미이며,
     // 여기서 합성 LFO 비브라토를 만들면 오히려 인위적 아티팩트를 유발하므로 비활성.
-    (void)sample_rate;
     (void)params.modulation;
 
     return f0;
