@@ -293,3 +293,14 @@ expressions:
     default_value: 0
     is_flag: true
     flag: Bc
+  fast:
+    name: Render Mode
+    abbr: fast
+    type: Options
+    min: 0
+    max: 1
+    default_value: 0
+    is_flag: true
+    options:
+    - ''
+    - Fm1

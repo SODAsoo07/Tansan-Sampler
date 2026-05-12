@@ -11,6 +11,10 @@ void apply_volume(std::vector<float>& samples,
                   int volume_param,
                   const SynthParams& sp);
 
+// 시작/끝 경계가 본문보다 튀는 경우에만 짧게 감쇄한다.
+void apply_boundary_level_guard(std::vector<float>& samples,
+                                int sample_rate);
+
 // 플래그 기반 최종 샘플 후처리.
 // Fc 필터는 이 함수 내부에서 가장 마지막에 적용된다.
 void apply_flag_post_effects(std::vector<float>& samples,

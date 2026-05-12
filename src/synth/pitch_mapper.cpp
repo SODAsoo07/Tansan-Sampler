@@ -74,6 +74,70 @@ static double bounded_catmull_rom(double p0,
     return std::clamp(v, lo - pad, hi + pad);
 }
 
+static double smoothstep01(double x) {
+    x = std::clamp(x, 0.0, 1.0);
+    return x * x * (3.0 - 2.0 * x);
+}
+
+static void stabilize_boundary_pitch(std::vector<double>& cents,
+                                     int sample_rate,
+                                     const RenderParams& params) {
+    if (cents.empty() || sample_rate <= 0) return;
+
+    const int n = static_cast<int>(cents.size());
+    const double note_ms = static_cast<double>(n) * 1000.0 / sample_rate;
+    if (note_ms < 24.0) return;
+
+    auto apply_edge = [&](bool head, double guard_ms) {
+        int guard = std::clamp(static_cast<int>(std::round(guard_ms * sample_rate / 1000.0)),
+                               1,
+                               std::max(1, n / 4));
+        if (guard < 4 || guard >= n) return;
+
+        const int ref_idx = head ? guard : (n - guard - 1);
+        const double ref = cents[std::clamp(ref_idx, 0, n - 1)];
+
+        double motion = 0.0;
+        if (head) {
+            for (int i = 0; i < guard; ++i) {
+                motion = std::max(motion, std::fabs(cents[i] - ref));
+            }
+        } else {
+            for (int i = n - guard; i < n; ++i) {
+                motion = std::max(motion, std::fabs(cents[i] - ref));
+            }
+        }
+
+        const double short_edge = std::clamp((180.0 - note_ms) / 120.0, 0.0, 1.0);
+        const double base_strength = std::clamp((motion - 8.0) / 58.0, 0.0, 0.58);
+        const double dense_strength = std::clamp((motion - 4.0) / 68.0, 0.0, 0.24) * short_edge;
+        const double strength = std::max(base_strength, dense_strength);
+        if (strength <= 1.0e-4) return;
+
+        if (head) {
+            for (int i = 0; i < guard; ++i) {
+                double u = static_cast<double>(i) / std::max(1, guard - 1);
+                double w = strength * (1.0 - smoothstep01(u));
+                cents[i] = cents[i] * (1.0 - w) + ref * w;
+            }
+        } else {
+            for (int i = n - guard; i < n; ++i) {
+                double u = static_cast<double>(i - (n - guard)) / std::max(1, guard - 1);
+                double w = strength * smoothstep01(u);
+                cents[i] = cents[i] * (1.0 - w) + ref * w;
+            }
+        }
+    };
+
+    const double short_amt = std::clamp((220.0 - note_ms) / 160.0, 0.0, 1.0);
+    const double head_ms = std::clamp(18.0 + 0.30 * params.consonant_ms + 7.0 * short_amt,
+                                      18.0,
+                                      54.0);
+    const double tail_ms = std::clamp(24.0 + 6.0 * short_amt, 18.0, 38.0);
+    apply_edge(true, head_ms);
+    apply_edge(false, tail_ms);
+}
+
 std::vector<double> make_f0_contour(const RenderParams& params,
                                     const SynthParams& sp,
                                     int output_samples,
@@ -143,6 +207,7 @@ std::vector<double> make_f0_contour(const RenderParams& params,
         int radius = std::max(1, static_cast<int>(std::round(sample_rate * 0.0018))); // 1.8ms
         smooth_cents_zero_phase(cents_contour, radius);
         soften_pitch_kinks(cents_contour, sample_rate);
+        stabilize_boundary_pitch(cents_contour, sample_rate, params);
     }
 
     // contour 적용

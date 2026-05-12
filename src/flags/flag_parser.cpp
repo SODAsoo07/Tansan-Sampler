@@ -292,12 +292,14 @@ SynthParams parse_flags(const std::string& s) {
                             p.distortion = math::clamp(val, 0, 100);
         else if (lname == "bc" || lname == "bit")
                             p.bitcrusher = math::clamp(val, 0, 100);
-        else if (lname == "vz" || lname == "voc" || lname == "vocalizer")
-                            p.vocalizer = math::clamp(val, 0, 7);
-        else if (lname == "vzs" || lname == "vocstr" || lname == "vocalizerstrength")
-                            p.vocalizer_strength = math::clamp(val, 0, 100);
-        // 알 수 없는 플래그는 무시
-    }
+	        else if (lname == "vz" || lname == "voc" || lname == "vocalizer")
+	                            p.vocalizer = math::clamp(val, 0, 7);
+	        else if (lname == "vzs" || lname == "vocstr" || lname == "vocalizerstrength")
+	                            p.vocalizer_strength = math::clamp(val, 0, 100);
+	        else if (lname == "fm" || lname == "fast")
+	                            p.fast_mode = (val > 0) ? 1 : 0;
+	        // 알 수 없는 플래그는 무시
+	    }
     return p;
 }
 
