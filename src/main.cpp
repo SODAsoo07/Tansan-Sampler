@@ -319,11 +319,12 @@ int main(int argc, char** argv) {
                       << " Fh=" << sp.fry_head
                       << " Ft=" << sp.fry_tail
                       << " Tm=" << sp.tremolo
-                      << " Ds=" << sp.distortion
-                      << " Bc=" << sp.bitcrusher
-                      << " Vz=" << sp.vocalizer
-                      << " VzS=" << sp.vocalizer_strength << '\n';
-        }
+	                      << " Ds=" << sp.distortion
+	                      << " Bc=" << sp.bitcrusher
+	                      << " Vz=" << sp.vocalizer
+	                      << " VzS=" << sp.vocalizer_strength
+	                      << " Fm=" << sp.fast_mode << '\n';
+	        }
         append_debug_log("[FLAGS] Vtl=" + std::to_string(sp.tract_length) +
                          " Vtr=" + std::to_string(sp.tract_resonance) +
                          " Vtw=" + std::to_string(sp.tract_focus) +
@@ -336,20 +337,32 @@ int main(int argc, char** argv) {
 
         // ── 6. WORLD 분석 (raw Harvest F0 + envelope/AP 추출) ─────────
         // 디스크 캐시를 사용해 반복 렌더 시 분석 비용을 절감.
-        const bool track_formants =
-            std::abs(sp.mouth_open) > 0 ||
-            std::abs(sp.tract_length) > 0 ||
-            std::abs(sp.tract_resonance) > 0 ||
-            std::abs(sp.tract_focus) > 0 ||
-            (sp.vocalizer > 0 && sp.vocalizer_strength > 0);
-        append_debug_log(std::string("[ANALYSIS] formants=") +
-                         (track_formants ? "tracked" : "default"));
-        if (verbose_log) {
-            std::cerr << "[Resamp] analysis formants="
-                      << (track_formants ? "tracked" : "default") << '\n';
-        }
-        auto wa = resamp::synth::world_analyze_cached(
-            trimmed, sample_rate, params.input_wav, src_start, src_end, track_formants);
+	        const bool fast_mode = sp.fast_mode > 0;
+	        const bool formant_flags_requested =
+	            std::abs(sp.mouth_open) > 0 ||
+	            std::abs(sp.tract_length) > 0 ||
+	            std::abs(sp.tract_resonance) > 0 ||
+	            std::abs(sp.tract_focus) > 0 ||
+	            (sp.vocalizer > 0 && sp.vocalizer_strength > 0);
+	        const bool strong_formant_flags =
+	            std::abs(sp.mouth_open) >= 45 ||
+	            std::abs(sp.tract_length) >= 45 ||
+	            std::abs(sp.tract_resonance) >= 45 ||
+	            std::abs(sp.tract_focus) >= 45 ||
+	            (sp.vocalizer > 0 && sp.vocalizer_strength >= 35);
+	        const bool track_formants = formant_flags_requested && (!fast_mode || strong_formant_flags);
+	        const double analysis_frame_period_ms = fast_mode ? 3.5 : 2.5;
+	        append_debug_log(std::string("[ANALYSIS] formants=") +
+	                         (track_formants ? "tracked" : "default") +
+	                         " frame_ms=" + std::to_string(analysis_frame_period_ms));
+	        if (verbose_log) {
+	            std::cerr << "[Resamp] analysis formants="
+	                      << (track_formants ? "tracked" : "default")
+	                      << " frame_ms=" << analysis_frame_period_ms << '\n';
+	        }
+	        auto wa = resamp::synth::world_analyze_cached(
+	            trimmed, sample_rate, params.input_wav, src_start, src_end,
+	            track_formants, analysis_frame_period_ms);
 
         std::string budget_reason;
         double max_render_mb = env_double_clamped("RESAMP_MAX_RENDER_MB", 768.0, 64.0, 8192.0);
@@ -372,6 +385,7 @@ int main(int argc, char** argv) {
 
         // 볼륨 스케일 + 피크 제한 (P 플래그)
         resamp::post::apply_volume(output, params.volume, sp);
+        resamp::post::apply_boundary_level_guard(output, sample_rate);
 
         // Fade in/out:
         // 과도한 fade-in은 어두 자음 attack을 깎아 "툭 끊기는" 인상을 줄 수 있어 축소.

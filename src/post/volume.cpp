@@ -65,6 +65,27 @@ static float gated_rms(const std::vector<float>& samples, float gate_abs) {
     return static_cast<float>(std::sqrt(sum2 / std::max(1, cnt)));
 }
 
+static float rms_slice(const std::vector<float>& samples, int begin, int end) {
+    if (samples.empty()) return 0.0f;
+    begin = std::clamp(begin, 0, static_cast<int>(samples.size()));
+    end = std::clamp(end, begin, static_cast<int>(samples.size()));
+    if (end <= begin) return 0.0f;
+    double sum2 = 0.0;
+    for (int i = begin; i < end; ++i) {
+        sum2 += static_cast<double>(samples[i]) * samples[i];
+    }
+    return static_cast<float>(std::sqrt(sum2 / std::max(1, end - begin)));
+}
+
+static float peak_slice(const std::vector<float>& samples, int begin, int end) {
+    if (samples.empty()) return 0.0f;
+    begin = std::clamp(begin, 0, static_cast<int>(samples.size()));
+    end = std::clamp(end, begin, static_cast<int>(samples.size()));
+    float peak = 0.0f;
+    for (int i = begin; i < end; ++i) peak = std::max(peak, std::fabs(samples[i]));
+    return peak;
+}
+
 struct LevelStats {
     float p90 = 0.0f;
     float p95 = 0.0f;
@@ -103,9 +124,9 @@ static void apply_makeup_level(std::vector<float>& samples, int sample_rate, con
     float short_note = std::clamp((360.0f - duration_ms) / 240.0f, 0.0f, 1.0f);
     short_note = short_note * short_note * (3.0f - 2.0f * short_note);
 
-    float target_rms = 0.110f + 0.018f * ln_pos - 0.018f * ln_neg;
-    float target_p95 = 0.46f + 0.045f * ln_pos - 0.055f * ln_neg;
-    float target_p995 = 0.88f - 0.055f * fx_load + 0.020f * ln_pos - 0.030f * ln_neg;
+    float target_rms = 0.118f + 0.020f * ln_pos - 0.018f * ln_neg;
+    float target_p95 = 0.50f + 0.048f * ln_pos - 0.055f * ln_neg;
+    float target_p995 = 0.91f - 0.055f * fx_load + 0.018f * ln_pos - 0.030f * ln_neg;
     float ceiling = 0.982f - 0.055f * fx_load;
 
     float gain = 1.0f;
@@ -154,9 +175,9 @@ void apply_volume(std::vector<float>& samples,
     float ln = std::clamp(sp.loud_norm / 100.0f, -1.0f, 1.0f);
     float ln_pos = std::max(0.0f, ln);
     float ln_neg = std::max(0.0f, -ln);
-    float target_rms = 0.110f + 0.018f * ln_pos - 0.018f * ln_neg;
-    float target_p95 = 0.52f  + 0.035f * ln_pos - 0.060f * ln_neg;
-    float target_p995 = 0.90f + 0.010f * ln_pos - 0.035f * ln_neg;
+    float target_rms = 0.118f + 0.020f * ln_pos - 0.018f * ln_neg;
+    float target_p95 = 0.56f  + 0.035f * ln_pos - 0.060f * ln_neg;
+    float target_p995 = 0.93f + 0.008f * ln_pos - 0.035f * ln_neg;
 
     float gain_rms = (cur_rms > 1e-9f) ? (target_rms / cur_rms) : 1.0f;
     float gain_p95 = (cur_p95 > 1e-9f) ? (target_p95 / cur_p95) : 1.0f;
@@ -195,6 +216,78 @@ void apply_volume(std::vector<float>& samples,
     if (peak > 0.985f) {
         float pg = 0.985f / peak;
         for (auto& s : samples) s *= pg;
+    }
+}
+
+void apply_boundary_level_guard(std::vector<float>& samples,
+                                int sample_rate) {
+    if (samples.empty() || sample_rate <= 0) return;
+
+    const int n = static_cast<int>(samples.size());
+    const float note_ms = static_cast<float>(n) * 1000.0f / static_cast<float>(sample_rate);
+    if (note_ms < 28.0f) return;
+
+    const float dense_note = std::clamp((280.0f - note_ms) / 190.0f, 0.0f, 1.0f);
+    const int edge_n = std::clamp(static_cast<int>(std::round(sample_rate * (0.026f + 0.010f * dense_note))),
+                                  1,
+                                  std::max(1, n / 4));
+    const int body_margin = std::clamp(static_cast<int>(std::round(sample_rate * 0.045)),
+                                       edge_n,
+                                       std::max(edge_n, n / 3));
+    int body_begin = std::min(body_margin, n - 1);
+    int body_end = std::max(body_begin + 1, n - body_margin);
+    if (body_end <= body_begin + 8) {
+        body_begin = std::max(0, n / 4);
+        body_end = std::max(body_begin + 1, (3 * n) / 4);
+    }
+
+    const float body_rms = rms_slice(samples, body_begin, body_end);
+    const float body_peak = peak_slice(samples, body_begin, body_end);
+    if (body_rms <= 1.0e-5f || body_peak <= 1.0e-5f) return;
+
+    auto edge_gain = [&](float edge_rms, float edge_peak, float min_gain) {
+        float rms_gain = (edge_rms > body_rms * 1.18f)
+            ? (body_rms * 1.12f / std::max(edge_rms, 1.0e-8f))
+            : 1.0f;
+        float peak_gain = (edge_peak > body_peak * 1.35f)
+            ? (body_peak * 1.24f / std::max(edge_peak, 1.0e-8f))
+            : 1.0f;
+        return std::clamp(std::min(rms_gain, peak_gain), min_gain, 1.0f);
+    };
+
+    float head_gain = edge_gain(rms_slice(samples, 0, edge_n),
+                                peak_slice(samples, 0, edge_n),
+                                0.84f);
+    float tail_gain = edge_gain(rms_slice(samples, n - edge_n, n),
+                                peak_slice(samples, n - edge_n, n),
+                                0.80f);
+
+    // Dense CVVC/VCV passages often overlap several nominally "normal" edges.
+    // In that case relative edge matching alone is not enough, so short notes get
+    // a mild fixed de-emphasis. Tail is stronger because it creates most of the
+    // perceived residue; head stays conservative to preserve consonant attacks.
+    const float dense_head_gain = 1.0f - 0.055f * dense_note;
+    const float dense_tail_gain = 1.0f - 0.180f * dense_note;
+    head_gain = std::min(head_gain, dense_head_gain);
+    tail_gain = std::min(tail_gain, dense_tail_gain);
+
+    if (head_gain < 0.999f) {
+        for (int i = 0; i < edge_n; ++i) {
+            float u = static_cast<float>(i) / static_cast<float>(std::max(1, edge_n - 1));
+            float s = u * u * (3.0f - 2.0f * u);
+            float g = head_gain + (1.0f - head_gain) * s;
+            samples[i] *= g;
+        }
+    }
+
+    if (tail_gain < 0.999f) {
+        for (int i = n - edge_n; i < n; ++i) {
+            float u = static_cast<float>(i - (n - edge_n)) /
+                      static_cast<float>(std::max(1, edge_n - 1));
+            float s = u * u * (3.0f - 2.0f * u);
+            float g = 1.0f + (tail_gain - 1.0f) * s;
+            samples[i] *= g;
+        }
     }
 }
 

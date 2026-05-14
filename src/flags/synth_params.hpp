@@ -41,10 +41,11 @@ struct SynthParams {
     int tremolo = 0;            // Tm: 0~100 주기적 피치 떨림
     int distortion = 0;         // Ds: 0~100 디스토션
     int bitcrusher = 0;         // Bc: 0~100 비트크러셔
-    int vocalizer = 0;          // Vz: 0=off, 1=아, 2=에, 3=이, 4=오, 5=우, 6=어, 7=N
-    int vocalizer_strength = 100; // VzS: 0~100 보컬라이저 필터 강도
+	int vocalizer = 0;          // Vz: 0=off, 1=아, 2=에, 3=이, 4=오, 5=우, 6=어, 7=N
+	int vocalizer_strength = 100; // VzS: 0~100 보컬라이저 필터 강도
+	int fast_mode = 0;          // Fm: 0=quality, 1=fast
 
-    static SynthParams defaults() { return {}; }
+	static SynthParams defaults() { return {}; }
 };
 
 } // namespace resamp
