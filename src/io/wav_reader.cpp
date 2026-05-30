@@ -3,8 +3,21 @@
 #include <stdexcept>
 #include <cstring>
 #include <cmath>
+#include <filesystem>
 
 namespace resamp::io {
+
+namespace {
+
+std::filesystem::path path_from_utf8(const std::string& path) {
+#ifdef _WIN32
+    return std::filesystem::u8path(path);
+#else
+    return std::filesystem::path(path);
+#endif
+}
+
+} // namespace
 
 // ── 리틀엔디언 읽기 헬퍼 ─────────────────────────────────────────────────
 static uint16_t read_u16(std::ifstream& f) {
@@ -20,7 +33,7 @@ static int32_t read_i32(std::ifstream& f) {
 }
 
 std::vector<float> load_wav(const std::string& path, WavInfo& info) {
-    std::ifstream f(path, std::ios::binary);
+    std::ifstream f(path_from_utf8(path), std::ios::binary);
     if (!f) throw std::runtime_error("Cannot open WAV: " + path);
 
     // RIFF 헤더

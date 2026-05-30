@@ -3,8 +3,21 @@
 #include <stdexcept>
 #include <algorithm>
 #include <cmath>
+#include <filesystem>
 
 namespace resamp::io {
+
+namespace {
+
+std::filesystem::path path_from_utf8(const std::string& path) {
+#ifdef _WIN32
+    return std::filesystem::u8path(path);
+#else
+    return std::filesystem::path(path);
+#endif
+}
+
+} // namespace
 
 static void write_u16(std::ofstream& f, uint16_t v) {
     uint8_t b[2] = { static_cast<uint8_t>(v & 0xFF),
@@ -22,7 +35,7 @@ static void write_u32(std::ofstream& f, uint32_t v) {
 void save_wav(const std::string& path,
               const std::vector<float>& samples,
               uint32_t sample_rate) {
-    std::ofstream f(path, std::ios::binary);
+    std::ofstream f(path_from_utf8(path), std::ios::binary);
     if (!f) throw std::runtime_error("Cannot write WAV: " + path);
 
     uint32_t num_samples     = static_cast<uint32_t>(samples.size());
