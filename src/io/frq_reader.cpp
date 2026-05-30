@@ -2,8 +2,21 @@
 #include <fstream>
 #include <cstring>
 #include <algorithm>
+#include <filesystem>
 
 namespace resamp::io {
+
+namespace {
+
+std::filesystem::path path_from_utf8(const std::string& path) {
+#ifdef _WIN32
+    return std::filesystem::u8path(path);
+#else
+    return std::filesystem::path(path);
+#endif
+}
+
+} // namespace
 
 static double read_f64_le(std::ifstream& f) {
     double v; f.read(reinterpret_cast<char*>(&v), 8); return v;
@@ -20,7 +33,7 @@ FrqData load_frq(const std::string& wav_path) {
     if (dot != std::string::npos) frq_path = frq_path.substr(0, dot);
     frq_path += ".frq";
 
-    std::ifstream f(frq_path, std::ios::binary);
+    std::ifstream f(path_from_utf8(frq_path), std::ios::binary);
     if (!f) return {}; // 파일 없음
 
     // 매직 헤더 "FREQ0003"

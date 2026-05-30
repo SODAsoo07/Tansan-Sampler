@@ -16,6 +16,14 @@ namespace {
 
 constexpr const char* kPresetFileName = "tansanSampler.txt";
 
+std::filesystem::path path_from_utf8(const std::string& path) {
+#ifdef _WIN32
+    return std::filesystem::u8path(path);
+#else
+    return std::filesystem::path(path);
+#endif
+}
+
 std::string trim_copy(const std::string& s) {
     size_t first = 0;
     while (first < s.size() && std::isspace(static_cast<unsigned char>(s[first]))) ++first;
@@ -41,12 +49,12 @@ std::vector<std::filesystem::path> preset_candidate_paths(const std::string& exe
 
     const char* override_path = std::getenv("RESAMP_PRESET_FILE");
     if (override_path != nullptr && *override_path != '\0') {
-        paths.emplace_back(override_path);
+        paths.push_back(path_from_utf8(override_path));
     }
 
     if (!executable_path.empty()) {
         std::error_code ec;
-        std::filesystem::path exe_path(executable_path);
+        std::filesystem::path exe_path(path_from_utf8(executable_path));
         if (exe_path.has_parent_path()) {
             paths.push_back(std::filesystem::absolute(exe_path.parent_path(), ec) / kPresetFileName);
         }
@@ -268,6 +276,8 @@ SynthParams parse_flags(const std::string& s) {
         else if (lname == "p") p.peak_comp   = math::clamp(val, 0, 100);
         else if (lname == "ln" || lname == "lnrm")
                             p.loud_norm     = math::clamp(val, -100, 100);
+        else if (lname == "rs" || lname == "reverbsuppression" || lname == "reverbsup")
+                            p.reverb_suppression = math::clamp(val, 0, 100);
         else if (lname == "lp" || lname == "loop")
                             p.loop_mode = math::clamp(val, 0, 2);
         else if (lname == "cw" || lname == "cp")
@@ -297,7 +307,7 @@ SynthParams parse_flags(const std::string& s) {
 	        else if (lname == "vzs" || lname == "vocstr" || lname == "vocalizerstrength")
 	                            p.vocalizer_strength = math::clamp(val, 0, 100);
 	        else if (lname == "fm" || lname == "fast")
-	                            p.fast_mode = (val > 0) ? 1 : 0;
+	                            p.fast_mode = math::clamp(val, 0, 2);
 	        // 알 수 없는 플래그는 무시
 	    }
     return p;

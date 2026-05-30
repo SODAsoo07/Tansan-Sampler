@@ -27,9 +27,10 @@ struct SynthParams {
     int noise_color         = 0;   // Ns: -100~+100 노이즈 톤 (밝기/어둠)
     int peak_comp   = 86;   // P: 0~100      피크 제한 강도
     int loud_norm   = 15;   // Ln: -100~+100 음량 정규화 강도 (-완화 / +강화), 기본 15
+    int reverb_suppression = 0; // Rs: 0~100 원본 룸/반향 억제
 
     // ── 확장 플래그 ───────────────────────────────────
-    int loop_mode = 1;          // Lp: 0=one-pass stretch, 1=forward loop, 2=ping-pong loop
+    int loop_mode = 0;          // Lp: 0=auto, 1=stretch, 2=loop
     int consonant_power = 0;    // Cw: -100~+100 자음 강화/약화
     int vowel_power = 0;        // Vw: -100~+100 모음 강화/약화
     int reverse_mode = 0;       // Rv: 0=off, 1=full reverse
@@ -43,7 +44,7 @@ struct SynthParams {
     int bitcrusher = 0;         // Bc: 0~100 비트크러셔
 	int vocalizer = 0;          // Vz: 0=off, 1=아, 2=에, 3=이, 4=오, 5=우, 6=어, 7=N
 	int vocalizer_strength = 100; // VzS: 0~100 보컬라이저 필터 강도
-	int fast_mode = 0;          // Fm: 0=quality, 1=fast
+	int fast_mode = 0;          // Fm: 0=quality, 1=balanced, 2=fast
 
 	static SynthParams defaults() { return {}; }
 };

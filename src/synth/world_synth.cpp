@@ -23,6 +23,22 @@
 namespace resamp::synth {
 namespace fs = std::filesystem;
 
+static fs::path path_from_utf8(const std::string& path) {
+#ifdef _WIN32
+    return fs::u8path(path);
+#else
+    return fs::path(path);
+#endif
+}
+
+static std::string path_to_utf8(const fs::path& path) {
+#ifdef _WIN32
+    return path.u8string();
+#else
+    return path.string();
+#endif
+}
+
 struct FrameMatrix {
     FrameMatrix(int rows, int cols)
         : cols(cols),
@@ -131,18 +147,34 @@ static bool file_exists_noerr(const fs::path& path) {
     return fs::exists(path, ec);
 }
 
-static fs::path find_voicebank_root_for_cache(const fs::path& source_wav_path) {
+static bool directory_exists_noerr(const fs::path& path) {
     std::error_code ec;
-    fs::path cur = fs::absolute(source_wav_path, ec).parent_path();
-    if (cur.empty()) cur = source_wav_path.parent_path();
+    return fs::is_directory(path, ec);
+}
+
+static std::string lower_ascii_copy(std::string s) {
+    std::transform(s.begin(), s.end(), s.begin(),
+                   [](unsigned char ch) { return static_cast<char>(std::tolower(ch)); });
+    return s;
+}
+
+static bool has_voicebank_marker(const fs::path& dir) {
+    return file_exists_noerr(dir / "character.txt") ||
+           file_exists_noerr(dir / "character.yaml") ||
+           file_exists_noerr(dir / "character.yml") ||
+           file_exists_noerr(dir / "prefix.map");
+}
+
+static fs::path find_marked_voicebank_root(const fs::path& start_path) {
+    std::error_code ec;
+    fs::path cur = fs::absolute(start_path, ec);
+    if (ec || cur.empty()) cur = start_path;
+    if (!cur.empty() && !directory_exists_noerr(cur)) cur = cur.parent_path();
     if (cur.empty()) cur = fs::current_path(ec);
 
     fs::path best_oto_root;
     for (int depth = 0; depth < 10 && !cur.empty(); ++depth) {
-        if (file_exists_noerr(cur / "character.txt") ||
-            file_exists_noerr(cur / "character.yaml") ||
-            file_exists_noerr(cur / "character.yml") ||
-            file_exists_noerr(cur / "prefix.map")) {
+        if (has_voicebank_marker(cur)) {
             return cur;
         }
         if (best_oto_root.empty() && file_exists_noerr(cur / "oto.ini")) {
@@ -155,6 +187,235 @@ static fs::path find_voicebank_root_for_cache(const fs::path& source_wav_path) {
     }
 
     if (!best_oto_root.empty()) return best_oto_root;
+    return {};
+}
+
+static bool looks_like_openutau_source_cache(const fs::path& path) {
+    std::string ext = lower_ascii_copy(path_to_utf8(path.extension()));
+    std::string name = lower_ascii_copy(path_to_utf8(path.filename()));
+    std::string parent = lower_ascii_copy(path_to_utf8(path.parent_path().filename()));
+    return ext == ".wav" && parent == "cache" && name.rfind("src-", 0) == 0;
+}
+
+static void add_unique_existing_dir(std::vector<fs::path>& dirs, const fs::path& dir) {
+    if (dir.empty() || !directory_exists_noerr(dir)) return;
+    std::error_code ec;
+    fs::path canon = fs::weakly_canonical(dir, ec);
+    if (ec || canon.empty()) {
+        ec.clear();
+        canon = fs::absolute(dir, ec);
+        if (ec || canon.empty()) canon = dir;
+    }
+    for (const auto& existing : dirs) {
+        std::error_code ec2;
+        fs::path existing_canon = fs::weakly_canonical(existing, ec2);
+        if (!ec2 && existing_canon == canon) return;
+        if (existing == dir || existing == canon) return;
+    }
+    dirs.push_back(canon);
+}
+
+static std::vector<fs::path> split_env_dirs(const char* name) {
+    std::vector<fs::path> dirs;
+    const char* raw = std::getenv(name);
+    if (raw == nullptr || *raw == '\0') return dirs;
+    std::string s(raw);
+    size_t start = 0;
+    while (start <= s.size()) {
+        size_t end = s.find(';', start);
+        if (end == std::string::npos) end = s.size();
+        std::string token = s.substr(start, end - start);
+        while (!token.empty() && std::isspace(static_cast<unsigned char>(token.front()))) token.erase(token.begin());
+        while (!token.empty() && std::isspace(static_cast<unsigned char>(token.back()))) token.pop_back();
+        if (!token.empty()) add_unique_existing_dir(dirs, path_from_utf8(token));
+        if (end >= s.size()) break;
+        start = end + 1;
+    }
+    return dirs;
+}
+
+static bool quick_file_fingerprint(const fs::path& path, uintmax_t& out_size, uint64_t& out_hash) {
+    std::error_code ec;
+    out_size = fs::file_size(path, ec);
+    if (ec) return false;
+
+    std::ifstream f(path, std::ios::binary);
+    if (!f) return false;
+
+    constexpr uint64_t kOffset = 1469598103934665603ull;
+    constexpr uint64_t kPrime = 1099511628211ull;
+    auto append_bytes = [&](uint64_t h, const char* data, size_t n) {
+        for (size_t i = 0; i < n; ++i) {
+            h ^= static_cast<unsigned char>(data[i]);
+            h *= kPrime;
+        }
+        return h;
+    };
+
+    uint64_t h = kOffset;
+    h = append_bytes(h, reinterpret_cast<const char*>(&out_size), sizeof(out_size));
+
+    const uintmax_t chunk = 65536;
+    std::vector<uintmax_t> offsets;
+    offsets.push_back(0);
+    if (out_size > chunk) offsets.push_back(out_size / 2);
+    if (out_size > chunk) offsets.push_back(out_size - std::min<uintmax_t>(chunk, out_size));
+
+    std::vector<char> buf(static_cast<size_t>(std::min<uintmax_t>(chunk, std::max<uintmax_t>(1, out_size))));
+    for (uintmax_t off : offsets) {
+        f.clear();
+        f.seekg(static_cast<std::streamoff>(off), std::ios::beg);
+        if (!f) continue;
+        size_t want = static_cast<size_t>(std::min<uintmax_t>(chunk, out_size - off));
+        f.read(buf.data(), static_cast<std::streamsize>(want));
+        size_t got = static_cast<size_t>(std::max<std::streamsize>(0, f.gcount()));
+        h = append_bytes(h, reinterpret_cast<const char*>(&off), sizeof(off));
+        h = append_bytes(h, buf.data(), got);
+    }
+
+    out_hash = h;
+    return true;
+}
+
+static fs::path source_root_map_path(const fs::path& source_wav_path) {
+    fs::path dir = source_wav_path.parent_path() / ".tansan-sampler" / "source_map";
+    fs::path name = source_wav_path.stem();
+    name += ".root.txt";
+    return dir / name;
+}
+
+static fs::path read_cached_source_root_map(const fs::path& source_wav_path) {
+    fs::path map_file = source_root_map_path(source_wav_path);
+    std::ifstream f(map_file);
+    if (!f) return {};
+    std::string line;
+    std::getline(f, line);
+    if (line.empty()) return {};
+    fs::path root(path_from_utf8(line));
+    if (has_voicebank_marker(root) || file_exists_noerr(root / "oto.ini")) return root;
+    return {};
+}
+
+static void write_cached_source_root_map(const fs::path& source_wav_path, const fs::path& root) {
+    if (root.empty()) return;
+    std::error_code ec;
+    fs::path map_file = source_root_map_path(source_wav_path);
+    fs::create_directories(map_file.parent_path(), ec);
+    if (ec) return;
+    std::ofstream f(map_file, std::ios::binary | std::ios::trunc);
+    if (f) f << path_to_utf8(root) << "\n";
+}
+
+static std::vector<fs::path> candidate_voicebank_search_dirs(const fs::path& source_wav_path) {
+    std::vector<fs::path> dirs;
+    for (const auto& dir : split_env_dirs("RESAMP_VOICEBANK_DIRS")) add_unique_existing_dir(dirs, dir);
+    for (const auto& dir : split_env_dirs("RESAMP_SINGER_ROOTS")) add_unique_existing_dir(dirs, dir);
+
+    std::error_code ec;
+    fs::path source_abs = fs::absolute(source_wav_path, ec);
+    if (ec || source_abs.empty()) source_abs = source_wav_path;
+    fs::path cache_dir = source_abs.parent_path();
+    fs::path app_root = cache_dir.parent_path();
+    fs::path workspace = app_root.parent_path();
+
+    add_unique_existing_dir(dirs, app_root / "Singers");
+    add_unique_existing_dir(dirs, workspace / "Singers");
+    add_unique_existing_dir(dirs, workspace / "Singer");
+    add_unique_existing_dir(dirs, workspace / "UTAU" / "Singer");
+    add_unique_existing_dir(dirs, workspace / "UTAU" / "Singers");
+    add_unique_existing_dir(dirs, workspace / "UTAU" / "Voice");
+    add_unique_existing_dir(dirs, workspace / "UTAU" / "Voicebank");
+    add_unique_existing_dir(dirs, workspace / "UTAU" / "Voicebanks");
+
+    if (const char* profile = std::getenv("USERPROFILE"); profile && *profile) {
+        fs::path home(path_from_utf8(profile));
+        add_unique_existing_dir(dirs, home / "SODAsoo1" / "VocalSynth" / "UTAU" / "Singer");
+        add_unique_existing_dir(dirs, home / "SODAsoo1" / "VocalSynth" / "UTAU" / "Singers");
+        add_unique_existing_dir(dirs, home / "SODAsoo1" / "VocalSynth" / "Singers");
+        add_unique_existing_dir(dirs, home / "Documents" / "OpenUtau" / "Singers");
+        add_unique_existing_dir(dirs, home / "Documents" / "OpenUtau" / "Singer");
+    }
+
+    return dirs;
+}
+
+static fs::path find_voicebank_root_by_matching_source_cache(const fs::path& source_wav_path) {
+    if (!looks_like_openutau_source_cache(source_wav_path)) return {};
+
+    fs::path mapped = read_cached_source_root_map(source_wav_path);
+    if (!mapped.empty()) return mapped;
+
+    uintmax_t source_size = 0;
+    uint64_t source_hash = 0;
+    if (!quick_file_fingerprint(source_wav_path, source_size, source_hash)) return {};
+
+    std::vector<fs::path> matched_roots;
+    int checked_wavs = 0;
+    constexpr int kMaxCheckedWavs = 30000;
+    for (const auto& root_dir : candidate_voicebank_search_dirs(source_wav_path)) {
+        std::error_code ec;
+        fs::recursive_directory_iterator it(
+            root_dir,
+            fs::directory_options::skip_permission_denied,
+            ec);
+        fs::recursive_directory_iterator end;
+        for (; !ec && it != end; it.increment(ec)) {
+            const fs::path path = it->path();
+            if (!it->is_regular_file(ec)) {
+                ec.clear();
+                continue;
+            }
+            if (lower_ascii_copy(path_to_utf8(path.extension())) != ".wav") continue;
+            if (++checked_wavs > kMaxCheckedWavs) {
+                if (verbose_log_enabled()) {
+                    std::cerr << "[Resamp] voicebank source search stopped: too many wavs under "
+                              << path_to_utf8(root_dir) << '\n';
+                }
+                break;
+            }
+
+            uintmax_t size = fs::file_size(path, ec);
+            if (ec) {
+                ec.clear();
+                continue;
+            }
+            if (size != source_size) continue;
+
+            uintmax_t candidate_size = 0;
+            uint64_t candidate_hash = 0;
+            if (!quick_file_fingerprint(path, candidate_size, candidate_hash)) continue;
+            if (candidate_size != source_size || candidate_hash != source_hash) continue;
+
+            fs::path vb_root = find_marked_voicebank_root(path);
+            if (vb_root.empty()) vb_root = path.parent_path();
+            add_unique_existing_dir(matched_roots, vb_root);
+            if (matched_roots.size() > 1) break;
+        }
+        if (matched_roots.size() > 1) break;
+    }
+
+    if (matched_roots.size() == 1) {
+        write_cached_source_root_map(source_wav_path, matched_roots.front());
+        if (verbose_log_enabled()) {
+            std::cerr << "[Resamp] OpenUtau source cache mapped to voicebank: "
+                      << path_to_utf8(matched_roots.front()) << '\n';
+        }
+        return matched_roots.front();
+    }
+    if (verbose_log_enabled() && matched_roots.size() > 1) {
+        std::cerr << "[Resamp] OpenUtau source cache mapping ambiguous: "
+                  << path_to_utf8(source_wav_path) << '\n';
+    }
+    return {};
+}
+
+static fs::path find_voicebank_root_for_cache(const fs::path& source_wav_path) {
+    fs::path direct = find_marked_voicebank_root(source_wav_path);
+    if (!direct.empty()) return direct;
+
+    fs::path mapped = find_voicebank_root_by_matching_source_cache(source_wav_path);
+    if (!mapped.empty()) return mapped;
+
     fs::path parent = source_wav_path.parent_path();
     if (!parent.empty()) return parent;
     return fs::path(".");
@@ -210,7 +471,7 @@ static void prune_analysis_cache_dir(const fs::path& cache_root, int64_t max_byt
     if (static_cast<int64_t>(total) <= max_bytes) return;
     std::sort(entries.begin(), entries.end(), [](const CacheFileEntry& a, const CacheFileEntry& b) {
         if (a.time_key != b.time_key) return a.time_key < b.time_key;
-        return a.path.string() < b.path.string();
+        return path_to_utf8(a.path) < path_to_utf8(b.path);
     });
 
     uintmax_t target = static_cast<uintmax_t>(std::max<int64_t>(0, (max_bytes * 9) / 10));
@@ -229,13 +490,13 @@ static void prune_analysis_cache_dir(const fs::path& cache_root, int64_t max_byt
     if (removed > 0 && verbose_log_enabled()) {
         std::cerr << "[Resamp] WORLD cache prune: removed=" << removed
                   << " bytes=" << removed_bytes
-                  << " dir=" << cache_root.string() << '\n';
+                  << " dir=" << path_to_utf8(cache_root) << '\n';
     }
 }
 
 static fs::path default_legacy_analysis_cache_root() {
     if (const char* local = std::getenv("LOCALAPPDATA"); local && *local) {
-        return fs::path(local) / "Tansan-Sampler" / "analysis_cache";
+        return path_from_utf8(local) / "Tansan-Sampler" / "analysis_cache";
     }
     return {};
 }
@@ -400,6 +661,58 @@ static double frame_log_spectral_energy(
     }
     double mean = sum / static_cast<double>(std::max(1, count));
     return 10.0 * std::log10(std::max(1.0e-12, mean));
+}
+
+static double loop_endpoint_distance(
+    const WorldAnalysis& src,
+    int                  a,
+    int                  b)
+{
+    if (src.n_frames <= 0 || src.spectrogram.empty()) return 1.0e9;
+    a = std::clamp(a, 0, src.n_frames - 1);
+    b = std::clamp(b, 0, src.n_frames - 1);
+    if (a == b) return 1.0e9;
+
+    const auto& sa = src.spectrogram[a];
+    const auto& sb = src.spectrogram[b];
+    const int spec_dim = static_cast<int>(std::min(sa.size(), sb.size()));
+    if (spec_dim <= 4) return 1.0e9;
+
+    const int stride = std::max(1, spec_dim / 96);
+    double spec_diff = 0.0;
+    int count = 0;
+    for (int k = 1; k < spec_dim; k += stride) {
+        double fn = static_cast<double>(k) / static_cast<double>(std::max(1, spec_dim - 1));
+        double w = 0.55 + 0.45 * std::clamp(fn, 0.0, 1.0);
+        spec_diff += w * std::fabs(std::log(std::max(1.0e-12, sa[k])) -
+                                   std::log(std::max(1.0e-12, sb[k])));
+        ++count;
+    }
+    spec_diff /= static_cast<double>(std::max(1, count));
+
+    double ap_diff = 0.0;
+    count = 0;
+    if (a < static_cast<int>(src.aperiodicity.size()) &&
+        b < static_cast<int>(src.aperiodicity.size())) {
+        const auto& aa = src.aperiodicity[a];
+        const auto& ab = src.aperiodicity[b];
+        const int ap_dim = static_cast<int>(std::min(aa.size(), ab.size()));
+        for (int k = 1; k < ap_dim; k += std::max(1, ap_dim / 96)) {
+            ap_diff += std::fabs(aa[k] - ab[k]);
+            ++count;
+        }
+        if (count > 0) ap_diff /= static_cast<double>(count);
+    }
+
+    double energy_diff = std::fabs(frame_log_spectral_energy(sa) -
+                                   frame_log_spectral_energy(sb)) / 10.0;
+    double f0_diff = 0.0;
+    if (a < static_cast<int>(src.f0.size()) && b < static_cast<int>(src.f0.size()) &&
+        src.f0[a] >= 55.0 && src.f0[b] >= 55.0) {
+        f0_diff = std::fabs(1200.0 * std::log2(src.f0[b] / src.f0[a])) / 180.0;
+    }
+
+    return spec_diff + 1.15 * ap_diff + 0.48 * energy_diff + 0.42 * f0_diff;
 }
 
 static int find_last_energetic_frame(
@@ -666,6 +979,57 @@ WorldAnalysis world_analyze(
     return w;
 }
 
+static bool write_float_vector(std::ofstream& ofs, const std::vector<double>& values) {
+    std::vector<float> tmp(values.size());
+    for (size_t i = 0; i < values.size(); ++i) {
+        tmp[i] = static_cast<float>(values[i]);
+    }
+    ofs.write(reinterpret_cast<const char*>(tmp.data()), sizeof(float) * tmp.size());
+    return ofs.good();
+}
+
+static bool write_float_matrix(std::ofstream& ofs,
+                               const std::vector<std::vector<double>>& matrix,
+                               int rows,
+                               int cols) {
+    std::vector<float> tmp(static_cast<size_t>(cols));
+    for (int i = 0; i < rows; ++i) {
+        if (static_cast<int>(matrix[i].size()) != cols) return false;
+        for (int k = 0; k < cols; ++k) {
+            tmp[static_cast<size_t>(k)] = static_cast<float>(matrix[i][k]);
+        }
+        ofs.write(reinterpret_cast<const char*>(tmp.data()), sizeof(float) * tmp.size());
+        if (!ofs.good()) return false;
+    }
+    return true;
+}
+
+static bool read_float_vector(std::ifstream& ifs, std::vector<double>& values) {
+    std::vector<float> tmp(values.size(), 0.0f);
+    ifs.read(reinterpret_cast<char*>(tmp.data()), sizeof(float) * tmp.size());
+    if (!ifs.good()) return false;
+    for (size_t i = 0; i < values.size(); ++i) {
+        values[i] = static_cast<double>(tmp[i]);
+    }
+    return true;
+}
+
+static bool read_float_matrix(std::ifstream& ifs,
+                              std::vector<std::vector<double>>& matrix,
+                              int rows,
+                              int cols) {
+    std::vector<float> tmp(static_cast<size_t>(cols), 0.0f);
+    for (int i = 0; i < rows; ++i) {
+        if (static_cast<int>(matrix[i].size()) != cols) return false;
+        ifs.read(reinterpret_cast<char*>(tmp.data()), sizeof(float) * tmp.size());
+        if (!ifs.good()) return false;
+        for (int k = 0; k < cols; ++k) {
+            matrix[i][k] = static_cast<double>(tmp[static_cast<size_t>(k)]);
+        }
+    }
+    return true;
+}
+
 static bool write_world_analysis_cache(const fs::path& path, const WorldAnalysis& w) {
     if (w.n_frames <= 0 || w.fft_size <= 0) return false;
     int spec_dim = w.fft_size / 2 + 1;
@@ -676,6 +1040,10 @@ static bool write_world_analysis_cache(const fs::path& path, const WorldAnalysis
     if (static_cast<int>(w.aperiodicity.size()) != w.n_frames) return false;
     if (static_cast<int>(w.formant_peaks.size()) != w.n_frames) return false;
     if (static_cast<int>(w.formant_confidence.size()) != w.n_frames) return false;
+    for (int i = 0; i < w.n_frames; ++i) {
+        if (static_cast<int>(w.spectrogram[i].size()) != spec_dim) return false;
+        if (static_cast<int>(w.aperiodicity[i].size()) != spec_dim) return false;
+    }
 
     fs::create_directories(path.parent_path());
     fs::path tmp = path;
@@ -685,7 +1053,7 @@ static bool write_world_analysis_cache(const fs::path& path, const WorldAnalysis
     if (!ofs) return false;
 
     const uint32_t magic = 0x41575352u; // "RSWA"
-    const uint32_t version = 3u;
+    const uint32_t version = 4u;
     const int32_t fs_i32 = static_cast<int32_t>(w.fs);
     const int32_t fft_i32 = static_cast<int32_t>(w.fft_size);
     const double frame_period = w.frame_period;
@@ -700,20 +1068,18 @@ static bool write_world_analysis_cache(const fs::path& path, const WorldAnalysis
     ofs.write(reinterpret_cast<const char*>(&n_frames), sizeof(n_frames));
     ofs.write(reinterpret_cast<const char*>(&spec_i32), sizeof(spec_i32));
 
-    ofs.write(reinterpret_cast<const char*>(w.f0.data()), sizeof(double) * w.f0.size());
-    ofs.write(reinterpret_cast<const char*>(w.temporal_positions.data()), sizeof(double) * w.temporal_positions.size());
+    if (!write_float_vector(ofs, w.f0)) return false;
+    if (!write_float_vector(ofs, w.temporal_positions)) return false;
+    if (!write_float_matrix(ofs, w.spectrogram, w.n_frames, spec_dim)) return false;
+    if (!write_float_matrix(ofs, w.aperiodicity, w.n_frames, spec_dim)) return false;
+
+    float formant_row[4] = {};
     for (int i = 0; i < w.n_frames; ++i) {
-        if (static_cast<int>(w.spectrogram[i].size()) != spec_dim) return false;
-        if (static_cast<int>(w.aperiodicity[i].size()) != spec_dim) return false;
-        ofs.write(reinterpret_cast<const char*>(w.spectrogram[i].data()), sizeof(double) * spec_dim);
+        for (int j = 0; j < 4; ++j) formant_row[j] = static_cast<float>(w.formant_peaks[i][j]);
+        ofs.write(reinterpret_cast<const char*>(formant_row), sizeof(formant_row));
+        if (!ofs.good()) return false;
     }
-    for (int i = 0; i < w.n_frames; ++i) {
-        ofs.write(reinterpret_cast<const char*>(w.aperiodicity[i].data()), sizeof(double) * spec_dim);
-    }
-    for (int i = 0; i < w.n_frames; ++i) {
-        ofs.write(reinterpret_cast<const char*>(w.formant_peaks[i].data()), sizeof(double) * 4);
-    }
-    ofs.write(reinterpret_cast<const char*>(w.formant_confidence.data()), sizeof(double) * w.formant_confidence.size());
+    if (!write_float_vector(ofs, w.formant_confidence)) return false;
     ofs.close();
     if (!ofs.good()) {
         std::error_code ec;
@@ -730,7 +1096,99 @@ static bool write_world_analysis_cache(const fs::path& path, const WorldAnalysis
     return !ec;
 }
 
-static bool read_world_analysis_cache(const fs::path& path, WorldAnalysis& out) {
+static void normalize_formant_row(std::array<double, 4>& peaks, int fs) {
+    const double nyquist = std::max(1000.0, fs * 0.5);
+    const std::array<double, 4> fallback = {
+        std::min(700.0, nyquist * 0.30),
+        std::min(1500.0, nyquist * 0.48),
+        std::min(2600.0, nyquist * 0.70),
+        std::min(3800.0, nyquist * 0.88),
+    };
+    const double hi = std::max(220.0, nyquist * 0.96);
+    for (int j = 0; j < 4; ++j) {
+        double lo = (j == 0) ? 90.0 : (peaks[j - 1] + 80.0);
+        double fb = std::clamp(fallback[j], lo, hi);
+        if (!std::isfinite(peaks[j]) || peaks[j] < 60.0) peaks[j] = fb;
+        peaks[j] = std::clamp(peaks[j], lo, hi);
+    }
+}
+
+static bool sanitize_world_analysis_cache(WorldAnalysis& w) {
+    if (w.fs < 4000 || w.fs > 384000) return false;
+    if (w.fft_size <= 0 || (w.fft_size % 2) != 0) return false;
+    if (!std::isfinite(w.frame_period) || w.frame_period < 0.5 || w.frame_period > 20.0) return false;
+    if (w.n_frames <= 0 || w.n_frames > 20000) return false;
+
+    const int spec_dim = w.fft_size / 2 + 1;
+    if (spec_dim <= 1 || spec_dim > 65536) return false;
+    if (static_cast<int>(w.f0.size()) != w.n_frames) return false;
+    if (static_cast<int>(w.temporal_positions.size()) != w.n_frames) return false;
+    if (static_cast<int>(w.spectrogram.size()) != w.n_frames) return false;
+    if (static_cast<int>(w.aperiodicity.size()) != w.n_frames) return false;
+    if (static_cast<int>(w.formant_peaks.size()) != w.n_frames) return false;
+    if (static_cast<int>(w.formant_confidence.size()) != w.n_frames) return false;
+
+    int bad_scalar = 0;
+    for (int i = 0; i < w.n_frames; ++i) {
+        double& f0 = w.f0[i];
+        if (!std::isfinite(f0) || f0 < 45.0) {
+            if (!std::isfinite(f0)) ++bad_scalar;
+            f0 = 0.0;
+        } else {
+            f0 = std::clamp(f0, 55.0, 2000.0);
+        }
+
+        double expected_t = (w.frame_period * 0.001) * i;
+        double& t = w.temporal_positions[i];
+        if (!std::isfinite(t) || t < -1.0e-6 ||
+            (i > 0 && t + 1.0e-6 < w.temporal_positions[i - 1])) {
+            ++bad_scalar;
+            t = expected_t;
+        }
+
+        normalize_formant_row(w.formant_peaks[i], w.fs);
+        double& conf = w.formant_confidence[i];
+        if (!std::isfinite(conf)) {
+            ++bad_scalar;
+            conf = 0.0;
+        } else {
+            conf = std::clamp(conf, 0.0, 1.0);
+        }
+    }
+
+    uint64_t bad_bins = 0;
+    uint64_t total_bins = 0;
+    for (int i = 0; i < w.n_frames; ++i) {
+        if (static_cast<int>(w.spectrogram[i].size()) != spec_dim) return false;
+        if (static_cast<int>(w.aperiodicity[i].size()) != spec_dim) return false;
+        for (int k = 0; k < spec_dim; ++k) {
+            double& sp = w.spectrogram[i][k];
+            if (!std::isfinite(sp) || sp <= 0.0) {
+                ++bad_bins;
+                sp = 1.0e-12;
+            } else {
+                sp = std::clamp(sp, 1.0e-12, 1.0e12);
+            }
+
+            double& ap = w.aperiodicity[i][k];
+            if (!std::isfinite(ap)) {
+                ++bad_bins;
+                ap = 1.0;
+            } else {
+                ap = std::clamp(ap, 0.0, 1.0);
+            }
+            ++total_bins;
+        }
+    }
+
+    if (bad_scalar > std::max(64, w.n_frames / 3)) return false;
+    if (total_bins > 0 && bad_bins > std::max<uint64_t>(1024, total_bins / 8)) return false;
+    return true;
+}
+
+static bool read_world_analysis_cache(const fs::path& path,
+                                      WorldAnalysis& out,
+                                      uint32_t* out_version = nullptr) {
     std::ifstream ifs(path, std::ios::binary);
     if (!ifs) return false;
 
@@ -751,7 +1209,7 @@ static bool read_world_analysis_cache(const fs::path& path, WorldAnalysis& out) 
     ifs.read(reinterpret_cast<char*>(&spec_i32), sizeof(spec_i32));
 
     if (!ifs) return false;
-    if (magic != 0x41575352u || version != 3u) return false;
+    if (magic != 0x41575352u || (version != 3u && version != 4u)) return false;
     if (fs_i32 <= 0 || fft_i32 <= 0 || n_frames <= 0 || spec_i32 <= 1) return false;
     if (fft_i32 / 2 + 1 != spec_i32) return false;
     if (n_frames > 20000 || spec_i32 > 65536) return false;
@@ -768,20 +1226,45 @@ static bool read_world_analysis_cache(const fs::path& path, WorldAnalysis& out) 
     w.formant_peaks.assign(n_frames, {700.0, 1500.0, 2600.0, 3800.0});
     w.formant_confidence.assign(n_frames, 0.0);
 
-    ifs.read(reinterpret_cast<char*>(w.f0.data()), sizeof(double) * w.f0.size());
-    ifs.read(reinterpret_cast<char*>(w.temporal_positions.data()), sizeof(double) * w.temporal_positions.size());
-    for (int i = 0; i < n_frames; ++i) {
-        ifs.read(reinterpret_cast<char*>(w.spectrogram[i].data()), sizeof(double) * spec_i32);
-    }
-    for (int i = 0; i < n_frames; ++i) {
-        ifs.read(reinterpret_cast<char*>(w.aperiodicity[i].data()), sizeof(double) * spec_i32);
-    }
-    for (int i = 0; i < n_frames; ++i) {
-        ifs.read(reinterpret_cast<char*>(w.formant_peaks[i].data()), sizeof(double) * 4);
-    }
-    ifs.read(reinterpret_cast<char*>(w.formant_confidence.data()), sizeof(double) * w.formant_confidence.size());
-    if (!ifs.good()) return false;
+    if (version == 3u) {
+        ifs.read(reinterpret_cast<char*>(w.f0.data()), sizeof(double) * w.f0.size());
+        ifs.read(reinterpret_cast<char*>(w.temporal_positions.data()), sizeof(double) * w.temporal_positions.size());
+        for (int i = 0; i < n_frames; ++i) {
+            ifs.read(reinterpret_cast<char*>(w.spectrogram[i].data()), sizeof(double) * spec_i32);
+        }
+        for (int i = 0; i < n_frames; ++i) {
+            ifs.read(reinterpret_cast<char*>(w.aperiodicity[i].data()), sizeof(double) * spec_i32);
+        }
+        for (int i = 0; i < n_frames; ++i) {
+            ifs.read(reinterpret_cast<char*>(w.formant_peaks[i].data()), sizeof(double) * 4);
+        }
+        ifs.read(reinterpret_cast<char*>(w.formant_confidence.data()), sizeof(double) * w.formant_confidence.size());
+    } else {
+        if (!read_float_vector(ifs, w.f0)) return false;
+        if (!read_float_vector(ifs, w.temporal_positions)) return false;
+        if (!read_float_matrix(ifs, w.spectrogram, n_frames, spec_i32)) return false;
+        if (!read_float_matrix(ifs, w.aperiodicity, n_frames, spec_i32)) return false;
 
+        float formant_row[4] = {};
+        for (int i = 0; i < n_frames; ++i) {
+            ifs.read(reinterpret_cast<char*>(formant_row), sizeof(formant_row));
+            if (!ifs.good()) return false;
+            for (int j = 0; j < 4; ++j) {
+                w.formant_peaks[i][j] = static_cast<double>(formant_row[j]);
+            }
+        }
+        if (!read_float_vector(ifs, w.formant_confidence)) return false;
+    }
+    if (!ifs.good()) return false;
+    if (!sanitize_world_analysis_cache(w)) {
+        if (verbose_log_enabled()) {
+            std::cerr << "[Resamp] WORLD cache rejected by sanitizer: "
+                      << path_to_utf8(path.filename()) << '\n';
+        }
+        return false;
+    }
+
+    if (out_version) *out_version = version;
     out = std::move(w);
     return true;
 }
@@ -801,9 +1284,9 @@ WorldAnalysis world_analyze_cached(
 
     fs::path cache_root;
     if (const char* env_dir = std::getenv("RESAMP_CACHE_DIR"); env_dir && *env_dir) {
-        cache_root = fs::path(env_dir);
+        cache_root = path_from_utf8(env_dir);
     } else {
-        fs::path voicebank_root = find_voicebank_root_for_cache(fs::path(source_wav_path));
+        fs::path voicebank_root = find_voicebank_root_for_cache(path_from_utf8(source_wav_path));
         cache_root = voicebank_root / ".tansan-sampler" / "analysis_cache";
     }
     int64_t cache_max_bytes = analysis_cache_limit_bytes();
@@ -822,7 +1305,7 @@ WorldAnalysis world_analyze_cached(
     h = fnv1a_i64(h, static_cast<int64_t>(signal.size()));
 
     std::error_code ec;
-    fs::path src_path(source_wav_path);
+    fs::path src_path(path_from_utf8(source_wav_path));
     if (fs::exists(src_path, ec)) {
         auto fsize = fs::file_size(src_path, ec);
         if (!ec) h = fnv1a_u64(h, static_cast<uint64_t>(fsize));
@@ -837,13 +1320,21 @@ WorldAnalysis world_analyze_cached(
     fs::path cache_file = cache_root / (hex_u64(h) + ".rswa");
 
     WorldAnalysis cached;
-    if (read_world_analysis_cache(cache_file, cached)) {
+    uint32_t cache_version = 0;
+    if (read_world_analysis_cache(cache_file, cached, &cache_version)) {
         std::error_code touch_ec;
-        fs::last_write_time(cache_file, fs::file_time_type::clock::now(), touch_ec);
+        if (cache_version < 4u) {
+            if (!write_world_analysis_cache(cache_file, cached)) {
+                fs::last_write_time(cache_file, fs::file_time_type::clock::now(), touch_ec);
+            }
+        } else {
+            fs::last_write_time(cache_file, fs::file_time_type::clock::now(), touch_ec);
+        }
         prune_analysis_cache_dir(cache_root, cache_max_bytes);
         if (verbose_log_enabled()) {
-            std::cerr << "[Resamp] WORLD cache hit: " << cache_file.filename().string()
-                      << " dir=" << cache_root.string() << '\n';
+            std::cerr << "[Resamp] WORLD cache hit: " << path_to_utf8(cache_file.filename())
+                      << " dir=" << path_to_utf8(cache_root)
+                      << " version=" << cache_version << '\n';
         }
         return cached;
     }
@@ -852,8 +1343,8 @@ WorldAnalysis world_analyze_cached(
     if (write_world_analysis_cache(cache_file, analyzed)) {
         prune_analysis_cache_dir(cache_root, cache_max_bytes);
         if (verbose_log_enabled()) {
-            std::cerr << "[Resamp] WORLD cache store: " << cache_file.filename().string()
-                      << " dir=" << cache_root.string()
+            std::cerr << "[Resamp] WORLD cache store: " << path_to_utf8(cache_file.filename())
+                      << " dir=" << path_to_utf8(cache_root)
                       << " max_mb=" << (cache_max_bytes / (1024 * 1024)) << '\n';
         }
     }
@@ -890,8 +1381,9 @@ static void map_out_time_to_src(
         if (transition_src_len_ms > 0.0 && vowel_time <= transition_tgt_len_ms) {
             double t = vowel_time / std::max(1.0e-6, transition_tgt_len_ms);
             t = std::clamp(t, 0.0, 1.0);
-            t = t * t * (3.0 - 2.0 * t);
-            src_time_ms = consonant_src_ms + transition_src_len_ms * t;
+            double smooth_t = t * t * (3.0 - 2.0 * t);
+            double eased_t = 0.74 * t + 0.26 * smooth_t;
+            src_time_ms = consonant_src_ms + transition_src_len_ms * eased_t;
             in_vowel_loop = false;
             return;
         }
@@ -916,10 +1408,18 @@ static void map_out_time_to_src(
                 double cycle = std::fmod(loop_time, loop_len_ms * 2.0);
                 if (auto_stretch_then_mirror) cycle = std::fmod(phase_time, loop_len_ms * 2.0);
                 if (cycle < 0.0) cycle += loop_len_ms * 2.0;
+                double tri = 0.0;
+                double phase01 = 0.0;
                 if (auto_stretch_then_mirror) {
-                    wrapped = (cycle <= loop_len_ms) ? (loop_len_ms - cycle) : (cycle - loop_len_ms);
+                    tri = (cycle <= loop_len_ms) ? (loop_len_ms - cycle) : (cycle - loop_len_ms);
+                    phase01 = std::clamp(cycle / std::max(1.0e-6, loop_len_ms * 2.0), 0.0, 1.0);
+                    double sinus = loop_len_ms * (0.5 + 0.5 * std::cos(2.0 * 3.14159265358979323846 * phase01));
+                    wrapped = 0.68 * tri + 0.32 * sinus;
                 } else {
-                    wrapped = (cycle <= loop_len_ms) ? cycle : (2.0 * loop_len_ms - cycle);
+                    tri = (cycle <= loop_len_ms) ? cycle : (2.0 * loop_len_ms - cycle);
+                    phase01 = std::clamp(cycle / std::max(1.0e-6, loop_len_ms * 2.0), 0.0, 1.0);
+                    double sinus = loop_len_ms * (0.5 - 0.5 * std::cos(2.0 * 3.14159265358979323846 * phase01));
+                    wrapped = 0.72 * tri + 0.28 * sinus;
                 }
             }
             src_time_ms = loop_start_ms + wrapped;
@@ -1235,7 +1735,9 @@ std::vector<float> world_render(
     bool fast_flags_mode = env_flag_enabled("RESAMP_FAST_FLAGS", true);
     // 합성 프레임 주기를 넓히면 일부 음원에서 무플래그 상태도 치지직거릴 수 있다.
     // 기본 렌더는 품질 우선으로 기존 주기를 사용하고, 속도 실험은 명시적으로 켠다.
-    bool fast_timing_mode = (sp.fast_mode > 0) || env_flag_enabled("RESAMP_FAST_TIMING", false);
+    const int fast_mode_level = std::clamp(sp.fast_mode, 0, 2);
+    bool fast_timing_mode = (fast_mode_level > 0) || env_flag_enabled("RESAMP_FAST_TIMING", false);
+    bool fastest_timing_mode = fast_mode_level >= 2;
     int spec_dim       = src.fft_size / 2 + 1;
     std::vector<double> fn_lut(spec_dim, 0.0);
     std::vector<double> hz_lut(spec_dim, 0.0);
@@ -1411,10 +1913,27 @@ std::vector<float> world_render(
         floor_ms = std::min(floor_ms, stable_loop_cap_ms);
         double stable_loop_ms = std::clamp(loop_len_ms * 0.44, floor_ms, stable_loop_cap_ms);
         if (loop_len_ms > stable_loop_ms + anal_period) {
-            loop_len_ms = stable_loop_ms;
-            loop_end_ms = loop_start_ms + loop_len_ms;
-            loop_end_fi = std::clamp(static_cast<int>(std::round(loop_end_ms / anal_period)),
-                                     loop_start_fi + 1, n_frames - 1);
+            int min_end_fi = std::clamp(
+                loop_start_fi + static_cast<int>(std::ceil(std::max(56.0, floor_ms * 0.62) / anal_period)),
+                loop_start_fi + 1,
+                n_frames - 1);
+            int max_end_fi = std::clamp(
+                loop_start_fi + static_cast<int>(std::round(stable_loop_ms / anal_period)),
+                min_end_fi,
+                n_frames - 1);
+            int best_end_fi = max_end_fi;
+            double best_score = std::numeric_limits<double>::infinity();
+            for (int fi = min_end_fi; fi <= max_end_fi; ++fi) {
+                double len_ms = std::max(anal_period, (fi - loop_start_fi) * anal_period);
+                double length_preference = std::clamp((stable_loop_ms - len_ms) / std::max(1.0, stable_loop_ms),
+                                                      0.0, 1.0);
+                double score = loop_endpoint_distance(src, loop_start_fi, fi) + 0.055 * length_preference;
+                if (score < best_score) {
+                    best_score = score;
+                    best_end_fi = fi;
+                }
+            }
+            loop_end_fi = std::clamp(best_end_fi, loop_start_fi + 1, n_frames - 1);
             loop_end_ms = loop_end_fi * anal_period;
             loop_len_ms = std::max(anal_period, loop_end_ms - loop_start_ms);
         }
@@ -1444,11 +1963,14 @@ std::vector<float> world_render(
     double stretch_overrun_ms = required_after_consonant_ms - available_after_consonant_ms;
     double long_loop_stress = std::clamp(stretch_overrun_ms / std::max(120.0, available_after_consonant_ms), 0.0, 1.0);
     double auto_loop_margin_ms = std::clamp(available_after_consonant_ms * 0.18, 28.0, 180.0);
+    bool loop_auto_mode = (sp.loop_mode == 0);
+    bool force_stretch_mode = (sp.loop_mode == 1);
+    bool force_loop_mode = (sp.loop_mode == 2);
     bool auto_stretch_mirror_loop =
-        (sp.loop_mode == 0 && has_vowel_loop && stretch_overrun_ms > auto_loop_margin_ms);
+        (loop_auto_mode && has_vowel_loop && stretch_overrun_ms > auto_loop_margin_ms);
     bool micro_alias_stretch = false;
 
-    if (has_vowel_loop && sp.loop_mode != 2) {
+    if (has_vowel_loop && !force_loop_mode) {
         double micro_limit_ms = std::clamp(104.0 + 0.25 * consonant_src_dur_ms, 104.0, 124.0);
         bool tiny_loop = loop_len_ms <= micro_limit_ms;
         bool tiny_available = available_after_consonant_ms <= std::max(128.0, micro_limit_ms + 28.0);
@@ -1479,23 +2001,23 @@ std::vector<float> world_render(
         loop_start_fi = std::clamp(static_cast<int>(std::round(loop_start_ms / anal_period)), 0, n_frames - 1);
         loop_end_fi = loop_start_fi;
     }
-    int effective_loop_mode = sp.loop_mode;
+    int effective_loop_mode = 1;
     double short_stretch_first_amt = smoothstep01_time((660.0 - out_total_ms) / 360.0);
     bool auto_short_stretch_first =
-        (sp.loop_mode == 1 && has_vowel_loop && !no_loop_needed &&
+        (loop_auto_mode && has_vowel_loop && !no_loop_needed &&
          short_stretch_first_amt > 0.02 &&
          required_after_consonant_ms > std::max(12.0, loop_len_ms * 0.35) &&
          required_after_consonant_ms <= std::max(available_after_consonant_ms + auto_loop_margin_ms,
                                                  loop_len_ms * (2.15 + 0.95 * short_stretch_first_amt)));
     bool auto_natural_mirror_loop =
-        (sp.loop_mode == 1 && has_vowel_loop && !no_loop_needed && !auto_short_stretch_first &&
+        (loop_auto_mode && has_vowel_loop && !no_loop_needed && !auto_short_stretch_first &&
          long_loop_stress > 0.30 &&
          required_after_consonant_ms > std::max(available_after_consonant_ms + auto_loop_margin_ms,
                                                 loop_len_ms * 1.65));
     if (auto_stretch_mirror_loop || auto_short_stretch_first || auto_natural_mirror_loop) {
         effective_loop_mode = 3; // internal: one-pass stretch, then mirrored loop on overrun
     }
-    if (sp.loop_mode == 0 && !auto_stretch_mirror_loop) {
+    if (force_stretch_mode) {
         has_vowel_loop = false;
         loop_len_ms = 0.0;
         loop_start_ms = std::clamp(consonant_src_ms, 0.0, src_total_ms);
@@ -1505,8 +2027,12 @@ std::vector<float> world_render(
         loop_end_fi = loop_start_fi;
     }
     double loop_wander_amt = 0.0;
-    if ((auto_natural_mirror_loop || auto_short_stretch_first) && has_vowel_loop && loop_len_ms > 70.0) {
-        loop_wander_amt = long_loop_stress * smoothstep01_time((loop_len_ms - 70.0) / 130.0);
+    if ((auto_stretch_mirror_loop || auto_natural_mirror_loop || auto_short_stretch_first) &&
+        has_vowel_loop && loop_len_ms > 48.0) {
+        loop_wander_amt = long_loop_stress * smoothstep01_time((loop_len_ms - 48.0) / 150.0);
+        if (auto_stretch_mirror_loop && !auto_natural_mirror_loop) {
+            loop_wander_amt *= 0.70;
+        }
         if (auto_short_stretch_first && !auto_natural_mirror_loop) {
             loop_wander_amt *= 0.45 * short_stretch_first_amt;
         }
@@ -1673,6 +2199,15 @@ std::vector<float> world_render(
     } else {
         frame_period = (timing_sensitive_note || dynamic_texture_flags) ? 0.65 : 0.74;
     }
+    if (fastest_timing_mode) {
+        if (has_f0_mod) {
+            frame_period = 0.82;
+        } else if (flat_target_f0) {
+            frame_period = (timing_sensitive_note || dynamic_texture_flags) ? 0.95 : 1.15;
+        } else {
+            frame_period = (timing_sensitive_note || dynamic_texture_flags) ? 0.78 : 0.92;
+        }
+    }
 
     double seam_ms = 0.0;
     if (has_vowel_loop) {
@@ -1809,8 +2344,9 @@ std::vector<float> world_render(
     double nn_neg_eff = std::pow(std::max(0.0, -nn), 0.48);
     double nn_amt = std::max(nn_pos_eff, nn_neg_eff);
     // 기본 톤 캘리브레이션: 고역/잔향 과강조 완화
-    double global_hi_tilt_db = -2.7;
-    double global_hi_ap_trim = 0.090;
+    double global_hi_tilt_db = -2.95;
+    double global_hi_ap_trim = 0.096;
+    double reverb_suppression_amt = std::pow(std::clamp(sp.reverb_suppression / 100.0, 0.0, 1.0), 0.72);
 
     // ── Tension: 발성 강도/이완 근사 (체감 강화) ───────────────────────
     // +값: 더 pressed/firm (주기성↑, 존재감↑, breathiness↓)
@@ -1818,16 +2354,18 @@ std::vector<float> world_render(
     double tension = std::clamp(sp.tension / 100.0, -1.0, 1.0);
     double tension_pos_raw = std::max(0.0, tension);
     double tension_neg_raw = std::max(0.0, -tension);
-    double tension_pos = std::pow(tension_pos_raw, 0.70);
+    double tension_pos = std::pow(tension_pos_raw, 0.76);
     // Tn+는 60 이상에서 고강도 구간으로 가속 (high-knee).
     double tension_hi_knee = std::clamp((tension_pos_raw - 0.60) / 0.40, 0.0, 1.0);
-    tension_pos += (1.0 - tension_pos) * (0.28 * std::pow(tension_hi_knee, 1.12));
+    tension_pos += (1.0 - tension_pos) * (0.20 * std::pow(tension_hi_knee, 1.18));
     // Tn-는 전 구간 감도를 상향.
     double tension_neg = std::clamp(1.02 * std::pow(tension_neg_raw, 0.64), 0.0, 1.0);
     double tension_eff = tension_pos - tension_neg;
     // Tn-에서 연결부 click/pop을 줄이기 위한 가드 계수.
     double tension_relax_click_guard = std::pow(tension_neg, 0.80);
-    double tension_tract_strength = 0.80 * std::pow(std::max(tension_pos, tension_neg), 0.84);
+    double tension_tract_strength = std::clamp(0.68 * std::pow(tension_pos, 0.86) +
+                                               0.80 * std::pow(tension_neg, 0.84),
+                                               0.0, 1.0);
     bool tension_can_drive_tract = tension_tract_strength > 0.05;
     // 플래그 렌더 경량 모드:
     // 외부 리샘플러 호출 비용을 고려해 기본값 ON, 필요 시 RESAMP_FAST_FLAGS=0으로 해제.
@@ -1982,7 +2520,7 @@ std::vector<float> world_render(
             double seed = 2.0 * (seed_raw - std::floor(seed_raw)) - 1.0;
             double slow = std::sin((cycle_index + 1.0) * 2.399963 + 0.71);
             double cycle_shape = std::sin(3.14159265358979323846 * cycle_phase);
-            double amp_ms = std::clamp(loop_len_ms * 0.075, 2.5, 14.0) * loop_wander_amt;
+            double amp_ms = std::clamp(loop_len_ms * 0.105, 3.0, 20.0) * loop_wander_amt;
             double offset_ms = amp_ms * cycle_shape * (0.72 * seed + 0.28 * slow);
             double guard_ms = std::max(anal_period, std::min(seam_ms * 0.35, loop_len_ms * 0.16));
             double lo_ms = loop_start_ms + guard_ms;
@@ -2298,6 +2836,7 @@ std::vector<float> world_render(
             (auto_stretch_mirror_loop || auto_short_stretch_first || auto_natural_mirror_loop)) {
             double room_guard = std::clamp((long_loop_stress - 0.18) / 0.82, 0.0, 1.0);
             room_guard *= std::clamp(0.45 + 0.55 * loop_endpoint_sustain_amt, 0.45, 1.0);
+            room_guard = std::clamp(room_guard + 0.52 * reverb_suppression_amt, 0.0, 1.35);
             for (int k = 0; k < spec_dim; ++k) {
                 double hz = hz_lut[k];
                 double low_room = std::exp(-0.5 * std::pow(std::log2((hz + 80.0) / 520.0) / 0.82, 2.0));
@@ -3181,9 +3720,9 @@ std::vector<float> world_render(
                                           + 0.20 * top);
                 double relax_body = t_neg * (0.75 * body + 0.25 * low);
                 double relax_clarity = t_neg * (1.9 * presence + 1.35 * hi + 0.35 * air - 0.18 * top);
-                double press_body = t_pos * (1.0 * body + 0.65 * mid);
-                double press_focus = t_pos * (7.0 * presence + 2.1 * mid + 1.8 * hi + 0.35 * air
-                                            - 2.0 * top - 0.5 * low);
+                double press_body = t_pos * (0.82 * body + 0.52 * mid);
+                double press_focus = t_pos * (5.55 * presence + 1.65 * mid + 1.20 * hi + 0.16 * air
+                                            - 2.55 * top - 0.62 * low);
                 double db = press_focus + press_body - relax_cut + relax_body + relax_clarity;
                 db = std::clamp(db, -8.5, 8.5);
                 out_spec[i][k] = p0 * std::pow(10.0, db / 10.0); // power
@@ -3194,8 +3733,8 @@ std::vector<float> world_render(
                 // - relaxed(T-): 전대역 AP 증가
                 double low_mid = curve_lut.low_mid_018[k];
                 double ap_delta = 0.0;
-                ap_delta -= t_pos * (0.105 * low_mid + 0.030 * (1.0 - hi));
-                ap_delta += t_pos * (0.010 * hi - 0.040 * top);
+                ap_delta -= t_pos * (0.085 * low_mid + 0.024 * (1.0 - hi));
+                ap_delta += t_pos * (0.004 * hi - 0.055 * top);
                 // T-는 숨 섞임 체감은 남기되, 초고역 hiss가 튀지 않게 top을 별도 억제.
                 ap_delta += t_neg * (0.016 + 0.014 * body + 0.026 * hi);
                 ap_delta -= t_neg * (0.055 * top + 0.018 * low_mid);
@@ -3542,6 +4081,12 @@ std::vector<float> world_render(
 
         // 9. Global tone calibration: 고역/잔향 과강조 완화
         {
+            double head_pop_gate = 0.0;
+            if (out_time_ms <= 18.0) {
+                double u = std::clamp((18.0 - out_time_ms) / 18.0, 0.0, 1.0);
+                head_pop_gate = u * u * (3.0 - 2.0 * u);
+                head_pop_gate *= in_consonant ? 1.0 : 0.52;
+            }
             for (int k = 0; k < spec_dim; ++k) {
                 double hi = curve_lut.global_hi_34[k];
                 double db = global_hi_tilt_db * hi;
@@ -3549,18 +4094,86 @@ std::vector<float> world_render(
                 double puff_gate = (in_consonant ? 1.0 : (in_transition ? 0.65 : 0.28));
                 db -= puff_gate * 1.65 * puff;
                 double room_gate = in_consonant ? 0.14 : (in_transition ? 0.38 : 1.0);
+                double room_user = reverb_suppression_amt * (in_consonant ? 0.28 : (in_transition ? 0.62 : 1.0));
                 double hz = hz_lut[k];
                 double room_lowmid = std::exp(-0.5 * std::pow(std::log2((hz + 90.0) / 560.0) / 0.78, 2.0));
                 double room_air = std::clamp((fn_lut[k] - 0.46) / 0.54, 0.0, 1.0);
-                db -= room_gate * (0.42 * room_lowmid + 0.18 * room_air);
+                double head_presence = curve_lut.presence_2800[k];
+                db -= head_pop_gate * (0.95 * puff + 0.34 * head_presence + 0.36 * hi * hi);
+                db -= room_gate * (0.58 * room_lowmid + 0.24 * room_air);
+                db -= room_user * (1.75 * room_lowmid + 0.72 * room_air);
                 out_spec[i][k] *= std::pow(10.0, db / 10.0);
 
                 double hiss_guard = curve_lut.global_hiss_48[k];
                 double ap_cut = global_hi_ap_trim * hi * hi
                               + 0.018 * hiss_guard
                               + (0.010 + 0.024 * puff_gate) * puff
-                              + room_gate * (0.012 * room_lowmid + 0.010 * room_air);
+                              + head_pop_gate * (0.026 * puff + 0.014 * head_presence + 0.016 * hi)
+                              + room_gate * (0.015 * room_lowmid + 0.013 * room_air)
+                              + room_user * (0.026 * room_lowmid + 0.018 * room_air);
                 out_ap[i][k] = std::clamp(out_ap[i][k] - ap_cut, 0.0, 1.0);
+            }
+        }
+
+        // 9.1. WORLD parameter continuity:
+        // Smooth spectral envelope and AP with separate weights. This targets
+        // metallic frame-to-frame jumps without applying a broad waveform blur.
+        if (i > 0) {
+            bool boundary_region = in_consonant || in_transition;
+            double unvoiced_amt = std::clamp(1.0 - voiced_eff, 0.0, 1.0);
+            double transition_unvoiced = in_transition
+                ? std::clamp((0.55 - transition_voiced_ratio) / 0.55, 0.0, 1.0)
+                : 0.0;
+            double continuity_base = 0.0;
+            if (in_consonant) {
+                double head_amt = std::clamp((24.0 - out_time_ms) / 24.0, 0.0, 1.0);
+                continuity_base = 0.012 + 0.024 * unvoiced_amt + 0.018 * head_amt * unvoiced_amt;
+            } else if (in_transition) {
+                continuity_base = 0.018 + 0.030 * transition_unvoiced + 0.016 * unvoiced_amt;
+                if (transition_voiced_ratio >= 0.62) continuity_base *= 0.72;
+            } else if (in_vowel_loop && long_loop_stress > 0.12) {
+                continuity_base = 0.006 + 0.018 * long_loop_stress;
+            } else if (!has_consonant_head && out_time_ms <= 10.0) {
+                continuity_base = 0.014;
+            }
+
+            if (continuity_base > 1.0e-5) {
+                int jump_stride = std::max(1, spec_dim / 96);
+                double spec_jump = 0.0;
+                double ap_jump = 0.0;
+                int jump_count = 0;
+                for (int k = 0; k < spec_dim; k += jump_stride) {
+                    double cur = std::max(1.0e-12, out_spec[i][k]);
+                    double prv = std::max(1.0e-12, out_spec[i - 1][k]);
+                    spec_jump += std::fabs(std::log(cur) - std::log(prv));
+                    ap_jump += std::fabs(out_ap[i][k] - out_ap[i - 1][k]);
+                    ++jump_count;
+                }
+                if (jump_count > 0) {
+                    spec_jump /= static_cast<double>(jump_count);
+                    ap_jump /= static_cast<double>(jump_count);
+                }
+                double spec_risk = std::clamp((spec_jump - 0.18) / 0.42, 0.0, 1.0);
+                double ap_risk = std::clamp((ap_jump - 0.045) / 0.18, 0.0, 1.0);
+                double dense_guard = std::clamp(1.0 - 0.34 * dense_articulation_amt,
+                                                boundary_region ? 0.62 : 0.48,
+                                                1.0);
+                double loop_guard = in_vowel_loop
+                    ? std::clamp(1.0 - 0.42 * long_loop_stress, 0.38, 1.0)
+                    : 1.0;
+                double spec_base = std::clamp((continuity_base + 0.040 * spec_risk) * dense_guard * loop_guard,
+                                              0.0, boundary_region ? 0.145 : 0.075);
+                double ap_base = std::clamp((0.62 * continuity_base + 0.032 * ap_risk) * dense_guard * loop_guard,
+                                            0.0, boundary_region ? 0.115 : 0.060);
+                if (spec_base > 1.0e-5 || ap_base > 1.0e-5) {
+                    for (int k = 0; k < spec_dim; ++k) {
+                        double fn = fn_lut[k];
+                        double spec_w = std::clamp(spec_base * (0.92 - 0.42 * fn), 0.0, 0.16);
+                        double ap_w = std::clamp(ap_base * (0.78 + 0.34 * fn), 0.0, 0.13);
+                        out_spec[i][k] = out_spec[i][k] * (1.0 - spec_w) + out_spec[i - 1][k] * spec_w;
+                        out_ap[i][k] = out_ap[i][k] * (1.0 - ap_w) + out_ap[i - 1][k] * ap_w;
+                    }
+                }
             }
         }
 
@@ -3588,8 +4201,24 @@ std::vector<float> world_render(
         // 음소 연결의 "툭" 끊김과 인위적 경계감을 줄인다.
         if (i > 0) {
             double join_smooth = 0.0;
+            double unvoiced_amt = std::clamp(1.0 - voiced_eff, 0.0, 1.0);
+            double transient_join_amt = 0.0;
             if (in_consonant || in_transition) {
-                join_smooth = 0.16 + 0.24 * cs_pos + 0.09 * cs_neg;
+                double head_join = std::clamp((18.0 - out_time_ms) / 18.0, 0.0, 1.0);
+                head_join = head_join * head_join * (3.0 - 2.0 * head_join);
+                if (in_consonant) {
+                    transient_join_amt = std::clamp(0.65 * unvoiced_amt + 0.35 * head_join * unvoiced_amt,
+                                                     0.0, 1.0);
+                    join_smooth = 0.105 + 0.18 * cs_pos + 0.08 * cs_neg
+                                + 0.070 * unvoiced_amt + 0.045 * head_join * unvoiced_amt;
+                } else {
+                    double transition_unvoiced =
+                        std::clamp((0.55 - transition_voiced_ratio) / 0.55, 0.0, 1.0);
+                    transient_join_amt = std::max(unvoiced_amt, transition_unvoiced);
+                    join_smooth = 0.105 + 0.16 * cs_pos + 0.07 * cs_neg
+                                + 0.090 * transition_unvoiced + 0.035 * unvoiced_amt;
+                    if (transition_voiced_ratio >= 0.62) join_smooth *= 0.82;
+                }
                 // C+V 단음절 무성→유성 전환: AP 클릭 억제를 위해 스무딩 강화
                 if (in_transition && consonant_src_ms < 6.0 && transition_voiced_ratio < 0.40)
                     join_smooth = std::max(join_smooth, 0.22);
@@ -3601,7 +4230,10 @@ std::vector<float> world_render(
                 // 어두 무자음 진입의 미세 경계 완화
                 join_smooth = 0.08;
             }
-            join_smooth *= std::clamp(1.0 - 0.52 * dense_articulation_amt, 0.36, 1.0);
+            double dense_floor = (in_consonant || in_transition)
+                ? (0.42 + 0.16 * transient_join_amt)
+                : 0.36;
+            join_smooth *= std::clamp(1.0 - 0.52 * dense_articulation_amt, dense_floor, 1.0);
             join_smooth = std::clamp(join_smooth, 0.0, 0.42);
             if (join_smooth > 1.0e-4) {
                 for (int k = 0; k < spec_dim; ++k) {
@@ -3636,11 +4268,22 @@ std::vector<float> world_render(
                             : (out_time_ms <= 10.0 ? 0.70 : 0.22);
             double jump_thr = 0.24 - 0.06 * cs_neg + 0.06 * cs_pos;
             jump_thr -= 0.05 * tension_relax_click_guard;
-            jump_thr = std::clamp(jump_thr, 0.22, 0.36);
+            double transient_join_amt = 0.0;
+            if (in_consonant || in_transition) {
+                double unvoiced_amt = std::clamp(1.0 - voiced_eff, 0.0, 1.0);
+                double transition_unvoiced = in_transition
+                    ? std::clamp((0.55 - transition_voiced_ratio) / 0.55, 0.0, 1.0)
+                    : 0.0;
+                transient_join_amt = std::max(unvoiced_amt, transition_unvoiced);
+                jump_thr -= 0.035 * transient_join_amt;
+            }
+            jump_thr = std::clamp(jump_thr, 0.19, 0.36);
             double declick = std::clamp((jump_score - jump_thr)
-                                        * (0.44 + 0.56 * join_gate + 0.22 * tension_relax_click_guard),
-                                        0.0, 0.30);
-            declick *= std::clamp(1.0 - 0.42 * dense_articulation_amt, 0.44, 1.0);
+                                        * (0.44 + 0.56 * join_gate + 0.22 * tension_relax_click_guard
+                                           + 0.18 * transient_join_amt),
+                                        0.0, 0.34);
+            double dense_floor = 0.44 + 0.12 * transient_join_amt;
+            declick *= std::clamp(1.0 - 0.42 * dense_articulation_amt, dense_floor, 1.0);
             if (in_vowel_loop && long_loop_stress > 0.12) {
                 declick *= std::clamp(1.0 - 0.62 * long_loop_stress, 0.30, 1.0);
             }
@@ -3734,6 +4377,7 @@ std::vector<float> world_render(
                   << " Tn=" << sp.tension
                   << " t_eff=" << tension_eff
                   << " t_trk=" << tension_tract_strength
+                  << " Rs=" << sp.reverb_suppression
                   << " Hu=" << sp.husky_tone
                   << " hu_eff=" << hu_eff
                   << " Ns=" << sp.noise_color

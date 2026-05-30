@@ -20,12 +20,62 @@
 #include <stdexcept>
 #include <algorithm>
 #include <cmath>
+#include <cctype>
 #include <cstdint>
 #include <fstream>
 #include <cstdlib>
 #include <limits>
+#include <string>
+#include <vector>
+
+#ifdef _WIN32
+#include <filesystem>
+#include <windows.h>
+#include <shellapi.h>
+#endif
 
 namespace {
+
+#ifdef _WIN32
+std::string wide_to_utf8(const wchar_t* ws) {
+    if (ws == nullptr || *ws == L'\0') return {};
+    int size = WideCharToMultiByte(CP_UTF8, 0, ws, -1, nullptr, 0, nullptr, nullptr);
+    if (size <= 1) return {};
+    std::string out(static_cast<size_t>(size - 1), '\0');
+    WideCharToMultiByte(CP_UTF8, 0, ws, -1, out.data(), size, nullptr, nullptr);
+    return out;
+}
+
+std::vector<std::string> get_utf8_command_line_args(int argc, char** argv) {
+    int wide_argc = 0;
+    LPWSTR* wide_argv = CommandLineToArgvW(GetCommandLineW(), &wide_argc);
+    if (wide_argv != nullptr && wide_argc > 0) {
+        std::vector<std::string> args;
+        args.reserve(static_cast<size_t>(wide_argc));
+        for (int i = 0; i < wide_argc; ++i) {
+            args.push_back(wide_to_utf8(wide_argv[i]));
+        }
+        LocalFree(wide_argv);
+        return args;
+    }
+
+    std::vector<std::string> args;
+    args.reserve(static_cast<size_t>(std::max(0, argc)));
+    for (int i = 0; i < argc; ++i) args.emplace_back(argv[i] ? argv[i] : "");
+    return args;
+}
+
+std::filesystem::path path_from_utf8(const std::string& path) {
+    return std::filesystem::u8path(path);
+}
+#else
+std::vector<std::string> get_utf8_command_line_args(int argc, char** argv) {
+    std::vector<std::string> args;
+    args.reserve(static_cast<size_t>(std::max(0, argc)));
+    for (int i = 0; i < argc; ++i) args.emplace_back(argv[i] ? argv[i] : "");
+    return args;
+}
+#endif
 
 bool env_enabled(const char* name, bool default_value) {
     const char* v = std::getenv(name);
@@ -53,7 +103,11 @@ double env_double_clamped(const char* name, double default_value, double lo, dou
 void append_debug_log(const std::string& line) {
     const char* path = std::getenv("RESAMP_DEBUG_LOG");
     if (path == nullptr || *path == '\0') return;
+#ifdef _WIN32
+    std::ofstream ofs(path_from_utf8(path), std::ios::out | std::ios::app);
+#else
     std::ofstream ofs(path, std::ios::out | std::ios::app);
+#endif
     if (!ofs) return;
     ofs << line << '\n';
 }
@@ -83,7 +137,11 @@ bool write_silence_wav_streamed(const std::string& path, int64_t requested_sampl
     uint16_t block_align = static_cast<uint16_t>(num_channels * bits_per_sample / 8);
     uint32_t data_size = num_samples * block_align;
 
+#ifdef _WIN32
+    std::ofstream f(path_from_utf8(path), std::ios::binary | std::ios::trunc);
+#else
     std::ofstream f(path, std::ios::binary | std::ios::trunc);
+#endif
     if (!f) return false;
     f.write("RIFF", 4);
     write_u32(f, 36 + data_size);
@@ -155,6 +213,14 @@ int main(int argc, char** argv) {
     int64_t requested_output_samples = 1;
     try {
         const bool verbose_log = env_enabled("RESAMP_VERBOSE", false);
+        std::vector<std::string> utf8_args = get_utf8_command_line_args(argc, argv);
+        std::vector<char*> utf8_argv;
+        utf8_argv.reserve(utf8_args.size());
+        for (std::string& arg : utf8_args) {
+            utf8_argv.push_back(const_cast<char*>(arg.c_str()));
+        }
+        argc = static_cast<int>(utf8_argv.size());
+        argv = utf8_argv.data();
 
         // ── 1. CLI 파싱 ────────────────────────────────────────────────
         params = resamp::parse_args(argc, argv);
@@ -309,6 +375,7 @@ int main(int argc, char** argv) {
                       << " Ns=" << sp.noise_color
                       << " P=" << sp.peak_comp
                       << " Ln=" << sp.loud_norm
+                      << " Rs=" << sp.reverb_suppression
                       << " Lp=" << sp.loop_mode
                       << " Cw=" << sp.consonant_power
                       << " Vw=" << sp.vowel_power
@@ -332,12 +399,13 @@ int main(int argc, char** argv) {
                          " Nn=" + std::to_string(sp.nasal_coupling) +
                          " Mo=" + std::to_string(sp.mouth_open) +
                          " Tn=" + std::to_string(sp.tension) +
+                         " Rs=" + std::to_string(sp.reverb_suppression) +
                          " Vz=" + std::to_string(sp.vocalizer) +
                          " VzS=" + std::to_string(sp.vocalizer_strength));
 
         // ── 6. WORLD 분석 (raw Harvest F0 + envelope/AP 추출) ─────────
         // 디스크 캐시를 사용해 반복 렌더 시 분석 비용을 절감.
-	        const bool fast_mode = sp.fast_mode > 0;
+	        const int fast_mode_level = std::clamp(sp.fast_mode, 0, 2);
 	        const bool formant_flags_requested =
 	            std::abs(sp.mouth_open) > 0 ||
 	            std::abs(sp.tract_length) > 0 ||
@@ -350,8 +418,18 @@ int main(int argc, char** argv) {
 	            std::abs(sp.tract_resonance) >= 45 ||
 	            std::abs(sp.tract_focus) >= 45 ||
 	            (sp.vocalizer > 0 && sp.vocalizer_strength >= 35);
-	        const bool track_formants = formant_flags_requested && (!fast_mode || strong_formant_flags);
-	        const double analysis_frame_period_ms = fast_mode ? 3.5 : 2.5;
+	        const bool critical_formant_flags =
+	            std::abs(sp.mouth_open) >= 70 ||
+	            std::abs(sp.tract_length) >= 70 ||
+	            std::abs(sp.tract_resonance) >= 70 ||
+	            std::abs(sp.tract_focus) >= 70 ||
+	            (sp.vocalizer > 0 && sp.vocalizer_strength >= 60);
+	        const bool track_formants = formant_flags_requested &&
+	            (fast_mode_level == 0 ||
+	             (fast_mode_level == 1 && strong_formant_flags) ||
+	             (fast_mode_level >= 2 && critical_formant_flags));
+	        const double analysis_frame_period_ms =
+	            (fast_mode_level == 0) ? 2.5 : ((fast_mode_level == 1) ? 3.25 : 4.5);
 	        append_debug_log(std::string("[ANALYSIS] formants=") +
 	                         (track_formants ? "tracked" : "default") +
 	                         " frame_ms=" + std::to_string(analysis_frame_period_ms));
@@ -389,7 +467,7 @@ int main(int argc, char** argv) {
 
         // Fade in/out:
         // 과도한 fade-in은 어두 자음 attack을 깎아 "툭 끊기는" 인상을 줄 수 있어 축소.
-        resamp::post::apply_fades(output, 1.0, 4.0, sample_rate);
+        resamp::post::apply_fades(output, 1.6, 4.0, sample_rate);
 
         // 역재생/디스토션/비트크러셔/최종 컷 필터.
         // Fc 하이컷/로우컷은 apply_flag_post_effects 내부에서 항상 마지막에 적용된다.
