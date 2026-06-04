@@ -408,19 +408,16 @@ int main(int argc, char** argv) {
 	        const int fast_mode_level = std::clamp(sp.fast_mode, 0, 2);
 	        const bool formant_flags_requested =
 	            std::abs(sp.mouth_open) > 0 ||
-	            std::abs(sp.tract_length) > 0 ||
 	            std::abs(sp.tract_resonance) > 0 ||
 	            std::abs(sp.tract_focus) > 0 ||
 	            (sp.vocalizer > 0 && sp.vocalizer_strength > 0);
 	        const bool strong_formant_flags =
 	            std::abs(sp.mouth_open) >= 45 ||
-	            std::abs(sp.tract_length) >= 45 ||
 	            std::abs(sp.tract_resonance) >= 45 ||
 	            std::abs(sp.tract_focus) >= 45 ||
 	            (sp.vocalizer > 0 && sp.vocalizer_strength >= 35);
 	        const bool critical_formant_flags =
 	            std::abs(sp.mouth_open) >= 70 ||
-	            std::abs(sp.tract_length) >= 70 ||
 	            std::abs(sp.tract_resonance) >= 70 ||
 	            std::abs(sp.tract_focus) >= 70 ||
 	            (sp.vocalizer > 0 && sp.vocalizer_strength >= 60);
