@@ -2347,6 +2347,18 @@ std::vector<float> world_render(
     double global_hi_tilt_db = -2.95;
     double global_hi_ap_trim = 0.096;
     double reverb_suppression_amt = std::pow(std::clamp(sp.reverb_suppression / 100.0, 0.0, 1.0), 0.72);
+    bool ap_texture_override =
+        sp.harmonics != 70 ||
+        sp.noise_level != 0 ||
+        sp.noise_color != 0 ||
+        sp.breathiness != 0 ||
+        sp.end_breath > 0 ||
+        sp.fry_head > 0 ||
+        sp.fry_tail > 0 ||
+        sp.growl > 0 ||
+        sp.voiced_growl > 0 ||
+        sp.voicing != 0;
+    bool preserve_source_ap = !ap_texture_override;
 
     // ── Tension: 발성 강도/이완 근사 (체감 강화) ───────────────────────
     // +값: 더 pressed/firm (주기성↑, 존재감↑, breathiness↓)
@@ -2367,6 +2379,8 @@ std::vector<float> world_render(
                                                0.80 * std::pow(tension_neg, 0.84),
                                                0.0, 1.0);
     bool tension_can_drive_tract = tension_tract_strength > 0.05;
+    bool global_spectrum_ap_correction = reverb_suppression_amt > 0.001;
+    bool room_ap_floor_enabled = reverb_suppression_amt > 0.001;
     // 플래그 렌더 경량 모드:
     // 외부 리샘플러 호출 비용을 고려해 기본값 ON, 필요 시 RESAMP_FAST_FLAGS=0으로 해제.
 
@@ -2423,6 +2437,13 @@ std::vector<float> world_render(
         vocalizer_strength *= std::clamp(1.0 - 0.20 * nn_amt - 0.12 * breathiness_eff, 0.70, 1.0);
     }
     bool vocalizer_enabled = vocalizer_mode > 0 && vocalizer_strength > 0.001;
+    double natural_high_soften_amt = 0.0;
+    if (preserve_source_ap && sp.final_filter == 0) {
+        double bright_guard = std::clamp((sp.brightness - 50) / 35.0, 0.0, 1.0);
+        double fx_guard = std::clamp(1.0 - 0.35 * vocalizer_load - 0.18 * std::max(0.0, tension_eff),
+                                     0.58, 1.0);
+        natural_high_soften_amt = std::clamp((1.0 - bright_guard) * fx_guard, 0.0, 1.0);
+    }
     bool tract_feature_requested =
         (std::fabs(vtl_eff) > 0.01 || std::fabs(vtr_eff) > 0.01 || std::fabs(vtw_eff) > 0.01 ||
          vc_amt > 0.01 || nn_amt > 0.01 || std::fabs(mo_eff) > 0.01 || tension_tract_strength > 0.02);
@@ -3932,15 +3953,18 @@ std::vector<float> world_render(
                     double x = (h - h0) / (100.0 - h0); // 0..1
                     double boost = 1.0 + 1.20 * std::pow(x, 0.85); // 1.0..2.2
                     for (int k = 0; k < spec_dim; ++k) {
-                        double harm = (1.0 - out_ap[i][k]) * boost;
+                        double ap0 = std::clamp(out_ap[i][k], 0.0, 1.0);
+                        double harm = (1.0 - ap0) * boost;
                         harm = std::clamp(harm, 0.0, 1.0);
-                        out_ap[i][k] = 1.0 - harm;
-
-                        // 배음 강조가 단순 노이즈 감소로만 들리지 않도록 존재감 보강
                         double fn = fn_lut[k];
-                        double body = std::exp(-0.5 * std::pow((fn - 0.22) / 0.18, 2.0));
-                        double pres = std::exp(-0.5 * std::pow((fn - 0.46) / 0.16, 2.0));
-                        double db = std::pow(x, 0.90) * (1.2 * body + 1.6 * pres);
+                        double air_floor = std::pow(std::clamp(fn, 0.0, 1.0), 0.75);
+                        double floor_w = 0.40 + 0.35 * air_floor;
+                        out_ap[i][k] = std::max(1.0 - harm, ap0 * floor_w);
+
+                        // Keep the harmonic lift broad enough to avoid tube-like ringing.
+                        double body = std::exp(-0.5 * std::pow((fn - 0.22) / 0.22, 2.0));
+                        double pres = std::exp(-0.5 * std::pow((fn - 0.46) / 0.22, 2.0));
+                        double db = std::pow(x, 0.90) * (1.1 * body + 1.25 * pres);
                         out_spec[i][k] *= std::pow(10.0, db / 10.0);
                     }
                 } else {
@@ -4081,37 +4105,97 @@ std::vector<float> world_render(
 
         // 9. Global tone calibration: 고역/잔향 과강조 완화
         {
+            if (global_spectrum_ap_correction) {
             double head_pop_gate = 0.0;
             if (out_time_ms <= 18.0) {
                 double u = std::clamp((18.0 - out_time_ms) / 18.0, 0.0, 1.0);
                 head_pop_gate = u * u * (3.0 - 2.0 * u);
                 head_pop_gate *= in_consonant ? 1.0 : 0.52;
             }
+            double frame_f0_for_tone = (out_f0[i] >= 50.0) ? out_f0[i] : flat_f0_hz;
+            double low_pitch_tone_guard = 0.0;
+            if (preserve_source_ap && frame_f0_for_tone >= 50.0) {
+                low_pitch_tone_guard = smoothstep01_time((190.0 - frame_f0_for_tone) / 90.0);
+            }
             for (int k = 0; k < spec_dim; ++k) {
                 double hi = curve_lut.global_hi_34[k];
-                double db = global_hi_tilt_db * hi;
+                double native_tone_scale = preserve_source_ap ? 0.42 : 1.0;
+                double native_air_scale = preserve_source_ap ? 0.68 : 1.0;
+                double db = global_hi_tilt_db * hi * native_tone_scale;
                 double puff = curve_lut.puff_90[k];
                 double puff_gate = (in_consonant ? 1.0 : (in_transition ? 0.65 : 0.28));
-                db -= puff_gate * 1.65 * puff;
-                double room_gate = in_consonant ? 0.14 : (in_transition ? 0.38 : 1.0);
+                db -= puff_gate * 1.65 * puff * (preserve_source_ap ? 0.62 : 1.0);
+                double room_gate = (in_consonant ? 0.14 : (in_transition ? 0.38 : 1.0)) * native_tone_scale;
                 double room_user = reverb_suppression_amt * (in_consonant ? 0.28 : (in_transition ? 0.62 : 1.0));
                 double hz = hz_lut[k];
                 double room_lowmid = std::exp(-0.5 * std::pow(std::log2((hz + 90.0) / 560.0) / 0.78, 2.0));
+                double tube_low = std::exp(-0.5 * std::pow(std::log2((hz + 90.0) / 430.0) / 0.55, 2.0));
+                double tube_mid = std::exp(-0.5 * std::pow(std::log2((hz + 120.0) / 840.0) / 0.54, 2.0));
+                double tube_high = std::exp(-0.5 * std::pow(std::log2((hz + 160.0) / 1450.0) / 0.62, 2.0));
+                double low_room_w = 1.0 - 0.54 * low_pitch_tone_guard;
+                double tube_low_w = 1.0 - 0.70 * low_pitch_tone_guard;
+                double tube_mid_w = 1.0 - 0.34 * low_pitch_tone_guard;
+                double tube_ring = std::clamp(0.42 * tube_low * tube_low_w +
+                                              0.78 * tube_mid * tube_mid_w +
+                                              0.36 * tube_high, 0.0, 1.0);
+                double air_sheen = std::exp(-0.5 * std::pow(std::log2((hz + 220.0) / 3600.0) / 0.58, 2.0));
+                double air_hiss = std::exp(-0.5 * std::pow(std::log2((hz + 320.0) / 6500.0) / 0.70, 2.0));
+                double high_reverb = std::clamp(0.72 * air_sheen + 0.48 * air_hiss, 0.0, 1.0);
                 double room_air = std::clamp((fn_lut[k] - 0.46) / 0.54, 0.0, 1.0);
                 double head_presence = curve_lut.presence_2800[k];
                 db -= head_pop_gate * (0.95 * puff + 0.34 * head_presence + 0.36 * hi * hi);
-                db -= room_gate * (0.58 * room_lowmid + 0.24 * room_air);
-                db -= room_user * (1.75 * room_lowmid + 0.72 * room_air);
+                db -= room_gate * (1.02 * low_room_w * room_lowmid + 0.76 * tube_ring + 0.58 * native_air_scale * high_reverb + 0.08 * room_air);
+                db -= room_user * (1.95 * low_room_w * room_lowmid + 0.92 * tube_ring + 0.76 * high_reverb + 0.42 * room_air);
                 out_spec[i][k] *= std::pow(10.0, db / 10.0);
 
+                double ap0_global = std::clamp(out_ap[i][k], 0.0, 1.0);
+                double ap_preserve_scale = preserve_source_ap ? (in_consonant ? 0.72 : (in_transition ? 0.36 : 0.12)) : 1.0;
                 double hiss_guard = curve_lut.global_hiss_48[k];
-                double ap_cut = global_hi_ap_trim * hi * hi
+                double ap_cut = ap_preserve_scale * global_hi_ap_trim * hi * hi
                               + 0.018 * hiss_guard
                               + (0.010 + 0.024 * puff_gate) * puff
                               + head_pop_gate * (0.026 * puff + 0.014 * head_presence + 0.016 * hi)
-                              + room_gate * (0.015 * room_lowmid + 0.013 * room_air)
+                              + room_gate * (0.006 * room_lowmid + 0.006 * room_air)
                               + room_user * (0.026 * room_lowmid + 0.018 * room_air);
-                out_ap[i][k] = std::clamp(out_ap[i][k] - ap_cut, 0.0, 1.0);
+                if (preserve_source_ap) {
+                    ap_cut -= (1.0 - ap_preserve_scale) *
+                              (0.018 * hiss_guard + (0.008 + 0.018 * puff_gate) * puff);
+                    ap_cut = std::max(0.0, ap_cut);
+                }
+                double tube_ap_restore = (in_consonant ? 0.0 : room_gate) *
+                                         (0.015 * low_room_w * room_lowmid + 0.026 * tube_ring);
+                out_ap[i][k] = std::clamp(out_ap[i][k] - ap_cut + tube_ap_restore, 0.0, 1.0);
+                double low_floor_w = 1.0 - 0.22 * low_pitch_tone_guard;
+                double room_ap_floor = room_ap_floor_enabled
+                    ? (in_consonant
+                        ? (preserve_source_ap ? 0.42 : 0.0)
+                        : (preserve_source_ap ? low_floor_w * (in_transition ? 0.78 : 0.90 + 0.06 * room_air)
+                                              : (in_transition ? 0.38 : 0.58 + 0.26 * room_air)))
+                    : 0.0;
+                if (room_ap_floor > 0.0) {
+                    double abs_floor = (in_transition ? 0.006 : 0.010) * low_room_w * room_lowmid +
+                                       (in_transition ? 0.010 : 0.018) * tube_ring;
+                    out_ap[i][k] = std::max(out_ap[i][k], std::max(ap0_global * room_ap_floor, abs_floor));
+                }
+            }
+            }
+        }
+
+        // 9.0.1. Natural high softening:
+        // Keep source AP intact and only ease the thin high-sheen that can make
+        // default WORLD output feel synthetic. Texture flags bypass this path.
+        if (natural_high_soften_amt > 0.001) {
+            double region_w = in_consonant ? 0.46 : (in_transition ? 0.72 : 1.0);
+            double voiced_w = std::clamp(0.70 + 0.30 * voiced_eff, 0.70, 1.0);
+            double soften = natural_high_soften_amt * region_w * voiced_w;
+            for (int k = 0; k < spec_dim; ++k) {
+                double fn = fn_lut[k];
+                double hz = hz_lut[k];
+                double sheen = std::pow(std::clamp((fn - 0.52) / 0.48, 0.0, 1.0), 1.22);
+                double pres = std::exp(-0.5 * std::pow(std::log2((hz + 180.0) / 4300.0) / 0.78, 2.0));
+                double sibilance = std::exp(-0.5 * std::pow(std::log2((hz + 240.0) / 6600.0) / 0.68, 2.0));
+                double db = -soften * (0.34 * pres + 0.78 * sheen + 0.28 * sibilance);
+                out_spec[i][k] *= std::pow(10.0, db / 10.0);
             }
         }
 
@@ -4165,6 +4249,13 @@ std::vector<float> world_render(
                                               0.0, boundary_region ? 0.145 : 0.075);
                 double ap_base = std::clamp((0.62 * continuity_base + 0.032 * ap_risk) * dense_guard * loop_guard,
                                             0.0, boundary_region ? 0.115 : 0.060);
+                if (preserve_source_ap && !boundary_region) {
+                    spec_base *= 0.34;
+                    ap_base *= 0.18;
+                } else if (preserve_source_ap) {
+                    spec_base *= 0.62;
+                    ap_base *= 0.48;
+                }
                 if (spec_base > 1.0e-5 || ap_base > 1.0e-5) {
                     for (int k = 0; k < spec_dim; ++k) {
                         double fn = fn_lut[k];
@@ -4182,16 +4273,23 @@ std::vector<float> world_render(
         if (i > 0) {
             double guard_base = in_consonant ? 0.042 : (in_transition ? 0.022 : 0.006);
             guard_base += (in_consonant || in_transition ? 0.020 : 0.008) * tension_relax_click_guard;
-            for (int k = 0; k < spec_dim; ++k) {
-                double hi = curve_lut.guard_hi_52[k];
-                double low_puff = curve_lut.low_puff_110[k];
-                double w_ap = std::clamp(guard_base + 0.030 * hi
-                                       + (0.024 + 0.018 * tension_relax_click_guard) * low_puff, 0.0, 0.115);
-                out_ap[i][k] = out_ap[i][k] * (1.0 - w_ap) + out_ap[i - 1][k] * w_ap;
-                if (low_puff > 0.04) {
-                    double w_spec = std::clamp((in_consonant ? 0.050 : (in_transition ? 0.020 : 0.009)) * low_puff,
-                                               0.0, 0.070);
-                    out_spec[i][k] = out_spec[i][k] * (1.0 - w_spec) + out_spec[i - 1][k] * w_spec;
+            bool broadband_guard_needed =
+                in_consonant || in_transition ||
+                tension_relax_click_guard > 0.01 ||
+                !preserve_source_ap ||
+                (!flat_target_f0 && out_time_ms <= 10.0);
+            if (broadband_guard_needed) {
+                for (int k = 0; k < spec_dim; ++k) {
+                    double hi = curve_lut.guard_hi_52[k];
+                    double low_puff = curve_lut.low_puff_110[k];
+                    double w_ap = std::clamp(guard_base + 0.030 * hi
+                                           + (0.024 + 0.018 * tension_relax_click_guard) * low_puff, 0.0, 0.115);
+                    out_ap[i][k] = out_ap[i][k] * (1.0 - w_ap) + out_ap[i - 1][k] * w_ap;
+                    if (low_puff > 0.04) {
+                        double w_spec = std::clamp((in_consonant ? 0.050 : (in_transition ? 0.020 : 0.009)) * low_puff,
+                                                   0.0, 0.070);
+                        out_spec[i][k] = out_spec[i][k] * (1.0 - w_spec) + out_spec[i - 1][k] * w_spec;
+                    }
                 }
             }
         }
@@ -4234,6 +4332,11 @@ std::vector<float> world_render(
                 ? (0.42 + 0.16 * transient_join_amt)
                 : 0.36;
             join_smooth *= std::clamp(1.0 - 0.52 * dense_articulation_amt, dense_floor, 1.0);
+            if (preserve_source_ap && !(in_consonant || in_transition)) {
+                join_smooth *= 0.38;
+            } else if (preserve_source_ap) {
+                join_smooth *= 0.72;
+            }
             join_smooth = std::clamp(join_smooth, 0.0, 0.42);
             if (join_smooth > 1.0e-4) {
                 for (int k = 0; k < spec_dim; ++k) {
@@ -4251,6 +4354,13 @@ std::vector<float> world_render(
         // 연결부에서 frame 단위 스펙트럼/AP 급변이 발생하면
         // 해당 프레임만 선택적으로 눌러 "툭툭" 임펄스성 잡음을 줄인다.
         if (i > 0) {
+            bool declick_probe_needed =
+                in_consonant || in_transition ||
+                out_time_ms <= 10.0 ||
+                std::fabs(cs) > 0.01 ||
+                tension_relax_click_guard > 0.01 ||
+                !preserve_source_ap;
+            if (declick_probe_needed) {
             int jump_stride = std::max(1, spec_dim / 96);
             double jump_score = 0.0;
             int jump_count = 0;
@@ -4284,6 +4394,11 @@ std::vector<float> world_render(
                                         0.0, 0.34);
             double dense_floor = 0.44 + 0.12 * transient_join_amt;
             declick *= std::clamp(1.0 - 0.42 * dense_articulation_amt, dense_floor, 1.0);
+            if (preserve_source_ap && !(in_consonant || in_transition)) {
+                declick *= 0.34;
+            } else if (preserve_source_ap) {
+                declick *= 0.70;
+            }
             if (in_vowel_loop && long_loop_stress > 0.12) {
                 declick *= std::clamp(1.0 - 0.62 * long_loop_stress, 0.30, 1.0);
             }
@@ -4295,6 +4410,7 @@ std::vector<float> world_render(
                     out_spec[i][k] = out_spec[i][k] * (1.0 - w_spec) + out_spec[i - 1][k] * w_spec;
                     out_ap[i][k]   = out_ap[i][k]   * (1.0 - w_ap)   + out_ap[i - 1][k]   * w_ap;
                 }
+            }
             }
         }
 
@@ -4378,6 +4494,10 @@ std::vector<float> world_render(
                   << " t_eff=" << tension_eff
                   << " t_trk=" << tension_tract_strength
                   << " Rs=" << sp.reverb_suppression
+                  << " src_ap=" << (preserve_source_ap ? 1 : 0)
+                  << " gcal=" << (global_spectrum_ap_correction ? 1 : 0)
+                  << " room_floor=" << (room_ap_floor_enabled ? 1 : 0)
+                  << " nsoft=" << natural_high_soften_amt
                   << " Hu=" << sp.husky_tone
                   << " hu_eff=" << hu_eff
                   << " Ns=" << sp.noise_color

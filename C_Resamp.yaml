@@ -176,13 +176,22 @@ expressions:
     default_value: 0
     is_flag: true
     flag: Ns
+  rsup:
+    name: Reverb Suppression
+    abbr: rs
+    type: Numerical
+    min: 0
+    max: 100
+    default_value: 0
+    is_flag: true
+    flag: Rs
   loop:
     name: Stretch/Loop Mode
     abbr: loop
     type: Numerical
     min: 0
     max: 2
-    default_value: 1
+    default_value: 0
     is_flag: true
     flag: Lp
   cpow:

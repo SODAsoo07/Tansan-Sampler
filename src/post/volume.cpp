@@ -97,9 +97,18 @@ struct LevelStats {
 static LevelStats measure_level(const std::vector<float>& samples) {
     LevelStats st;
     if (samples.empty()) return st;
-    st.p90 = abs_percentile(samples, 0.90f);
-    st.p95 = abs_percentile(samples, 0.95f);
-    st.p995 = abs_percentile(samples, 0.995f);
+    std::vector<float> abs_values;
+    abs_values.reserve(samples.size());
+    for (float s : samples) abs_values.push_back(std::fabs(s));
+    auto percentile_from_abs = [&](float q) {
+        q = std::clamp(q, 0.0f, 1.0f);
+        size_t idx = static_cast<size_t>(q * static_cast<float>(abs_values.size() - 1));
+        std::nth_element(abs_values.begin(), abs_values.begin() + idx, abs_values.end());
+        return abs_values[idx];
+    };
+    st.p90 = percentile_from_abs(0.90f);
+    st.p95 = percentile_from_abs(0.95f);
+    st.p995 = percentile_from_abs(0.995f);
     st.peak = max_abs_sample(samples);
     float gate_abs = std::max(0.0018f, std::min(st.p90 * 0.16f, st.p95 * 0.10f));
     st.rms = gated_rms(samples, gate_abs);
@@ -245,22 +254,38 @@ void apply_boundary_level_guard(std::vector<float>& samples,
     const float body_peak = peak_slice(samples, body_begin, body_end);
     if (body_rms <= 1.0e-5f || body_peak <= 1.0e-5f) return;
 
-    auto edge_gain = [&](float edge_rms, float edge_peak, float min_gain) {
+    auto edge_gain = [&](float edge_rms, float edge_peak, float min_gain, bool head) {
+        float gain = 1.0f;
         float rms_gain = (edge_rms > body_rms * 1.18f)
             ? (body_rms * 1.12f / std::max(edge_rms, 1.0e-8f))
             : 1.0f;
         float peak_gain = (edge_peak > body_peak * 1.35f)
             ? (body_peak * 1.24f / std::max(edge_peak, 1.0e-8f))
             : 1.0f;
-        return std::clamp(std::min(rms_gain, peak_gain), min_gain, 1.0f);
+        gain = std::clamp(std::min(rms_gain, peak_gain), min_gain, 1.0f);
+
+        const bool active_edge = edge_peak > std::max(0.006f, body_peak * 0.045f) &&
+                                 edge_rms > std::max(0.0025f, body_rms * 0.18f);
+        if (active_edge && edge_rms < body_rms * 0.72f) {
+            const float target = body_rms * (head ? 0.82f : 0.88f);
+            float boost = target / std::max(edge_rms, 1.0e-8f);
+            const float peak_room = std::min(0.94f, body_peak * (head ? 1.08f : 1.14f)) /
+                                    std::max(edge_peak, 1.0e-8f);
+            const float max_boost = (head ? 1.10f : 1.16f) + (head ? 0.04f : 0.08f) * dense_note;
+            boost = std::clamp(std::min(boost, peak_room), 1.0f, max_boost);
+            gain = std::max(gain, boost);
+        }
+        return gain;
     };
 
     float head_gain = edge_gain(rms_slice(samples, 0, edge_n),
                                 peak_slice(samples, 0, edge_n),
-                                0.84f);
+                                0.84f,
+                                true);
     float tail_gain = edge_gain(rms_slice(samples, n - edge_n, n),
                                 peak_slice(samples, n - edge_n, n),
-                                0.80f);
+                                0.80f,
+                                false);
 
     // Dense CVVC/VCV passages often overlap several nominally "normal" edges.
     // In that case relative edge matching alone is not enough, so short notes get
@@ -268,10 +293,10 @@ void apply_boundary_level_guard(std::vector<float>& samples,
     // perceived residue; head stays conservative to preserve consonant attacks.
     const float dense_head_gain = 1.0f - 0.055f * dense_note;
     const float dense_tail_gain = 1.0f - 0.180f * dense_note;
-    head_gain = std::min(head_gain, dense_head_gain);
-    tail_gain = std::min(tail_gain, dense_tail_gain);
+    if (head_gain <= 1.0f) head_gain = std::min(head_gain, dense_head_gain);
+    if (tail_gain <= 1.0f) tail_gain = std::min(tail_gain, dense_tail_gain);
 
-    if (head_gain < 0.999f) {
+    if (std::fabs(head_gain - 1.0f) > 0.001f) {
         for (int i = 0; i < edge_n; ++i) {
             float u = static_cast<float>(i) / static_cast<float>(std::max(1, edge_n - 1));
             float s = u * u * (3.0f - 2.0f * u);
@@ -280,7 +305,7 @@ void apply_boundary_level_guard(std::vector<float>& samples,
         }
     }
 
-    if (tail_gain < 0.999f) {
+    if (std::fabs(tail_gain - 1.0f) > 0.001f) {
         for (int i = n - edge_n; i < n; ++i) {
             float u = static_cast<float>(i - (n - edge_n)) /
                       static_cast<float>(std::max(1, edge_n - 1));
@@ -289,6 +314,7 @@ void apply_boundary_level_guard(std::vector<float>& samples,
             samples[i] *= g;
         }
     }
+    apply_peak_guard(samples, 0.985f);
 }
 
 static void apply_distortion(std::vector<float>& samples, int amount) {
@@ -372,6 +398,14 @@ void apply_flag_post_effects(std::vector<float>& samples,
                              const SynthParams& sp) {
     if (samples.empty()) return;
 
+    const bool post_fx_requested =
+        sp.reverse_mode != 0 ||
+        sp.distortion > 0 ||
+        sp.bitcrusher > 0 ||
+        sp.final_filter != 0 ||
+        sp.loud_norm != 15;
+    if (!post_fx_requested) return;
+
     if (sp.reverse_mode == 1) {
         std::reverse(samples.begin(), samples.end());
     }
@@ -402,7 +436,12 @@ void apply_flag_post_effects(std::vector<float>& samples,
         apply_one_pole_highpass(samples, sample_rate, 180.0f);
     }
 
-    apply_makeup_level(samples, sample_rate, sp);
+    if (sp.loud_norm != 15 ||
+        sp.distortion > 0 ||
+        sp.bitcrusher > 0 ||
+        sp.final_filter != 0) {
+        apply_makeup_level(samples, sample_rate, sp);
+    }
 }
 
 void normalize_rms(std::vector<float>& samples, float target_rms) {

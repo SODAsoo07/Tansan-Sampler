@@ -48,3 +48,4 @@ resamp_wavtool_calls*.jsonl
 /build
 *.tlog
 *.tlog
+*.obj
