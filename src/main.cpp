@@ -289,11 +289,11 @@ int main(int argc, char** argv) {
         playback_start = std::max(0, std::min(playback_start, static_cast<int>(signal.size())));
 
         int playback_end;
+        // UTAU: negative cutoff is length from offset; positive is right blank from EOF.
         if (params.cutoff_ms < 0.0) {
-            playback_end = static_cast<int>(signal.size())
-                    + static_cast<int>(params.cutoff_ms * sample_rate / 1000.0);
+            playback_end = static_cast<int>((params.offset_ms - params.cutoff_ms) * sample_rate / 1000.0);
         } else if (params.cutoff_ms > 0.0) {
-            playback_end = playback_start + static_cast<int>(params.cutoff_ms * sample_rate / 1000.0);
+            playback_end = static_cast<int>(signal.size() - params.cutoff_ms * sample_rate / 1000.0);
         } else {
             playback_end = static_cast<int>(signal.size());
         }
