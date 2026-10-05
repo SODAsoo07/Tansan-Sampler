@@ -9,18 +9,22 @@ namespace resamp::post {
 // sp.peak_comp: P 플래그 (0=강한 제한, 100=제한없음)
 void apply_volume(std::vector<float>& samples,
                   int volume_param,
-                  const SynthParams& sp);
+                  const SynthParams& sp,
+                  bool normalize = true);
 
 // 시작/끝 경계가 본문보다 튀는 경우에만 짧게 감쇄한다.
 void apply_boundary_level_guard(std::vector<float>& samples,
-                                int sample_rate);
+                                int sample_rate,
+                                bool boost = false,
+                                bool attenuate = true);
 
 // 플래그 기반 최종 샘플 후처리.
 // Fc 필터는 이 함수 내부에서 가장 마지막에 적용된다.
 void apply_flag_post_effects(std::vector<float>& samples,
                              int sample_rate,
                              double consonant_ms,
-                             const SynthParams& sp);
+                             const SynthParams& sp,
+                             bool normalize = true);
 
 // RMS 정규화 (목표 RMS로)
 void normalize_rms(std::vector<float>& samples, float target_rms = 0.25f);

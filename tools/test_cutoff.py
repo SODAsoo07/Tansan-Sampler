@@ -29,7 +29,11 @@ def main():
         ('positive_right_blank', 100, 250, int(frames - 250 * rate / 1000), False),
         ('zero_eof', 100, 0, frames, False),
         ('negative_eof_clamp', 100, -duration, frames, False),
-        ('positive_minimum_span', 100, duration + 100, int(100 * rate / 1000) + 1, False),
+        ('positive_invalid_span', 100, duration + 100, None, False),
+        ('offset_at_eof', duration, 0, None, False),
+        ('offset_after_eof', duration + 100, 0, None, False),
+        ('huge_offset', 1e100, -250, None, False),
+        ('negative_offset', -100, -250, None, False),
         ('fractional_offset_length', 100.125, -250.375, int(350.5 * rate / 1000), False),
         ('negative_flags_omitted', 100, -250, int(350 * rate / 1000), True),
         ('positive_flags_omitted', 100, 250, int(frames - 250 * rate / 1000), True),
@@ -49,7 +53,10 @@ def main():
         actual = int(trim.group(2)) if trim else None
         with wave.open(str(rendered), 'rb') as wav:
             output_frames = wav.getnframes()
-        passed = proc.returncode == 0 and actual == expected and output_frames == round(rate * .15)
+            pcm = wav.readframes(output_frames)
+        valid_range = (actual == expected) if expected is not None else (
+            trim is None and '[FALLBACK_SILENCE]' in text and not any(pcm))
+        passed = proc.returncode == 0 and valid_range and output_frames == round(rate * .15)
         results.append(dict(case=name, passed=passed, expected_end=expected, actual_end=actual,
                             argv=argv, returncode=proc.returncode, output_frames=output_frames))
     assert hashlib.sha256(source.read_bytes()).hexdigest() == source_sha

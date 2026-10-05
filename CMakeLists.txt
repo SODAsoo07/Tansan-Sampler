@@ -10,16 +10,19 @@ endif()
 
 # ── 컴파일러 플래그 ─────────────────────────────────────
 if(MSVC)
-  add_compile_options(/O2 /W3 /fp:fast /arch:SSE2)
+  add_compile_options(/O2 /W3 /fp:precise /arch:SSE2)
   add_compile_options(/utf-8)
 else()
-  add_compile_options(-O3 -Wall -Wextra -ffast-math -msse2 -mfpmath=sse)
+  add_compile_options(-O3 -Wall -Wextra -msse2 -mfpmath=sse)
   link_libraries(m)
 endif()
 
 # ── WORLD 라이브러리 (vocoder) ─────────────────────────
 set(WORLD_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(WORLD_BUILD_TESTS    OFF CACHE BOOL "" FORCE)
+if(NOT EXISTS "${CMAKE_SOURCE_DIR}/external/World/CMakeLists.txt")
+  message(FATAL_ERROR "WORLD source missing. Clone https://github.com/mmorise/World.git into external/World before configuring.")
+endif()
 add_subdirectory(external/World)
 
 # ── 소스 목록 ──────────────────────────────────────────
@@ -68,12 +71,20 @@ set(WAVTOOL_SOURCES
   src/io/wav_writer.cpp
 )
 
+option(RESAMP_BUILD_WAVTOOL "Build the full wavtool when its source is available." ON)
+if(RESAMP_BUILD_WAVTOOL AND EXISTS "${CMAKE_SOURCE_DIR}/src/wavtool/wavtool.cpp")
 add_executable(wavtool ${WAVTOOL_SOURCES})
 target_include_directories(wavtool PRIVATE src)
 set_target_properties(wavtool PROPERTIES OUTPUT_NAME "V_wavtool")
+if(WIN32)
+  target_link_libraries(wavtool PRIVATE shell32)
+endif()
 if(MSVC)
   target_compile_options(wavtool PRIVATE /Oi /Gy /Gw /GL)
   target_link_options(wavtool PRIVATE /LTCG /OPT:REF /OPT:ICF)
+endif()
+else()
+  message(STATUS "Full wavtool omitted; wavtool_probe is only a diagnostic tool.")
 endif()
 
 # ── OpenUtau 테스트용 자동 배포 ─────────────────────────
@@ -110,12 +121,14 @@ if(WIN32 AND WAVTOOL_AUTO_COPY_TO_OPENUTAU)
             "$<TARGET_FILE:wavtool_probe>"
             "${OPENUTAU_RESAMPLERS_DIR}/wavtool_probe.exe"
     COMMENT "Deploying wavtool_probe.exe to ${OPENUTAU_RESAMPLERS_DIR}")
+  if(TARGET wavtool)
   add_custom_command(TARGET wavtool POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E make_directory "${OPENUTAU_WAVTOOLS_DIR}"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
             "$<TARGET_FILE:wavtool>"
             "${OPENUTAU_WAVTOOLS_DIR}/V_wavtool.exe"
     COMMENT "Deploying V_wavtool.exe to ${OPENUTAU_WAVTOOLS_DIR}")
+  endif()
 endif()
 
 if(WIN32)
@@ -125,10 +138,29 @@ if(WIN32)
   target_compile_definitions(wavtool_probe PRIVATE
     _UNICODE UNICODE NOMINMAX WIN32_LEAN_AND_MEAN
   )
+  if(TARGET wavtool)
   target_compile_definitions(wavtool PRIVATE
     _UNICODE UNICODE NOMINMAX WIN32_LEAN_AND_MEAN
   )
+  endif()
 endif()
 
-install(TARGETS resamp wavtool_probe wavtool RUNTIME DESTINATION bin)
+install(TARGETS resamp wavtool_probe RUNTIME DESTINATION bin)
+if(TARGET wavtool)
+  install(TARGETS wavtool RUNTIME DESTINATION bin)
+endif()
 install(FILES "${RESAMPLER_PRESET_FILE}" DESTINATION bin)
+
+include(CTest)
+if(BUILD_TESTING)
+  add_executable(core_timing_test tools/core_timing_test.cpp
+    src/synth/pitch_mapper.cpp src/synth/world_synth.cpp
+    src/args/arg_parser.cpp src/post/volume.cpp src/util/math_util.cpp)
+  target_include_directories(core_timing_test PRIVATE src)
+  target_link_libraries(core_timing_test PRIVATE world)
+  if(WIN32)
+    target_compile_definitions(core_timing_test PRIVATE NOMINMAX WIN32_LEAN_AND_MEAN)
+  endif()
+  add_test(NAME core_timing COMMAND core_timing_test)
+  set_tests_properties(core_timing PROPERTIES ENVIRONMENT "RESAMP_VERBOSE=1;RESAMP_ANALYSIS_CACHE=0")
+endif()

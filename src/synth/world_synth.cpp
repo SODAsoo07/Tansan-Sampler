@@ -9,6 +9,8 @@
 
 #include <algorithm>
 #include <array>
+#include <atomic>
+#include <chrono>
 #include <cctype>
 #include <cmath>
 #include <cstdint>
@@ -19,6 +21,11 @@
 #include <limits>
 #include <string>
 #include <vector>
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <unistd.h>
+#endif
 
 namespace resamp::synth {
 namespace fs = std::filesystem;
@@ -437,6 +444,16 @@ static void prune_analysis_cache_dir(const fs::path& cache_root, int64_t max_byt
     if (max_bytes <= 0) return;
     std::error_code ec;
     if (!fs::exists(cache_root, ec)) return;
+    // Directory creation is atomic across renderer processes. At most one scan/minute.
+    const fs::path marker = cache_root / ".prune_interval";
+    if (!fs::create_directory(marker, ec)) {
+        ec.clear();
+        const auto stamp = fs::last_write_time(marker, ec);
+        if (ec || fs::file_time_type::clock::now() - stamp < std::chrono::minutes(1)) return;
+        fs::remove(marker, ec);
+        ec.clear();
+        if (!fs::create_directory(marker, ec)) return;
+    }
 
     std::vector<CacheFileEntry> entries;
     uintmax_t total = 0;
@@ -448,8 +465,7 @@ static void prune_analysis_cache_dir(const fs::path& cache_root, int64_t max_byt
             continue;
         }
         if (path.extension() == ".tmp") {
-            fs::remove(path, ec);
-            ec.clear();
+            // Another process may still be writing this file.
             continue;
         }
         if (path.extension() != ".rswa") continue;
@@ -1045,9 +1061,21 @@ static bool write_world_analysis_cache(const fs::path& path, const WorldAnalysis
         if (static_cast<int>(w.aperiodicity[i].size()) != spec_dim) return false;
     }
 
-    fs::create_directories(path.parent_path());
+    std::error_code directory_ec;
+    fs::create_directories(path.parent_path(), directory_ec);
+    if (directory_ec) return false; // Cache is optional, including on read-only banks.
+    static std::atomic<uint64_t> sequence{0};
+#ifdef _WIN32
+    const auto process_id = GetCurrentProcessId();
+#else
+    const auto process_id = getpid();
+#endif
     fs::path tmp = path;
-    tmp += ".tmp";
+    tmp += "." + std::to_string(process_id) + "." + std::to_string(sequence++) + ".tmp";
+    struct TempCleanup {
+        fs::path path;
+        ~TempCleanup() { std::error_code ec; fs::remove(path, ec); }
+    } cleanup{tmp};
 
     std::ofstream ofs(tmp, std::ios::binary | std::ios::trunc);
     if (!ofs) return false;
@@ -1087,13 +1115,13 @@ static bool write_world_analysis_cache(const fs::path& path, const WorldAnalysis
         return false;
     }
     std::error_code ec;
+#ifdef _WIN32
+    // Replace atomically; never delete a valid cache before a new writer finishes.
+    return MoveFileExW(tmp.c_str(), path.c_str(), MOVEFILE_REPLACE_EXISTING) != 0;
+#else
     fs::rename(tmp, path, ec);
-    if (ec) {
-        fs::remove(path, ec);
-        ec.clear();
-        fs::rename(tmp, path, ec);
-    }
     return !ec;
+#endif
 }
 
 static void normalize_formant_row(std::array<double, 4>& peaks, int fs) {
@@ -1303,6 +1331,7 @@ WorldAnalysis world_analyze_cached(
     h = fnv1a_i64(h, track_formants ? 1 : 0);
     h = fnv1a_i64(h, static_cast<int64_t>(std::llround(analysis_frame_period_ms * 1000.0)));
     h = fnv1a_i64(h, static_cast<int64_t>(signal.size()));
+    h = fnv1a_i64(h, 5); // Timing fix: zero postroll / valid playback bounds.
 
     std::error_code ec;
     fs::path src_path(path_from_utf8(source_wav_path));
@@ -1751,18 +1780,16 @@ std::vector<float> world_render(
         }
     }
     SpectralCurveLut curve_lut(fn_lut, hz_lut);
-    double src_total_ms = src.n_frames * anal_period;
+    double src_total_ms = std::min((src.n_frames - 1) * anal_period,
+        params.source_end_ms > 0.0 ? params.source_end_ms : src.n_frames * anal_period);
     double source_origin_ms = std::clamp(params.source_origin_ms, 0.0, std::max(0.0, src_total_ms - anal_period));
-    // UTAU velocity 관례:
-    // 값이 클수록 자음이 더 빠르게(짧게) 지나가야 하므로 역비율 사용.
-    // v=100 -> 1.0, v=200 -> 0.5, v=50 -> 2.0
-    double vel = static_cast<double>(std::max(1, params.velocity));
-    double consonant_scale = std::clamp(100.0 / vel, 0.25, 4.0);
+    double consonant_scale = math::velocity_duration_scale(params.velocity);
     double consonant_src_dur_ms = std::clamp(params.consonant_ms, 0.0,
                                              std::max(0.0, src_total_ms - source_origin_ms));
     double consonant_src_ms = std::clamp(source_origin_ms + consonant_src_dur_ms, 0.0, src_total_ms);
     double consonant_tgt_ms = consonant_src_dur_ms * consonant_scale;
-    if (consonant_src_dur_ms > 1.0 && timing_short_note_amt > 0.001) {
+    if (env_flag_enabled("RESAMP_COMPRESS_FIXED", false) &&
+        consonant_src_dur_ms > 1.0 && timing_short_note_amt > 0.001) {
         // 짧은 노트에서 fixed consonant가 출력 전체를 차지하면 tail/fry/breath와
         // 안정 모음부가 사라진다. 소스 fixed consonant 끝까지는 도달하되,
         // 타겟 시간만 압축해 최소 모음 공간을 확보한다.
@@ -1778,7 +1805,11 @@ std::vector<float> world_render(
 
     // 재생 범위는 main.cpp에서 alias offset..cutoff로 잘라 들어온다.
     // 스트레치/루프 가능 범위는 oto의 fixed consonant end..cutoff start 전체를 따른다.
-    int n_frames = src.n_frames;
+    int n_frames = std::min(src.n_frames,
+        static_cast<int>(std::floor(src_total_ms / anal_period)) + 1);
+    if (n_frames < 2) return std::vector<float>(output_samples, 0.0f);
+    const int first_playback_frame = std::clamp(
+        static_cast<int>(std::ceil(source_origin_ms / anal_period)), 0, n_frames - 1);
     int start_fi = static_cast<int>(std::round(consonant_src_ms / anal_period));
     start_fi = std::clamp(start_fi, 0, n_frames - 1);
 
@@ -1848,7 +1879,46 @@ std::vector<float> world_render(
         }
     }
 
-    // ── 루프 끝 결정: 마지막 유성 프레임까지만 ─────────────────────────
+    // Use the first sustained voiced run after fixed consonant, not the last
+    // voiced syllable in a loose oto range. Short masked gaps were filled above.
+    int first_run_end = n_frames - 1;
+    if (env_flag_enabled("RESAMP_STABLE_LOOP", true)) {
+        const int min_run = std::max(2, static_cast<int>(std::ceil(24.0 / anal_period)));
+        for (int a = loop_start_fi; a < n_frames - 1; ++a) {
+            if (src_voicing[a] < 0.5) continue;
+            int b = a;
+            while (b + 1 < n_frames && src_voicing[b + 1] >= 0.5) ++b;
+            if (b - a + 1 < min_run) { a = b; continue; }
+            first_run_end = b;
+            const int width = std::max(2, static_cast<int>(std::ceil(40.0 / anal_period)));
+            const int horizon = std::min(b - width,
+                a + static_cast<int>(std::ceil(300.0 / anal_period)));
+            double peak_energy = -120.0;
+            for (int fi = a; fi <= b; ++fi)
+                peak_energy = std::max(peak_energy, frame_log_spectral_energy(src.spectrogram[fi]));
+            double best = std::numeric_limits<double>::infinity();
+            int stable_start = a;
+            for (int fi = a; fi <= horizon; ++fi) {
+                double score = 0.0;
+                for (int j = fi; j < fi + width; ++j)
+                    score += loop_endpoint_distance(src, j, j + 1);
+                score /= width;
+                score += std::max(0.0, peak_energy - 6.0 -
+                    frame_log_spectral_energy(src.spectrogram[fi])) / 10.0;
+                // Mild preference for early stable vowel; do not select a later coda.
+                score += 0.03 * (fi - a) * anal_period / 300.0;
+                if (score < best) { best = score; stable_start = fi; }
+            }
+            loop_start_fi = std::clamp(stable_start, loop_start_fi, n_frames - 2);
+            // Exclude voiced low-energy decay too, while retaining airy vowels.
+            while (first_run_end > loop_start_fi + width &&
+                frame_log_spectral_energy(src.spectrogram[first_run_end]) < peak_energy - 12.0)
+                --first_run_end;
+            break;
+        }
+    }
+
+    // ── 루프 끝 결정: 선택된 연속 유성 구간까지만 ─────────────────────
     // [근본 원인 수정]
     // 기존: loop_end_fi = n_frames - 1 → 소스 전체(데케이/릴리즈 포함)가 루프됨.
     //
@@ -1861,7 +1931,7 @@ std::vector<float> world_render(
     int loop_end_fi;
     {
         int last_voiced = -1;
-        for (int fi = n_frames - 1; fi > loop_start_fi; --fi) {
+        for (int fi = first_run_end; fi > loop_start_fi; --fi) {
             if (src_voicing[fi] >= 0.5) {
                 last_voiced = fi;
                 break;
@@ -1881,7 +1951,7 @@ std::vector<float> world_render(
         bool suspicious_short_voicing =
             vowel_like_alias && src_total_ms >= 180.0 &&
             voiced_span_ms < std::min(220.0, src_total_ms * 0.42);
-        if (suspicious_short_voicing) {
+        if (suspicious_short_voicing && first_run_end == n_frames - 1) {
             // Energy fallback must not scan the whole loose VCV tail. Otherwise a later
             // syllable inside offset..cutoff can be mistaken for the same sustained vowel.
             int energy_horizon = std::clamp(
@@ -2131,8 +2201,9 @@ std::vector<float> world_render(
     // 과도한 단축은 피하고, 무성 연결부에서는 충분히 길게 유지.
     double transition_tgt_len_ms = 0.0;
     if (transition_src_len_ms > 0.0) {
-        double scale  = (transition_voiced_ratio < 0.45) ? 1.10 : 0.98;
-        double min_ms = (transition_voiced_ratio < 0.45) ? 18.0 : 10.0;
+        const bool expand_transition = env_flag_enabled("RESAMP_EXPAND_TRANSITION", false);
+        double scale  = expand_transition ? ((transition_voiced_ratio < 0.45) ? 1.10 : 0.98) : 1.0;
+        double min_ms = expand_transition ? ((transition_voiced_ratio < 0.45) ? 18.0 : 10.0) : 0.0;
         double max_ms = (transition_voiced_ratio < 0.45) ? 70.0 : 54.0;
         if (short_pitch_move_amt > 0.001) {
             double q = short_pitch_move_amt;
@@ -2157,6 +2228,15 @@ std::vector<float> world_render(
     double dense_articulation_amt = std::max(
         timing_short_note_amt,
         smoothstep01_time((articulation_ratio - 0.36) / 0.34));
+    if (verbose_log_enabled()) {
+        std::cerr << "[TIMING] velocity_scale=" << consonant_scale
+                  << " consonant_tgt_ms=" << consonant_tgt_ms
+                  << " source_origin_ms=" << source_origin_ms
+                  << " source_end_ms=" << src_total_ms
+                  << " loop_start_ms=" << loop_start_fi * anal_period
+                  << " loop_end_ms=" << loop_end_fi * anal_period
+                  << " transition_tgt_ms=" << transition_tgt_len_ms << '\n';
+    }
     // 타겟 F0가 거의 평탄한 노트면 강제 평탄화 (비브라토 없는 음정 떨림 억제).
     double voiced_min = 1.0e18;
     double voiced_max = 0.0;
@@ -2218,11 +2298,13 @@ std::vector<float> world_render(
         if (auto_stretch_mirror_loop) seam_ms = std::max(seam_ms, 12.0);
         seam_ms *= std::clamp(1.0 - 0.38 * dense_articulation_amt, 0.52, 1.0);
     }
+    if (!env_flag_enabled("RESAMP_LOOP_SEAM", true)) seam_ms = 0.0;
 
     // 안정화 모드:
     // 음색이 노트마다 랜덤하게 꺼지는 현상을 막기 위해
     // transition voiced ratio 의존을 줄이고 보수적 상수 혼합으로 고정.
-    bool use_stable_vowel_env = has_vowel_loop || (flat_target_f0 && dense_articulation_amt < 0.64);
+    bool use_stable_vowel_env = env_flag_enabled("RESAMP_VOWEL_ANCHOR", true) &&
+        has_vowel_loop; // One-pass playback must not hold a transition frame as an anchor.
     bool has_consonant_head = (consonant_src_ms >= 1.0);
     double anchor_mix_cap = flat_target_f0 ? 0.60 : (has_f0_mod ? 0.20 : (has_consonant_head ? 0.28 : 0.46));
     if (has_consonant_head) anchor_mix_cap *= 0.75;
@@ -2502,6 +2584,12 @@ std::vector<float> world_render(
     double tract_c2_state = -1.0;
     double tract_c3_state = -1.0;
     double tract_q_state  = -1.0;
+    const bool rs_restore = env_flag_enabled("RESAMP_RS_AP_RESTORE", true);
+    const bool rs_floor = env_flag_enabled("RESAMP_RS_AP_FLOOR", true);
+    const bool diagnose = env_flag_enabled("RESAMP_DIAGNOSTICS", false);
+    const bool temporal_smoothing = env_flag_enabled("RESAMP_TEMPORAL_SMOOTHING", true);
+    double ap_before[3] = {}, ap_after[3] = {}, spec_before[3] = {}, spec_after[3] = {};
+    uint64_t diagnostic_bins[3] = {};
     auto smooth_alpha_ms = [](double dt_ms, double tau_ms) {
         tau_ms = std::max(1.0e-3, tau_ms);
         double a = 1.0 - std::exp(-dt_ms / tau_ms);
@@ -2550,7 +2638,7 @@ std::vector<float> world_render(
                 src_time_ms = std::clamp(src_time_ms + offset_ms, lo_ms, hi_ms);
             }
         }
-        src_time_ms = std::clamp(src_time_ms, 0.0, std::max(0.0, src_total_ms - 1.0e-6));
+        src_time_ms = std::clamp(src_time_ms, source_origin_ms, std::max(source_origin_ms, src_total_ms - 1.0e-6));
         double src_fi_d    = src_time_ms / anal_period;   // 분석 프레임 주기 사용
         int    src_fi      = static_cast<int>(src_fi_d);
         int    src_fi2     = src_fi + 1;
@@ -2560,9 +2648,9 @@ std::vector<float> world_render(
             src_fi2 = src_fi + 1;
             if (src_fi2 > loop_end_fi) src_fi2 = (effective_loop_mode == 2 || effective_loop_mode == 3) ? loop_end_fi : loop_start_fi;
         } else {
-            if (src_fi < 0)            src_fi = 0;
-            if (src_fi >= src.n_frames) src_fi = src.n_frames - 1;
-            src_fi2 = std::min(src_fi + 1, src.n_frames - 1);
+            if (src_fi < first_playback_frame) src_fi = first_playback_frame;
+            if (src_fi >= n_frames) src_fi = n_frames - 1;
+            src_fi2 = std::min(src_fi + 1, n_frames - 1);
         }
         double frac        = src_fi_d - src_fi;
         if (frac < 0.0) frac = 0.0;
@@ -4119,6 +4207,8 @@ std::vector<float> world_render(
             }
             for (int k = 0; k < spec_dim; ++k) {
                 double hi = curve_lut.global_hi_34[k];
+                const int region = in_consonant ? 0 : (in_transition ? 1 : 2);
+                const double spec0_global = out_spec[i][k];
                 double native_tone_scale = preserve_source_ap ? 0.42 : 1.0;
                 double native_air_scale = preserve_source_ap ? 0.68 : 1.0;
                 double db = global_hi_tilt_db * hi * native_tone_scale;
@@ -4164,18 +4254,28 @@ std::vector<float> world_render(
                 }
                 double tube_ap_restore = (in_consonant ? 0.0 : room_gate) *
                                          (0.015 * low_room_w * room_lowmid + 0.026 * tube_ring);
+                const double stable_rs = (!in_consonant && !in_transition && src_voicing[src_fi] >= 0.5)
+                    ? reverb_suppression_amt : 0.0;
+                tube_ap_restore *= rs_restore ? (1.0 - stable_rs) : 0.0;
                 out_ap[i][k] = std::clamp(out_ap[i][k] - ap_cut + tube_ap_restore, 0.0, 1.0);
                 double low_floor_w = 1.0 - 0.22 * low_pitch_tone_guard;
-                double room_ap_floor = room_ap_floor_enabled
+                double room_ap_floor = room_ap_floor_enabled && rs_floor
                     ? (in_consonant
                         ? (preserve_source_ap ? 0.42 : 0.0)
                         : (preserve_source_ap ? low_floor_w * (in_transition ? 0.78 : 0.90 + 0.06 * room_air)
                                               : (in_transition ? 0.38 : 0.58 + 0.26 * room_air)))
                     : 0.0;
+                room_ap_floor *= 1.0 - 0.60 * stable_rs;
                 if (room_ap_floor > 0.0) {
                     double abs_floor = (in_transition ? 0.006 : 0.010) * low_room_w * room_lowmid +
                                        (in_transition ? 0.010 : 0.018) * tube_ring;
-                    out_ap[i][k] = std::max(out_ap[i][k], std::max(ap0_global * room_ap_floor, abs_floor));
+                    out_ap[i][k] = std::max(out_ap[i][k], std::max(ap0_global * room_ap_floor,
+                        abs_floor * (1.0 - stable_rs)));
+                }
+                if (diagnose) {
+                    ap_before[region] += ap0_global; ap_after[region] += out_ap[i][k];
+                    spec_before[region] += spec0_global; spec_after[region] += out_spec[i][k];
+                    ++diagnostic_bins[region];
                 }
             }
             }
@@ -4202,7 +4302,7 @@ std::vector<float> world_render(
         // 9.1. WORLD parameter continuity:
         // Smooth spectral envelope and AP with separate weights. This targets
         // metallic frame-to-frame jumps without applying a broad waveform blur.
-        if (i > 0) {
+        if (temporal_smoothing && i > 0) {
             bool boundary_region = in_consonant || in_transition;
             double unvoiced_amt = std::clamp(1.0 - voiced_eff, 0.0, 1.0);
             double transition_unvoiced = in_transition
@@ -4270,7 +4370,7 @@ std::vector<float> world_render(
 
         // 9.2. broadband noise/pop guard:
         // AP와 초저역이 프레임 단위로 튀는 경우만 약하게 눌러 바람/팝 노이즈를 줄인다.
-        if (i > 0) {
+        if (temporal_smoothing && i > 0) {
             double guard_base = in_consonant ? 0.042 : (in_transition ? 0.022 : 0.006);
             guard_base += (in_consonant || in_transition ? 0.020 : 0.008) * tension_relax_click_guard;
             bool broadband_guard_needed =
@@ -4297,7 +4397,7 @@ std::vector<float> world_render(
         // 9.5. 연결부 연속성 스무딩:
         // consonant/transition 구간에서 프레임 간 급변을 완화해
         // 음소 연결의 "툭" 끊김과 인위적 경계감을 줄인다.
-        if (i > 0) {
+        if (temporal_smoothing && i > 0) {
             double join_smooth = 0.0;
             double unvoiced_amt = std::clamp(1.0 - voiced_eff, 0.0, 1.0);
             double transient_join_amt = 0.0;
@@ -4353,7 +4453,7 @@ std::vector<float> world_render(
         // 9.6. join de-click guard:
         // 연결부에서 frame 단위 스펙트럼/AP 급변이 발생하면
         // 해당 프레임만 선택적으로 눌러 "툭툭" 임펄스성 잡음을 줄인다.
-        if (i > 0) {
+        if (temporal_smoothing && i > 0) {
             bool declick_probe_needed =
                 in_consonant || in_transition ||
                 out_time_ms <= 10.0 ||
@@ -4416,7 +4516,7 @@ std::vector<float> world_render(
 
         // 고음 AP 프레임 간 안정화 (F0 > 500Hz 비자음 구간)
         // 배음 밀도 저하로 인한 AP per-frame 분산을 시간 방향 블렌드로 완화.
-        if (i > 0 && flat_f0_hz > 500.0 && !in_consonant) {
+        if (temporal_smoothing && i > 0 && flat_f0_hz > 500.0 && !in_consonant) {
             double hp_blend = std::clamp((flat_f0_hz - 500.0) / 400.0, 0.0, 1.0) * 0.12;
             for (int k = 0; k < spec_dim; ++k) {
                 out_ap[i][k] = out_ap[i][k] * (1.0 - hp_blend) + out_ap[i - 1][k] * hp_blend;
@@ -4424,6 +4524,14 @@ std::vector<float> world_render(
         }
     }
 
+    if (diagnose) {
+        for (int r = 0; r < 3; ++r) {
+            const double count = static_cast<double>(std::max<uint64_t>(1, diagnostic_bins[r]));
+            std::cerr << "[RS_AP] region=" << r << " bins=" << diagnostic_bins[r]
+                      << " before=" << ap_before[r] / count << " after=" << ap_after[r] / count
+                      << " spectrum_ratio=" << spec_after[r] / std::max(1.0e-12, spec_before[r]) << '\n';
+        }
+    }
     // 최종 F0 프레임 jitter 미세 억제 (zero-phase FIR).
     // flat note에서는 더 강하게, 변조 노트에서는 약하게.
     // 고음(F0>500Hz)에서는 배음 밀도가 낮아 per-frame 분산이 청취됨 → radius +1.
@@ -4431,7 +4539,7 @@ std::vector<float> world_render(
         int hi_bonus = (flat_f0_hz > 500.0) ? 1 : 0;
         if (flat_target_f0) {
             smooth_out_f0_log_zero_phase(out_f0, 4 + hi_bonus);
-        } else if (has_f0_mod) {
+        } else if (has_f0_mod && env_flag_enabled("RESAMP_PITCH_SMOOTHING", false)) {
             smooth_out_f0_log_zero_phase(out_f0, 4 + hi_bonus);
         } else if (hi_bonus > 0) {
             smooth_out_f0_log_zero_phase(out_f0, 1);

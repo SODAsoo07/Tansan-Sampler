@@ -1,5 +1,6 @@
 #include "io/wav_reader.hpp"
 #include "io/wav_writer.hpp"
+#include "util/command_line.hpp"
 
 #include <algorithm>
 #include <chrono>
@@ -235,7 +236,7 @@ bool probe_wav_data_stream(std::istream& f, WavDataInfo& info) {
 }
 
 bool probe_wav_data(const std::string& path, WavDataInfo& info) {
-    std::ifstream f(path, std::ios::binary);
+    std::ifstream f(fs::u8path(path), std::ios::binary);
     if (!f) return false;
     return probe_wav_data_stream(f, info);
 }
@@ -296,7 +297,7 @@ std::vector<int16_t> load_pcm16_segment(const WavtoolArgs& args,
         wanted = std::max(0, std::min(wanted, available));
 
         std::vector<int16_t> out(static_cast<size_t>(wanted), 0);
-        std::ifstream f(args.input_path, std::ios::binary);
+        std::ifstream f(fs::u8path(args.input_path), std::ios::binary);
         if (!f) throw std::runtime_error("Cannot open WAV: " + args.input_path);
         const std::streamoff start = static_cast<std::streamoff>(wi.data_offset) +
             static_cast<std::streamoff>(skip_samples) * wi.channels * 2;
@@ -335,7 +336,7 @@ std::vector<int16_t> load_pcm16_segment(const WavtoolArgs& args,
 std::vector<int16_t> load_pcm16_segment_fast(const FastWavtoolArgs& args,
                                              uint32_t& sample_rate) {
     WavDataInfo wi{};
-    std::ifstream f(args.input_path, std::ios::binary);
+    std::ifstream f(fs::u8path(args.input_path), std::ios::binary);
     if (f &&
         probe_wav_data_stream(f, wi) &&
         wi.audio_format == 1 &&
@@ -906,11 +907,11 @@ void mix_with_crossfade(std::vector<float>& out,
 
 fs::path debug_log_path() {
     const std::string env_path = read_env("WT_DEBUG_LOG");
-    if (!env_path.empty()) return fs::path(env_path);
+    if (!env_path.empty()) return fs::u8path(env_path);
     try {
         return fs::temp_directory_path() / "V_wavtool_calls.jsonl";
     } catch (...) {
-        return fs::path("V_wavtool_calls.jsonl");
+        return fs::u8path("V_wavtool_calls.jsonl");
     }
 }
 
@@ -962,7 +963,7 @@ void write_session_state(const std::string& output_path,
                          uint32_t sample_rate,
                          int final_samples) {
     try {
-        const fs::path state_path = fs::path(output_path + ".wtstate");
+        const fs::path state_path = fs::u8path(output_path + ".wtstate");
         if (state_path.has_parent_path()) fs::create_directories(state_path.parent_path());
         std::ofstream state(state_path, std::ios::binary | std::ios::trunc);
         if (!state) return;
@@ -975,10 +976,10 @@ void write_session_state(const std::string& output_path,
 }
 
 void prepare_output_session(const std::string& output_path, uint32_t sample_rate) {
-    const fs::path out_path(output_path);
-    const fs::path whd_path = fs::path(output_path + ".whd");
-    const fs::path dat_path = fs::path(output_path + ".dat");
-    const fs::path state_path = fs::path(output_path + ".wtstate");
+    const fs::path out_path = fs::u8path(output_path);
+    const fs::path whd_path = fs::u8path(output_path + ".whd");
+    const fs::path dat_path = fs::u8path(output_path + ".dat");
+    const fs::path state_path = fs::u8path(output_path + ".wtstate");
 
     std::error_code ec;
     if (!fs::exists(dat_path, ec)) return;
@@ -995,7 +996,7 @@ void prepare_output_session(const std::string& output_path, uint32_t sample_rate
         reset_reason = "missing_whd";
     } else {
         WavDataInfo whd_info{};
-        if (!probe_wav_data(whd_path.string(), whd_info)) {
+        if (!probe_wav_data(whd_path.u8string(), whd_info)) {
             reset_reason = "invalid_whd";
         } else if (whd_info.sample_rate != sample_rate) {
             reset_reason = "sample_rate_changed";
@@ -1048,7 +1049,7 @@ void log_render_fast(int argc,
 void append_wav_data(const std::string& output_path,
                      const std::vector<float>& samples,
                      uint32_t sample_rate) {
-    fs::path out_path(output_path);
+    fs::path out_path = fs::u8path(output_path);
     if (out_path.has_parent_path()) fs::create_directories(out_path.parent_path());
 
     bool create_new = true;
@@ -1076,7 +1077,7 @@ void append_wav_data(const std::string& output_path,
 
     const uint32_t add_size = static_cast<uint32_t>(samples.size() * 2);
     if (create_new) {
-        std::ofstream f(output_path, std::ios::binary | std::ios::trunc);
+        std::ofstream f(fs::u8path(output_path), std::ios::binary | std::ios::trunc);
         if (!f) throw std::runtime_error("Cannot write WAV: " + output_path);
         write_pcm16_header(f, sample_rate, add_size);
         write_pcm16_samples(f, samples);
@@ -1100,11 +1101,11 @@ void write_whd_dat_positioned(const std::string& output_path,
                               int overlap_samples,
                               int duration_samples,
                               const JoinOptions& options = {}) {
-    fs::path out_path(output_path);
+    fs::path out_path = fs::u8path(output_path);
     if (out_path.has_parent_path()) fs::create_directories(out_path.parent_path());
     prepare_output_session(output_path, sample_rate);
-    const fs::path whd_path = fs::path(output_path + ".whd");
-    const fs::path dat_path = fs::path(output_path + ".dat");
+    const fs::path whd_path = fs::u8path(output_path + ".whd");
+    const fs::path dat_path = fs::u8path(output_path + ".dat");
 
     uint32_t old_data_size = 0;
     if (fs::exists(dat_path)) {
@@ -1121,18 +1122,18 @@ void write_whd_dat_positioned(const std::string& output_path,
 
     {
         std::ofstream whd(whd_path, std::ios::binary | std::ios::trunc);
-        if (!whd) throw std::runtime_error("Cannot write WAV header: " + whd_path.string());
+        if (!whd) throw std::runtime_error("Cannot write WAV header: " + whd_path.u8string());
         write_pcm16_header(whd, sample_rate, final_data_size);
     }
 
     std::fstream dat(dat_path, std::ios::binary | std::ios::in | std::ios::out);
     if (!dat) {
         std::ofstream create(dat_path, std::ios::binary | std::ios::trunc);
-        if (!create) throw std::runtime_error("Cannot create WAV data: " + dat_path.string());
+        if (!create) throw std::runtime_error("Cannot create WAV data: " + dat_path.u8string());
         create.close();
         dat.open(dat_path, std::ios::binary | std::ios::in | std::ios::out);
     }
-    if (!dat) throw std::runtime_error("Cannot open WAV data: " + dat_path.string());
+    if (!dat) throw std::runtime_error("Cannot open WAV data: " + dat_path.u8string());
 
     if (old_samples < start_sample) {
         dat.seekp(0, std::ios::end);
@@ -1209,12 +1210,12 @@ int write_output_wav_positioned(const std::string& output_path,
                                  uint32_t sample_rate,
                                  int overlap_samples,
                                  int duration_samples) {
-    fs::path out_path(output_path);
+    fs::path out_path = fs::u8path(output_path);
     if (out_path.has_parent_path()) fs::create_directories(out_path.parent_path());
 
     bool create_new = !fs::exists(out_path) || fs::file_size(out_path) < 44;
     if (create_new) {
-        std::ofstream create(output_path, std::ios::binary | std::ios::trunc);
+        std::ofstream create(fs::u8path(output_path), std::ios::binary | std::ios::trunc);
         if (!create) throw std::runtime_error("Cannot create WAV: " + output_path);
         write_pcm16_header(create, sample_rate, 0);
     }
@@ -1235,7 +1236,7 @@ int write_output_wav_positioned(const std::string& output_path,
         std::string(wave, 4) != "WAVE" ||
         std::string(data, 4) != "data") {
         wav.close();
-        std::ofstream recreate(output_path, std::ios::binary | std::ios::trunc);
+        std::ofstream recreate(fs::u8path(output_path), std::ios::binary | std::ios::trunc);
         if (!recreate) throw std::runtime_error("Cannot recreate WAV: " + output_path);
         write_pcm16_header(recreate, sample_rate, 0);
         recreate.close();
@@ -1306,7 +1307,7 @@ int render_fast_append(int argc, char** argv, const std::string& mode) {
     write_whd_dat_positioned(args.output_path, segment, sr, overlap_samples,
                              duration_samples_sr, join_options);
     const int advance_samples = std::max(0, duration_samples_sr - overlap_samples);
-    const fs::path dat_path = fs::path(args.output_path + ".dat");
+    const fs::path dat_path = fs::u8path(args.output_path + ".dat");
     const int final_samples = fs::exists(dat_path)
         ? static_cast<int>(fs::file_size(dat_path) / 2)
         : 0;
@@ -1381,7 +1382,7 @@ int render_wavtool(int argc, char** argv) {
     const int target_size = duration_samples > 0 ? previous_size + duration_samples : 0;
     mix_with_crossfade(out, segment, overlap, sr, target_size, !append_mode);
 
-    fs::path out_path(args.output_path);
+    fs::path out_path = fs::u8path(args.output_path);
     if (out_path.has_parent_path()) fs::create_directories(out_path.parent_path());
     resamp::io::save_wav(args.output_path, out, sr);
 
@@ -1413,6 +1414,11 @@ int render_wavtool(int argc, char** argv) {
 } // namespace
 
 int main(int argc, char** argv) {
+    auto args_utf8 = resamp::utf8_command_line(argc, argv);
+    std::vector<char*> argv_utf8;
+    for (auto& arg : args_utf8) argv_utf8.push_back(arg.data());
+    argc = static_cast<int>(argv_utf8.size());
+    argv = argv_utf8.data();
     try {
         return render_wavtool(argc, argv);
     } catch (const std::exception& e) {
@@ -1424,7 +1430,7 @@ int main(int argc, char** argv) {
             WavtoolArgs args = parse_args(argc, argv);
             uint32_t sr = 44100;
             auto out = render_basic_append(args, sr);
-            fs::path out_path(args.output_path);
+            fs::path out_path = fs::u8path(args.output_path);
             if (out_path.has_parent_path()) fs::create_directories(out_path.parent_path());
             resamp::io::save_wav(args.output_path, out, sr);
             debug_log("{\"event\":\"fallback\",\"mode\":\"append\"}");

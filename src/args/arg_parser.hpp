@@ -18,7 +18,7 @@ struct RenderParams {
     double offset_ms       = 0.0;   // arg[6]: wav 시작 오프셋 (ms)
     double length_ms       = 500.0; // arg[7]: 출력 길이 (ms)
     double consonant_ms    = 0.0;   // arg[8]: 자음 영역 길이 (ms)
-    double cutoff_ms       = 0.0;   // arg[9]: 끝 커팅 (ms, 음수=끝에서)
+    double cutoff_ms       = 0.0;   // arg[9]: 양수=파일 끝에서 제외, 음수=offset부터의 길이
     int    volume          = 100;   // arg[10]: 볼륨 (0~200)
     int    modulation      = 0;     // arg[11]: 피치 모듈레이션 (0~200)
     double tempo           = 120.0; // arg[12]: 템포 (BPM, "!120" 형식)
@@ -27,6 +27,7 @@ struct RenderParams {
     // ── 파생 값 ───────────────────────────────────────
     double target_hz = 440.0; // pitch_str에서 변환된 Hz
     double source_origin_ms = 0.0; // 분석용 trim 시작점 기준 실제 offset 위치
+    double source_end_ms = 0.0; // 분석 좌표의 재생 끝; 분석 패딩은 재생/루프에서 제외
 };
 
 // argc/argv에서 파싱

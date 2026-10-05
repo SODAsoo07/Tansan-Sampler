@@ -163,7 +163,8 @@ static void apply_makeup_level(std::vector<float>& samples, int sample_rate, con
 
 void apply_volume(std::vector<float>& samples,
                   int volume_param,
-                  const SynthParams& sp) {
+                  const SynthParams& sp,
+                  bool normalize) {
     if (samples.empty()) return;
 
     float user_scale = std::max(0.0f, volume_param / 100.0f);
@@ -197,12 +198,13 @@ void apply_volume(std::vector<float>& samples,
     // Ln으로 정규화 개입 강도를 조절한다.
     float norm_blend = std::clamp(0.72f + 0.60f * ln_pos - 0.58f * ln_neg, 0.10f, 1.35f);
     norm_gain = 1.0f + norm_blend * (norm_gain - 1.0f);
+    if (!normalize) norm_gain = 1.0f;
 
     for (auto& s : samples) {
         // low-level 성분(잔향/히스)은 완만히 감쇠해 거친 질감 부각 방지.
         float a = std::fabs(s);
         float tail_damp = 1.0f;
-        if (a < gate_abs) {
+        if (normalize && a < gate_abs) {
             float t = a / std::max(1.0e-8f, gate_abs);
             tail_damp = 0.55f + 0.45f * t * t;
         }
@@ -229,7 +231,9 @@ void apply_volume(std::vector<float>& samples,
 }
 
 void apply_boundary_level_guard(std::vector<float>& samples,
-                                int sample_rate) {
+                                int sample_rate,
+                                bool boost,
+                                bool attenuate) {
     if (samples.empty() || sample_rate <= 0) return;
 
     const int n = static_cast<int>(samples.size());
@@ -266,7 +270,7 @@ void apply_boundary_level_guard(std::vector<float>& samples,
 
         const bool active_edge = edge_peak > std::max(0.006f, body_peak * 0.045f) &&
                                  edge_rms > std::max(0.0025f, body_rms * 0.18f);
-        if (active_edge && edge_rms < body_rms * 0.72f) {
+        if (boost && active_edge && edge_rms < body_rms * 0.72f) {
             const float target = body_rms * (head ? 0.82f : 0.88f);
             float boost = target / std::max(edge_rms, 1.0e-8f);
             const float peak_room = std::min(0.94f, body_peak * (head ? 1.08f : 1.14f)) /
@@ -293,8 +297,13 @@ void apply_boundary_level_guard(std::vector<float>& samples,
     // perceived residue; head stays conservative to preserve consonant attacks.
     const float dense_head_gain = 1.0f - 0.055f * dense_note;
     const float dense_tail_gain = 1.0f - 0.180f * dense_note;
-    if (head_gain <= 1.0f) head_gain = std::min(head_gain, dense_head_gain);
-    if (tail_gain <= 1.0f) tail_gain = std::min(tail_gain, dense_tail_gain);
+    if (attenuate) {
+        if (head_gain <= 1.0f) head_gain = std::min(head_gain, dense_head_gain);
+        if (tail_gain <= 1.0f) tail_gain = std::min(tail_gain, dense_tail_gain);
+    } else {
+        head_gain = std::max(1.0f, head_gain);
+        tail_gain = std::max(1.0f, tail_gain);
+    }
 
     if (std::fabs(head_gain - 1.0f) > 0.001f) {
         for (int i = 0; i < edge_n; ++i) {
@@ -395,7 +404,8 @@ static void apply_one_pole_highpass(std::vector<float>& samples, int sample_rate
 void apply_flag_post_effects(std::vector<float>& samples,
                              int sample_rate,
                              double consonant_ms,
-                             const SynthParams& sp) {
+                             const SynthParams& sp,
+                             bool normalize) {
     if (samples.empty()) return;
 
     const bool post_fx_requested =
@@ -436,10 +446,10 @@ void apply_flag_post_effects(std::vector<float>& samples,
         apply_one_pole_highpass(samples, sample_rate, 180.0f);
     }
 
-    if (sp.loud_norm != 15 ||
+    if (normalize && (sp.loud_norm != 15 ||
         sp.distortion > 0 ||
         sp.bitcrusher > 0 ||
-        sp.final_filter != 0) {
+        sp.final_filter != 0)) {
         apply_makeup_level(samples, sample_rate, sp);
     }
 }

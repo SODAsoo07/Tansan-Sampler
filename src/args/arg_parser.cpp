@@ -57,7 +57,7 @@ RenderParams parse_args(int argc, char** argv) {
     p.input_wav  = argv[1];
     p.output_wav = argv[2];
     p.pitch_str  = argv[3];
-    p.velocity   = std::atoi(argv[4]);
+    p.velocity   = std::clamp(std::stoi(argv[4]), 0, 200);
     p.target_hz  = pitch_str_to_hz(p.pitch_str);
 
     auto get_str = [&](int i) -> std::string {
@@ -135,6 +135,9 @@ RenderParams parse_args(int argc, char** argv) {
         if (!t.empty() && t[0] == '!') t = t.substr(1);
         if (!t.empty()) p.tempo = std::stod(t);
     }
+
+    if (!std::isfinite(p.tempo) || p.tempo <= 0.0)
+        throw std::invalid_argument("Tempo must be finite and positive");
 
     // pitch_bend (base64)
     if (argc > (opt_base + 7)) {

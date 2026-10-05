@@ -14,6 +14,7 @@
 #include "post/volume.hpp"
 #include "post/fade.hpp"
 #include "util/math_util.hpp"
+#include "util/command_line.hpp"
 
 #include <iostream>
 #include <random>
@@ -37,43 +38,8 @@
 namespace {
 
 #ifdef _WIN32
-std::string wide_to_utf8(const wchar_t* ws) {
-    if (ws == nullptr || *ws == L'\0') return {};
-    int size = WideCharToMultiByte(CP_UTF8, 0, ws, -1, nullptr, 0, nullptr, nullptr);
-    if (size <= 1) return {};
-    std::string out(static_cast<size_t>(size - 1), '\0');
-    WideCharToMultiByte(CP_UTF8, 0, ws, -1, out.data(), size, nullptr, nullptr);
-    return out;
-}
-
-std::vector<std::string> get_utf8_command_line_args(int argc, char** argv) {
-    int wide_argc = 0;
-    LPWSTR* wide_argv = CommandLineToArgvW(GetCommandLineW(), &wide_argc);
-    if (wide_argv != nullptr && wide_argc > 0) {
-        std::vector<std::string> args;
-        args.reserve(static_cast<size_t>(wide_argc));
-        for (int i = 0; i < wide_argc; ++i) {
-            args.push_back(wide_to_utf8(wide_argv[i]));
-        }
-        LocalFree(wide_argv);
-        return args;
-    }
-
-    std::vector<std::string> args;
-    args.reserve(static_cast<size_t>(std::max(0, argc)));
-    for (int i = 0; i < argc; ++i) args.emplace_back(argv[i] ? argv[i] : "");
-    return args;
-}
-
 std::filesystem::path path_from_utf8(const std::string& path) {
     return std::filesystem::u8path(path);
-}
-#else
-std::vector<std::string> get_utf8_command_line_args(int argc, char** argv) {
-    std::vector<std::string> args;
-    args.reserve(static_cast<size_t>(std::max(0, argc)));
-    for (int i = 0; i < argc; ++i) args.emplace_back(argv[i] ? argv[i] : "");
-    return args;
 }
 #endif
 
@@ -213,7 +179,7 @@ int main(int argc, char** argv) {
     int64_t requested_output_samples = 1;
     try {
         const bool verbose_log = env_enabled("RESAMP_VERBOSE", false);
-        std::vector<std::string> utf8_args = get_utf8_command_line_args(argc, argv);
+        std::vector<std::string> utf8_args = resamp::utf8_command_line(argc, argv);
         std::vector<char*> utf8_argv;
         utf8_argv.reserve(utf8_args.size());
         for (std::string& arg : utf8_args) {
@@ -282,37 +248,42 @@ int main(int argc, char** argv) {
         }
 
         // ── 3. 소스 트리밍 (offset_ms, cutoff_ms) ─────────────────────
-        // UTAU식 offset..cutoff 전체가 너무 길면 VCV/CVVC 녹음의 다음 발음까지
-        // WORLD 분석에 들어간다. 실제 합성 안정 구간만 분석하도록 하드캡하되,
-        // CheapTrick/D4C 경계 안정성을 위해 offset 앞과 cap 뒤에 작은 분석 여유를 둔다.
-        int playback_start = static_cast<int>(params.offset_ms * sample_rate / 1000.0);
-        playback_start = std::max(0, std::min(playback_start, static_cast<int>(signal.size())));
-
-        int playback_end;
-        // UTAU: negative cutoff is length from offset; positive is right blank from EOF.
-        if (params.cutoff_ms < 0.0) {
-            playback_end = static_cast<int>((params.offset_ms - params.cutoff_ms) * sample_rate / 1000.0);
-        } else if (params.cutoff_ms > 0.0) {
-            playback_end = static_cast<int>(signal.size() - params.cutoff_ms * sample_rate / 1000.0);
-        } else {
-            playback_end = static_cast<int>(signal.size());
+        // Validate milliseconds before converting to int or constructing iterators.
+        const double file_ms = signal.size() * 1000.0 / sample_rate;
+        const double end_ms = params.cutoff_ms < 0.0
+            ? params.offset_ms - params.cutoff_ms : file_ms - params.cutoff_ms;
+        if (signal.empty() || signal.size() > static_cast<size_t>(std::numeric_limits<int>::max()) ||
+            params.offset_ms < 0.0 || params.offset_ms >= file_ms ||
+            !std::isfinite(end_ms) || end_ms <= params.offset_ms) {
+            return fail_with_silence(params, requested_output_samples, static_cast<uint32_t>(sample_rate),
+                                     "Invalid offset/cutoff source range; wrote fallback silence");
         }
-        playback_end = std::max(playback_start + 1, std::min(playback_end, static_cast<int>(signal.size())));
+        int playback_start = static_cast<int>(params.offset_ms * sample_rate / 1000.0);
+        int playback_end = static_cast<int>(std::min(end_ms, file_ms) * sample_rate / 1000.0);
+        playback_end = std::min(playback_end, static_cast<int>(signal.size()));
+        if (playback_end <= playback_start) {
+            return fail_with_silence(params, requested_output_samples, static_cast<uint32_t>(sample_rate),
+                                     "Source range contains no samples; wrote fallback silence");
+        }
 
         double analysis_preroll_ms = env_double_clamped("RESAMP_ANALYSIS_PREROLL_MS", 5.0, 0.0, 30.0);
-        double analysis_tail_cap_ms = env_double_clamped("RESAMP_ANALYSIS_TAIL_CAP_MS", 360.0, 80.0, 800.0);
+        double analysis_tail_cap_ms = env_double_clamped("RESAMP_ANALYSIS_TAIL_CAP_MS", 0.0, 0.0, 30000.0);
         double analysis_postroll_ms = env_double_clamped("RESAMP_ANALYSIS_POSTROLL_MS", 24.0, 0.0, 90.0);
 
         double fixed_end_ms = std::max(0.0, params.offset_ms) + std::max(0.0, params.consonant_ms);
-        double hard_end_ms = fixed_end_ms + analysis_tail_cap_ms + analysis_postroll_ms;
-        int hard_end = static_cast<int>(std::ceil(hard_end_ms * sample_rate / 1000.0));
-        int src_end = std::min(playback_end, std::max(playback_start + 32, hard_end));
-        src_end = std::max(playback_start + 1, std::min(src_end, static_cast<int>(signal.size())));
+        // A cap is an opt-in diagnostic policy, never the default oto range.
+        if (analysis_tail_cap_ms > 0.0) {
+            const double cap_end_ms = std::min(file_ms, fixed_end_ms + analysis_tail_cap_ms);
+            playback_end = std::min(playback_end, std::max(playback_start + 1,
+                static_cast<int>(cap_end_ms * sample_rate / 1000.0)));
+        }
+        int src_end = playback_end;
 
         int preroll = static_cast<int>(std::round(analysis_preroll_ms * sample_rate / 1000.0));
         int src_start = std::max(0, playback_start - preroll);
         params.source_origin_ms =
             (playback_start - src_start) * 1000.0 / static_cast<double>(std::max(1, sample_rate));
+        params.source_end_ms = (playback_end - src_start) * 1000.0 / sample_rate;
 
         double max_source_seconds = env_double_clamped("RESAMP_MAX_SOURCE_SECONDS", 30.0, 1.0, 600.0);
         int64_t source_range_samples = static_cast<int64_t>(src_end) - static_cast<int64_t>(src_start);
@@ -323,6 +294,9 @@ int main(int argc, char** argv) {
 
         std::vector<float> trimmed(signal.begin() + src_start,
                                    signal.begin() + src_end);
+        // Zero postroll stabilizes WORLD without analyzing the next syllable.
+        trimmed.resize(trimmed.size() + static_cast<size_t>(
+            std::round(analysis_postroll_ms * sample_rate / 1000.0)), 0.0f);
         if (trimmed.size() < 32) trimmed.resize(32, 0.0f);
         append_debug_log("[TRIM] playback_start=" + std::to_string(playback_start) +
                          " playback_end=" + std::to_string(playback_end) +
@@ -459,8 +433,12 @@ int main(int argc, char** argv) {
         // 노이즈 추가 (N 플래그)는 envelope 단계에서 AP로 처리됨
 
         // 볼륨 스케일 + 피크 제한 (P 플래그)
-        resamp::post::apply_volume(output, params.volume, sp);
-        resamp::post::apply_boundary_level_guard(output, sample_rate);
+        resamp::post::apply_volume(output, params.volume, sp,
+                                  env_enabled("RESAMP_NORMALIZATION", true));
+        if (env_enabled("RESAMP_BOUNDARY_GUARD", true))
+            resamp::post::apply_boundary_level_guard(output, sample_rate,
+                env_enabled("RESAMP_BOUNDARY_BOOST", false),
+                env_enabled("RESAMP_BOUNDARY_ATTENUATION", true));
 
         // Fade in/out:
         // 과도한 fade-in은 어두 자음 attack을 깎아 "툭 끊기는" 인상을 줄 수 있어 축소.
@@ -469,8 +447,9 @@ int main(int argc, char** argv) {
         // 역재생/디스토션/비트크러셔/최종 컷 필터.
         // Fc 하이컷/로우컷은 apply_flag_post_effects 내부에서 항상 마지막에 적용된다.
         double consonant_tgt_ms = params.consonant_ms *
-            std::clamp(100.0 / static_cast<double>(std::max(1, params.velocity)), 0.25, 4.0);
-        resamp::post::apply_flag_post_effects(output, sample_rate, consonant_tgt_ms, sp);
+            resamp::math::velocity_duration_scale(params.velocity);
+        resamp::post::apply_flag_post_effects(output, sample_rate, consonant_tgt_ms, sp,
+            env_enabled("RESAMP_NORMALIZATION", true));
 
         // ── 10. WAV 저장 ──────────────────────────────────────────────
         resamp::io::save_wav(params.output_wav, output,

@@ -9,6 +9,11 @@ namespace resamp::math {
 static constexpr double PI  = 3.14159265358979323846;
 static constexpr double TAU = 6.28318530717958647692;
 
+// OpenUtau stretches preutterance/skipOver with the same exponential ratio.
+inline double velocity_duration_scale(int velocity) {
+    return std::exp2(1.0 - std::clamp(velocity, 0, 200) / 100.0);
+}
+
 // ── 자기상관 ───────────────────────────────────────────────────────────────
 // r[k] = sum_{n=0}^{N-1-k} x[n]*x[n+k]  (k = 0..max_lag)
 std::vector<double> autocorr(const float* x, int n, int max_lag);

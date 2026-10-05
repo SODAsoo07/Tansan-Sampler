@@ -91,6 +91,10 @@ std::vector<float> load_wav(const std::string& path, WavInfo& info) {
         throw std::runtime_error("Unsupported WAV format: " + std::to_string(audio_format));
 
     uint32_t bytes_per_sample = bits_per_sample / 8;
+    if (num_channels == 0 || sample_rate < 4000 || sample_rate > 384000 ||
+        (bits_per_sample != 16 && bits_per_sample != 24 && bits_per_sample != 32) ||
+        (audio_format == 3 && bits_per_sample != 32))
+        throw std::runtime_error("Invalid or unsupported WAV format fields: " + path);
     uint32_t total_samples    = data_size / (bytes_per_sample * num_channels);
 
     info.sample_rate      = sample_rate;
